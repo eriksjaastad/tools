@@ -1,0 +1,24 @@
+# Ollama MCP - Cursor Rules
+
+## 📝 Markdown & Documentation Standards
+- **ALWAYS preserve YAML frontmatter** when editing `.md` files
+- Use nested tags for taxonomy (e.g., #type/project/tool, #tech/typescript, #status/active)
+- Follow the **Documents/** pattern for documentation (see `Documents/README.md`)
+
+## 🚫 Context Window Management
+- **NEVER waste context on:**
+  - `node_modules/`, `dist/`, `.git/`
+  - Large log files (`*.jsonl`)
+- Use targeted reads with line ranges for large source files
+- Prefer `codebase_search` for exploring unfamiliar logic
+
+## 🛠 Project-Specific Patterns
+- **MCP Server Logic**: When adding new tools, follow the pattern in `src/server.ts`.
+- **Telemetry**: All model executions MUST be logged using the `logRun` utility in `src/logger.ts`.
+- **Safety**: Always validate model names and sanitize inputs before passing to shell commands.
+- **TypeScript**: Prefer explicit types over `any`. Use interfaces for tool parameters.
+
+## 🎯 Task Prioritization
+- Refer to `TODO.md` for current priorities (🔴 🟡 🔵 🟢)
+- Update `TODO.md` after every session or major milestone
+

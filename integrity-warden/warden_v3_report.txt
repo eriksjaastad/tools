@@ -1,0 +1,862 @@
+============================================================
+INTEGRITY WARDEN
+Scanning for broken connections across the ecosystem
+============================================================
+
+Root: /Users/eriksjaastad/projects
+Checkers: 9 registered
+Excluding: .git, .mypy_cache, .obsidian, .pytest_cache, .venv, __pycache__, _trash, ai-journal, archives, cortana-personal-ai, integrity-warden, node_modules, site-packages, venv
+Building scan context for /Users/eriksjaastad/projects...
+  - Indexed 656 unique markdown files
+  - Found 37 projects
+  - Scanning 1900 text files
+
+============================================================
+INTEGRITY ISSUES FOUND: 403
+============================================================
+
+[ERROR] Broken Cron Script (15 found)
+    Checker: CronJobs
+----------------------------------------
+  File: crontab:line_10
+    -> /Users/eriksjaastad/projects/trading-copilot"
+  File: crontab:line_10
+    -> /bin/activate
+  File: crontab:line_10
+    -> /morning_briefing_discord.py
+  File: crontab:line_4
+    -> /bin/activate
+  File: crontab:line_4
+    -> /model_arena.py
+  File: crontab:line_4
+    -> /Users/eriksjaastad/projects/trading-copilot"
+  File: crontab:line_5
+    -> /model_arena.py
+  File: crontab:line_5
+    -> /Users/eriksjaastad/projects/trading-copilot"
+  File: crontab:line_5
+    -> /bin/activate
+  File: crontab:line_6
+    -> /bin/activate
+  File: crontab:line_6
+    -> /model_arena.py
+  File: crontab:line_6
+    -> /Users/eriksjaastad/projects/trading-copilot"
+  File: crontab:line_7
+    -> /Users/eriksjaastad/projects/trading-copilot"
+  File: crontab:line_7
+    -> /bin/activate
+  File: crontab:line_7
+    -> /model_arena.py
+
+
+[ERROR] Broken Git Hook Reference (11 found)
+    Checker: GitHooks
+----------------------------------------
+  File: audit-agent/.git/hooks/post-commit
+    -> #
+  File: project-scaffolding/.git/hooks/pre-commit
+    -> scripts/warden_audit.py
+  File: project-scaffolding/.git/hooks/pre-commit
+    -> Proceeding
+  File: project-scaffolding/.git/hooks/pre-commit
+    -> --fast
+  File: project-scaffolding/.git/hooks/pre-commit
+    -> #
+  File: project-scaffolding/.git/hooks/pre-commit
+    -> /warden_audit.py
+  File: project-tracker/.git/hooks/pre-commit
+    -> /scripts/fix_portability.py
+  File: project-tracker/.git/hooks/pre-commit
+    -> /git-pre-commit.sh
+  File: project-tracker/.git/hooks/pre-commit
+    -> $PROJECT_ROOT/scripts/warden_audit.py
+  File: project-tracker/.git/hooks/pre-commit
+    -> #
+  File: project-tracker/.git/hooks/pre-commit
+    -> /scripts/warden_audit.py
+
+
+[WARNING] Broken Cross-Project Reference (10 found)
+    Checker: RelativePaths
+----------------------------------------
+  File: image-workflow/scripts/ai/train_ranker_v3.py
+    -> ../image-workflow/mojo2/_mixed/file.png
+  File: project-scaffolding/Documents/CODE_QUALITY_STANDARDS.md
+    -> ../agent-skills-library
+  File: project-tracker/Documents/CODE_QUALITY_STANDARDS.md
+    -> ../agent-skills-library
+  File: project-tracker/Documents/CODE_REVIEW_PHASE4_TELEMETRY.md
+    -> ../trading-copilot/logs/arena.log
+  File: project-tracker/Documents/CODE_REVIEW_PHASE4_TELEMETRY.md
+    -> ../_tools/ai_router/logs/telemetry.jsonl
+  File: project-tracker/Documents/INTEGRATION_WITH_SCAFFOLDING.md
+    -> ../project-scaffolding/EXTERNAL_RESOURCES.md
+  File: project-tracker/Documents/README.md
+    -> ../project-scaffolding/AGENTS.md
+  File: project-tracker/Documents/README.md
+    -> ../project-scaffolding
+  File: project-tracker/Documents/README.md
+    -> ../project-scaffolding/patterns/
+  File: project-tracker/Documents/README.md
+    -> ../project-scaffolding/Documents/CODE_QUALITY_STANDARDS.md
+
+
+[WARNING] Broken File Path (180 found)
+    Checker: AbsolutePaths
+----------------------------------------
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/DISCUSSION_SUMMARY_2025-12-30.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/audit-agent/test_yaml_log.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/CODE_REVIEW_REQUEST.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/COMPLETION_SUMMARY.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/audit-agent/debug_script.py
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/IMPLEMENTATION_HANDOFF.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/HANDOFF_SERVICES_ISSUE.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/CODE_REVIEW.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/2025-12-31T22-00-00Z__claudeCode__brutal-code-review-silent-failures-and-memory.md
+  File: _obsidian/WARDEN_LOG.yaml
+    -> /Users/eriksjaastad/projects/project-tracker/pytest-cache-files-cu2nu74j/README.md
+  File: agent-skills-library/INTEGRATION_GUIDE.md
+    -> /Users/eriksjaastad/projects/project-scaffolding/templates/.cursorrules.template
+  File: audit-agent/DEPLOYMENT_READY.md
+    -> /Users/eriksjaastad/projects/audit-agent/test.md
+  File: audit-agent/DEPLOYMENT_READY.md
+    -> /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+  File: audit-agent/DEPLOYMENT_READY.md
+    -> /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/audit-agent/start_warden.sh</string
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/audit-agent/logs/stderr.log</string
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/audit-agent/test.md
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/audit-agent/logs/stdout.log</string
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/audit-agent/start_warden.sh
+  File: audit-agent/QUICKSTART.md
+    -> /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+  File: audit-agent/docs/COMMAND_CENTER_COMPLETE.md
+    -> /Users/eriksjaastad/projects/audit-agent/test.md
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> /Users/eriksjaastad/projects/audit-agent/scripts/install_git_warden.sh
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> /Users/eriksjaastad/projects/audit-agent/src/git_warden.py
+  File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+    -> /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+  File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+    -> /Users/eriksjaastad/projects/audit-agent/test.md
+  File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+    -> /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+  File: image-workflow/TODO.md
+    -> /Users/eriksjaastad/projects/image-workflow/sandbox/dashboard_test_$(date
+  File: image-workflow/data/projects/mojo3.project.json
+    -> /Users/eriksjaastad/projects/image-workflow/mojo3_final.zip
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_image-workflow_mojo3_progress.json
+    -> /Users/eriksjaastad/projects/image-workflow/mojo3
+  File: project-scaffolding/_cursorrules_backups/manifest.json
+    -> /Users/eriksjaastad/projects/project-scaffolding/_cursorrules_backups/2026-01-10T21-21-27/tax-organizer/.cursorrules
+  File: trading-copilot/Documents/guides/discord_webhook_setup.md
+    -> /Users/eriksjaastad/projects/trading-copilot\
+  File: trading-copilot/data/alpha_reports/10-1-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-10-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-13-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-14-2025 Alpha Report Ready.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-15-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-16-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-17-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-2-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-20-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-21-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-22-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-23-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-24-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-27-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-28-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-29-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-3-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-30-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-31-2025 Alpha Report (1).json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-31-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-6-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-7-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-8-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/10-9-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-10-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-11-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-12-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-13-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-14-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-17-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-18-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-3-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-4-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-5-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-6-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/11-7-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-08-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-09-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-10-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-11-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-12-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-15-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-16-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/12-17-2025 Alpha Report.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Append.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-19-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-20-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-21-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-24-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-25-202.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-26-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 11-28-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 12-1-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 12-2-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 12-4-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/data/alpha_reports/Alpha Report 12-5-2025.json
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-17-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-14-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/data/Alfa
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-2-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-13-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-09-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot\
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-16-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-15-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-13-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-8-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-6-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-5-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-18-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-11-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-24-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-17-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-08-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-3-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-28-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-12-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-29-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-23-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-7-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-20-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/Alpha
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-16-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-22-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-14-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-12-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-15-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-10-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-21-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-11-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-27-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-10-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-6-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-4-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-17-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-30-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-31-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-9-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-3-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-10-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-7-2025
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-1-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-21-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-11-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-27-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-6-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-9-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-3-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-10-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-7-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-17-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-14-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-2-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-13-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-09-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-16-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-29-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-23-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/Alpha
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-15-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-13-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-8-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-22-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-6-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-5-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-12-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-18-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-11-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-24-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-08-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-17-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-10-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-3-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-4-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-28-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-12-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-17-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-30-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-7-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-20-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-31-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/12-16-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/11-14-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-15-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-1-2025
+  File: trading-copilot/scripts/alpha_reports_state.json
+    -> /Users/eriksjaastad/projects/trading-copilot/scripts/alpha_reports/10-10-2025
+  File: trading-copilot/scripts/process_alpha_reports.md
+    -> /Users/eriksjaastad/projects/trading-copilot\
+
+
+[WARNING] Broken Markdown Link (28 found)
+    Checker: MarkdownLinks
+----------------------------------------
+  File: agent-skills-library/claude-skills/README.md
+    -> examples.md
+  File: agent-skills-library/claude-skills/README.md
+    -> reference.md
+  File: holoscape/ROADMAP.md
+    -> docs/IMPLEMENTATION_DIRECTIVES.md
+  File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+    -> ../Documents/PROJECT_MANIFEST_GUIDE.md
+  File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+    -> ./dashboard/README.md
+  File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+    -> ../Documents/SPEC_PROJECT_CLI.md
+  File: image-workflow/Documents/ai/AI_DOCUMENTS_INDEX.md
+    -> ../core/DEVELOPER_ONBOARDING.md
+  File: image-workflow/Documents/ai/AI_DOCUMENTS_INDEX.md
+    -> ../AI_PROJECT_IMPLEMENTATION_PLAN.md
+  File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+    -> AI_PROJECT_IMPLEMENTATION_PLAN.md
+  File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+    -> data/PROJECT_MANIFEST_GUIDE.md
+  File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+    -> ai/AI_TRAINING_GUIDE.md
+  File: image-workflow/Documents/video_creation/README.md
+    -> ./Three-Model%20Video%20Generation%20Shootout%20Plan.md
+  File: image-workflow/Documents/video_creation/README.md
+    -> ./Image-to-Video%20Generation%20-%20System%20Audit%20and%20Blueprint.md
+  File: project-scaffolding/Documents/PROJECT_STRUCTURE_STANDARDS.md
+    -> PROJECT_STRUCTURE_STANDARDS.md#documentation-structure
+  File: project-tracker/Documents/CODE_QUALITY_STANDARDS.md
+    -> reports/trustworthy_ai_report.md
+  File: project-tracker/Documents/README.md
+    -> planning/phase4_telemetry/PHASE4_PROMPTS_INDEX.md
+  File: smart-invoice-workflow/Documents/guides/SETUP.md
+    -> Automatic_Invoice_Collection_System_From_Scratch.md
+  File: smart-invoice-workflow/Documents/guides/SETUP.md
+    -> README.md
+  File: smart-invoice-workflow/README.md
+    -> QUICK_START.md
+  File: smart-invoice-workflow/README.md
+    -> Automatic_Invoice_Collection_System_From_Scratch.md
+  File: smart-invoice-workflow/README.md
+    -> GOOGLE_SHEET_TEMPLATE.md
+  File: smart-invoice-workflow/README.md
+    -> SETUP.md
+  File: solutions-architect/platform engineering and solutions architect.md
+    -> www.terraform.io
+  File: solutions-architect/platform engineering and solutions architect.md
+    -> www.pulumi.com
+  File: solutions-architect/platform engineering and solutions architect.md
+    -> backstage.io
+  File: trading-copilot/PROJECTS.md
+    -> MODEL_ARENA_ROADMAP.md
+  File: trading-copilot/PROJECTS.md
+    -> docs/reviews/
+  File: trading-copilot/PROJECT_PHILOSOPHY.md
+    -> MODEL_ARENA_ROADMAP.md
+
+
+[WARNING] Broken Shell Source (14 found)
+    Checker: ShellSources
+----------------------------------------
+  File: 3d-pose-factory/dashboard/run_tests.sh
+    -> venv/bin/activate
+  File: 3d-pose-factory/shared/scripts/setup_pod.sh
+    -> /workspace/.env
+  File: 3d-pose-factory/shared/scripts/setup_runpod_pod.sh
+    -> .venv/bin/activate
+  File: ai-usage-billing-tracker/scripts/download_cursor_with_cookies.sh
+    -> venv/bin/activate
+  File: analyze-youtube-videos/scripts/pre_review_scan.sh
+    -> --fast
+  File: automation-consulting/AI Consulting Discovery Toolkit/scripts/run_wizard.sh
+    -> venv/bin/activate
+  File: country-ai-futures-tracker/setup_expectations.sh
+    -> venv/bin/activate
+  File: holoscape/.husky/_/husky.sh
+    -> \
+  File: hypocrisynow/scripts/run_admin_ui.sh
+    -> venv/bin/activate
+  File: hypocrisynow/scripts/run_public_site.sh
+    -> venv/bin/activate
+  File: hypocrisynow/scripts/setup_env.sh
+    -> venv/bin/activate
+  File: image-workflow/scripts/ai/run_batch_predictions.sh
+    -> .venv311/bin/activate
+  File: project-tracker/scripts/pre_review_scan.sh
+    -> --fast
+  File: tax-organizer/scripts/pre_review_scan.sh
+    -> --fast
+
+
+[WARNING] Broken WikiLink (103 found)
+    Checker: WikiLinks
+----------------------------------------
+  File: AGENTS.md
+    -> memory:9061563
+  File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+    -> Project Name
+  File: _obsidian/DELIVERY_SUMMARY.md
+    -> page
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> audit-agent/docs/VIDEO_RESEARCH_OBSIDIAN_DEV
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> audit-agent
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> audit-agent/README
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> audit-agent/TODO
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> audit-agent/QUICKSTART
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> WARDEN_LOG
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> trading-copilot/PROJECT_PHILOSOPHY
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> project-scaffolding
+  File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+    -> _obsidian
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> Hologram
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> trading-copilot
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> project-scaffolding
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> Weekly_Vault_Summary_2025-W52
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> image-workflow
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> _obsidian
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> Daily_Vault_Pulse_2025-12-30
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> audit-agent
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> Meta/Code_Redundancies_and_Patterns
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> audit-agent/TODO
+  File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+    -> WARDEN_LOG
+  File: _obsidian/INDEX.md
+    -> Document Name
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_pose-rendering
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_actionable-ai-intel
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_character-creation
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_dashboard
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_cortana-personal-ai
+  File: _obsidian/Master_Tasks.md
+    -> 00_Index_documents
+  File: _obsidian/PROJECT_ECOSYSTEM_DASHBOARD.md
+    -> Tech-Stack-Matrix
+  File: _obsidian/PROJECT_ECOSYSTEM_DASHBOARD.md
+    -> Pattern-Analysis
+  File: _obsidian/Project_Health.md
+    -> 00_Index__obsidian
+  File: _obsidian/Project_Health.md
+    -> 00_Index_hologram
+  File: _obsidian/Project_Health.md
+    -> 00_Index__tools
+  File: _obsidian/Project_Health.md
+    -> 00_Index_cortana-personal-ai
+  File: _obsidian/Project_Health.md
+    -> 00_Index_Speech-to-text
+  File: _obsidian/Project_Health.md
+    -> 00_Index_ai-model-testing
+  File: _obsidian/README.md
+    -> wikilinks
+  File: _obsidian/TAG_INDEX.md
+    -> Tech-Stack-Matrix
+  File: _obsidian/TAG_INDEX.md
+    -> Pattern-Analysis
+  File: _obsidian/Warden_Dashboard.md
+    -> Meta/Code_Redundancies_and_Patterns
+  File: _obsidian/Warden_Dashboard.md
+    -> project-tracker/TODO
+  File: _obsidian/Warden_Dashboard.md
+    -> WARDEN_LOG
+  File: _obsidian/Warden_Dashboard.md
+    -> WARDEN_LOG.yaml
+  File: _obsidian/Warden_Dashboard.md
+    -> project-scaffolding/EXTERNAL_RESOURCES
+  File: _obsidian/Warden_Dashboard.md
+    -> audit-agent/README
+  File: _obsidian/Warden_Dashboard.md
+    -> audit-agent/TODO
+  File: _obsidian/Warden_Dashboard.md
+    -> audit-agent/QUICKSTART
+  File: _tools/ai_router/AGENTS.md
+    -> Project Philosophy
+  File: _tools/ollama-mcp/AGENTS.md
+    -> Project Philosophy
+  File: _tools/ollama-mcp/AGENTS.md
+    -> Documents/README
+  File: analyze-youtube-videos/00_Index_analyze-youtube-videos.md
+    -> analyze-youtube-videos
+  File: analyze-youtube-videos/library/00_Index_Library.md
+    -> Agentic Design Systems in 2026 with Brad Frost
+  File: analyze-youtube-videos/library/00_Index_Library.md
+    -> Claude Code's Creator Does This Before Every Single Project
+  File: analyze-youtube-videos/library/2025-10-21_Zen_van_Riel_The-Ultimate-Local-AI-Coding-Guide-For-2026.md
+    -> The Ultimate Local AI Coding Guide For 2026
+  File: analyze-youtube-videos/library/2025-12-03_AWS_Events_AWS-reInvent-2025-Building-Scalable-Self-Orchestra.md
+    -> AWS re:Invent 2025 - Building Scalable, Self-Orchestrating AI Workflows with A2A and MCP (DEV415)
+  File: analyze-youtube-videos/library/2025-12-11_chromatic_agentic-design-systems-in-2026-with-brad_vg78k3t9.md
+    -> Agentic Design Systems in 2026 with Brad Frost
+  File: analyze-youtube-videos/library/2025-12-16_Unsupervised_Learning_A-Deepdive-on-my-Personal-AI-Infrastructure-PAI-v2.md
+    -> A Deepdive on my Personal AI Infrastructure (PAI v2.0, December 2025)
+  File: analyze-youtube-videos/library/2026-01-03_Parker_Prompts_Give-me-9-Min-Become-Dangerously-Good-at-Gemini-30.md
+    -> Give me 9 Min, Become Dangerously Good at Gemini 3.0 Pro
+  File: analyze-youtube-videos/library/2026-01-05_Aniket_Panjwani_Claude-Code-Skills-vs-MCPs-Complete-Beginners-Guid.md
+    -> Claude Code Skills vs MCPs: Complete Beginner's Guide 2026
+  File: analyze-youtube-videos/library/2026-01-06_Aniket_Panjwani_The-Creator-of-Claude-Code-Shares-His-Exact-Setup.md
+    -> The Creator of Claude Code Shares His Exact Setup
+  File: analyze-youtube-videos/library/2026-01-07_Aniket_Panjwani_The-Only-Claude-Code-Skill-You-Need_MMpaPV3K.md
+    -> The Only Claude Code Skill You Need
+  File: analyze-youtube-videos/library/2026-01-09_ai-labs_claude-codes-creator-does-this-before-ev_b-uxpnek.md
+    -> Claude Code's Creator Does This Before Every Single Project
+  File: audit-agent/00_Index_audit-agent.md
+    -> Meta/Code_Redundancies_and_Patterns
+  File: audit-agent/00_Index_audit-agent.md
+    -> 00_Index__tools
+  File: audit-agent/00_Index_audit-agent.md
+    -> Code_Redundancies_and_Patterns
+  File: audit-agent/00_Index_audit-agent.md
+    -> project-scaffolding
+  File: audit-agent/TODO.md
+    -> Steipete Pattern
+  File: audit-agent/docs/ARCHITECTURE.md
+    -> project-scaffolding
+  File: audit-agent/docs/ARCHITECTURE.md
+    -> image-workflow
+  File: audit-agent/docs/ARCHITECTURE.md
+    -> trading-copilot
+  File: audit-agent/docs/ARCHITECTURE.md
+    -> Meta/Code_Redundancies_and_Patterns
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> audit-agent/README
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> audit-agent/QUICKSTART
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> WARDEN_LOG
+  File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+    -> "Merge (Append)"
+  File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+    -> "TikTok → Set (optional)"
+  File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+    -> "Instagram → Set"
+  File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+    -> "Reddit → Set"
+  File: image-workflow/cursor_global_rules_kit.md
+    -> $allowed -eq 0
+  File: image-workflow/prompts/README.md
+    -> file for review
+  File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+    -> Documents/core/IMAGE_STYLE_GUIDE
+  File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+    -> Documents/core/RECIPE_SCHEMA
+  File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+    -> Documents/core/ARCHITECTURAL_DECISIONS
+  File: muffinpanrecipes/AGENTS.md
+    -> Documents/core/RECIPE_SCHEMA
+  File: muffinpanrecipes/AGENTS.md
+    -> Documents/core/ARCHITECTURAL_DECISIONS
+  File: project-scaffolding/Documents/reference/PATTERN_ANALYSIS.md
+    -> deploy.cron
+  File: project-tracker/00_Index_project-tracker.md
+    -> project-tracker
+  File: project-tracker/AGENTS.md
+    -> Project Philosophy
+  File: project-tracker/AGENTS.md
+    -> Documents/reference/MODEL_LEARNINGS.md
+  File: project-tracker/AGENTS.md
+    -> Documents/reference/LEARNINGS.md
+  File: project-tracker/AGENTS.md
+    -> .cursorrules
+  File: project-tracker/AGENTS.md
+    -> Documents/REVIEWS_AND_GOVERNANCE_PROTOCOL
+  File: project-tracker/AGENTS.md
+    -> project-scaffolding
+  File: project-tracker/CLAUDE.md
+    -> project-scaffolding
+  File: project-tracker/QUICKSTART.md
+    -> project-tracker
+  File: project-tracker/README.md
+    -> project-tracker
+  File: project-tracker/README.md
+    -> audit-agent
+  File: project-tracker/TODO.md
+    -> project-tracker
+  File: project-tracker/USAGE.md
+    -> project-tracker
+  File: tax-organizer/AGENTS.md
+    -> Project Philosophy
+  File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+    -> services
+
+
+[WARNING] Dead Project Reference (42 found)
+    Checker: AbsolutePaths
+----------------------------------------
+  File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+    -> /Users/eriksjaastad/projects/BACKUP_SCHEDULE_UPDATE.md
+  File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+    -> /Users/eriksjaastad/projects/Meta/Code_Redundancies_and_Patterns.md
+  File: _tools/agent-hub/TODO.md
+    -> /Users/eriksjaastad/projects/hub
+  File: _tools/ai_router/scripts/project_namer_test.py
+    -> /Users/eriksjaastad/projects/{dir_name}
+  File: agent-skills-library/INTEGRATION_GUIDE.md
+    -> /Users/eriksjaastad/projects/my-project/
+  File: agent-skills-library/INTEGRATION_GUIDE.md
+    -> /Users/eriksjaastad/projects/my-project
+  File: ai-usage-billing-tracker/scripts/daily_ingest.sh
+    -> /Users/eriksjaastad/projects/AI\
+  File: audit-agent/docs/GIT_INTEGRATION.md
+    -> /Users/eriksjaastad/projects/YOUR_PROJECT/.git/hooks/post-commit
+  File: audit-agent/docs/PHASE_3_COMPLETE.md
+    -> /Users/eriksjaastad/projects/YOUR_PROJECT
+  File: automation-consulting/AI Consulting Discovery Toolkit/scripts/run_wizard.sh
+    -> /Users/eriksjaastad/projects/DiscoveryToolkit/scripts
+  File: image-workflow/Documents/dashboard/DASHBOARD_GUIDE.md
+    -> /Users/eriksjaastad/projects/Eros\
+  File: image-workflow/data/character_analysis.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/character_analysis_fixed.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/daily_summaries/audit_files_vs_db_mojo3_20251026_163816.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/daily_summaries/doc_cleanup_report_20251025.md
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/daily_summaries/image_counts_20251026_155013.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/daily_summaries/image_counts_20251026_155417.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/daily_summaries/orphan_decisions_20251026T202447Z.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251021/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251022/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251023/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251024/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251025/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251026/aggregate.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_crop_clustered_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_crop_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_mojo1_clustered_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_mojo2__asian_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_scripts_tests_data_test_subdirs_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_selected_hannah_hannah_02_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_selected_progress.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/training/anomaly_analysis_report.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/training/manifests/20251005.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/data/training/mojo1_extraction_report.json
+    -> /Users/eriksjaastad/projects/Eros
+  File: image-workflow/scripts/cleanup_logs.py
+    -> /Users/eriksjaastad/projects/Image\
+  File: image-workflow/scripts/tests/README_VISUAL_TESTS.md
+    -> /Users/eriksjaastad/projects/Eros\
+  File: image-workflow/scripts/tools/recover_from_cursor_history.py
+    -> /Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/current_project_dashboard.py
+  File: image-workflow/scripts/tools/recover_from_cursor_history.py
+    -> /Users/eriksjaastad/projects/Eros%20Mate/scripts/ai/training_utils_v3.py
+  File: image-workflow/scripts/tools/recover_from_cursor_history.py
+    -> /Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/templates/current_project.html
+  File: project-scaffolding/patterns/automation-reliability.md
+    -> /Users/eriksjaastad/projects/YOUR_PROJECT/venv/bin/python
+  File: project-scaffolding/patterns/automation-reliability.md
+    -> /Users/eriksjaastad/projects/YOUR_PROJECT/venv/bin/activate
+  File: trading-copilot/full_repo_context.txt
+    -> /Users/eriksjaastad/projects/agent-os
+

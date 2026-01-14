@@ -1,0 +1,115 @@
+SSH Agent running. Watching for new requests...
+[check_output_progress] runpod$ find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Cleared 464 bytes of pending output
+  Sending to shell: find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (33 bytes)
+  Exit status: 0
+[check_output_progress_v2] runpod$ find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Sending to shell: find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (184 bytes)
+  Exit status: 0
+[check_output_final] runpod$ find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Sending to shell: find /workspace/output/muffin_pan -name "*.png" | wc -l
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (184 bytes)
+  Exit status: 0
+[pull_direct_harvest] runpod$ rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Sending to shell: rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (305 bytes)
+  Exit status: 0
+[execute_direct_harvest] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (610 bytes)
+  Exit status: 1
+[pull_direct_harvest_v2] runpod$ rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Sending to shell: rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (305 bytes)
+  Exit status: 0
+[execute_direct_harvest_v2] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (6144 bytes)
+  Exit status: 0
+[pull_direct_harvest_v3] runpod$ rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Sending to shell: rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (305 bytes)
+  Exit status: 0
+[execute_direct_harvest_v3] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (7745 bytes)
+  Exit status: 0
+[pull_smart_direct_harvest] runpod$ rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Sending to shell: rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (305 bytes)
+  Exit status: 0
+[execute_funded_harvest] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (7409 bytes)
+  Exit status: 0
+[update_pod_env_funded] runpod$ printf "STABILITY_API_KEY=sk-LDwMTQteAeMDFJDDi65hiZ0C5cQS1JbNeL7lFlz4YZbUv1so\n" > /workspace/.env
+  Sending to shell: printf "STABILITY_API_KEY=sk-LDwMTQteAeMDFJDDi65hiZ0C5cQS1JbNeL7lFlz4YZbUv1so\n" > /workspace/.env
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (223 bytes)
+  Exit status: 0
+[install_dotenv] runpod$ pip3 install python-dotenv
+  Sending to shell: pip3 install python-dotenv
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (975 bytes)
+  Exit status: 0
+[pull_final_direct_harvest] runpod$ rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Sending to shell: rclone copy r2_pose_factory:pose-factory/muffin_pan/scripts/direct_harvest.py /workspace/
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (305 bytes)
+  Exit status: 0
+[execute_final_funded_harvest] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (7409 bytes)
+  Exit status: 0
+[execute_final_funded_harvest_v2] runpod$ python3 /workspace/direct_harvest.py
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ERROR: Timeout (idx==2)
+  Buffer: 
+[?2004h]0;root@181c44ca1385: /root@181c44ca1385:/# [K
+[?2004l[?2004h]0;root@181c44ca1385: /root@181c44ca1385:/# python3 /workspace/direct_harvest.py; printf "\n__AGENT_DONEE__$?__\n"
+[?
+[execute_final_funded_harvest_v3] runpod$ python3 /workspace/direct_harvest.py
+  Cleared 124 bytes of pending output
+  Sending to shell: python3 /workspace/direct_harvest.py
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (3671 bytes)
+  Exit status: 0
+[sync_harvest_to_r2] runpod$ rclone copy /workspace/output/muffin_pan/ r2_pose_factory:pose-factory/muffin_pan/output/ --progress
+  Cleared 653 bytes of pending output
+  Sending to shell: rclone copy /workspace/output/muffin_pan/ r2_pose_factory:pose-factory/muffin_pan/output/ --progress
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (1392 bytes)
+  Exit status: 0
+[sync_harvest_to_r2_retry] runpod$ rclone copy /workspace/output/muffin_pan/ r2_pose_factory:pose-factory/muffin_pan/output/ --progress
+  Cleared 677 bytes of pending output
+  Sending to shell: rclone copy /workspace/output/muffin_pan/ r2_pose_factory:pose-factory/muffin_pan/output/ --progress
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (35417 bytes)
+  Exit status: 0
+[cleanup_pod] runpod$ rm /workspace/direct_harvest.py /workspace/batch_generate_muffins.py /workspace/image_generation_jobs.json /workspace/.env
+  Cleared 705 bytes of pending output
+  Sending to shell: rm /workspace/direct_harvest.py /workspace/batch_generate_muffins.py /workspace/image_generation_jobs.json /workspace/.env
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (2731 bytes)
+  Exit status: 0
+[cleanup_pod_final] runpod$ rm /workspace/direct_harvest.py /workspace/batch_generate_muffins.py /workspace/image_generation_jobs.json /workspace/.env
+  Cleared 313 bytes of pending output
+  Sending to shell: rm /workspace/direct_harvest.py /workspace/batch_generate_muffins.py /workspace/image_generation_jobs.json /workspace/.env
+  Waiting for sentinel (timeout=60s)...
+  ✅ Got output (558 bytes)
+  Exit status: 1

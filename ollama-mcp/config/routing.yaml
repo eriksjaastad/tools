@@ -1,0 +1,25 @@
+default_model: qwen3:14b
+fallback_chains:
+  classification:
+    - llama3.2:3b
+    - qwen3:14b
+  extraction:
+    - llama3.2:3b
+    - qwen3:14b
+  code:
+    - qwen3:14b
+    - deepseek-r1:14b
+  reasoning:
+    - deepseek-r1:14b
+    - qwen3:14b
+  file_mod:
+    - qwen3:14b
+    - deepseek-r1:14b
+  auto:
+    - qwen3:14b
+    - deepseek-r1:14b
+    - llama3.2:3b
+telemetry_review:
+  last_review: '2026-01-11'
+  review_interval_days: 30
+  min_runs_before_review: 50

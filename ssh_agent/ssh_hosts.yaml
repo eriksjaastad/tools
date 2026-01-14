@@ -1,0 +1,9 @@
+hosts:
+  runpod:
+    # RunPod format: POD_ID@ssh.runpod.io
+    # Read POD_ID from .pod_id file at runtime
+    hostname: ssh.runpod.io
+    username: null  # Will be set from .pod_id
+    key_path: ~/.ssh/id_ed25519
+    port: 22
+    method: cli_persistent  # Maintain persistent interactive shell (RunPod only supports interactive SSH)

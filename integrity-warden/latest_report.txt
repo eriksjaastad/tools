@@ -1,0 +1,1442 @@
+🛡️ Integrity Warden: Scanning /Users/eriksjaastad/projects
+Detecting broken links, dead project references, and cross-project path issues...
+Excluding safe zones (Journal, Cortana, Trash)...
+
+❌ Found 374 unique integrity issues:
+
+--- Broken Internal Path ---
+File: 3d-pose-factory/spec.md
+  - Target: /Users/eriksjaastad/projects/_tools/ssh_agent/queue`
+    Context: ...ap_pod.py:26-27` | `/Users/eriksjaastad/projects/_tools/ssh_agent/queue` | **HARDCODED USER ...
+File: 3d-pose-factory/spec.md
+  - Target: /Users/eriksjaastad/projects/_tools/ssh_agent/queue/`
+    Context: ...ICKSTART.md` | 9 | `/Users/eriksjaastad/projects/_tools/ssh_agent/queue/` |
+| `PIPELINE_OVERV...
+File: holoscape/Documents/core/SOCIAL_MEDIA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...e!)
+
+**Location:** `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+
+### Option A: Test...
+File: holoscape/agents/social-media/NEXT_SESSION.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...g)  
+**Location:** `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+
+---
+
+## 🚨 START HE...
+File: holoscape/prompts/phase-2-week5-6-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/`
+
+---
+
+## Step 1: In...
+File: holoscape/prompts/phase-3-week11-12-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/`
+
+---
+
+## Step 1: Cr...
+File: holoscape/prompts/phase-3-week7-8-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/`
+
+---
+
+## Step 1: Ex...
+File: holoscape/prompts/phase-3-week9-10-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/`
+
+---
+
+## Step 1: Cr...
+File: holoscape/prompts/social-media-phase1-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...te a new folder at `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+- **It runs indepen...
+File: holoscape/prompts/social-media-phase2-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...l work happens in: `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+
+---
+
+## Step 1: In...
+File: holoscape/prompts/social-media-phase3-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+
+---
+
+## Step 1: Cr...
+File: holoscape/prompts/social-media-phase4-prompt.md
+  - Target: /Users/eriksjaastad/projects/holoscape/agents/social-media/`
+    Context: ...tion
+
+All work in: `/Users/eriksjaastad/projects/holoscape/agents/social-media/`
+
+---
+
+## Step 1: Cr...
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/hypocrisynow`
+    Context: ...### Hypocrisy Now (`/Users/eriksjaastad/projects/hypocrisynow`)
+- RSS ingestion in...
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/ai-journal`
+    Context: ...)
+
+### AI Journal (`/Users/eriksjaastad/projects/ai-journal`)
+- Document learnin...
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/image-workflow`
+    Context: ...ference Project:** `/Users/eriksjaastad/projects/image-workflow`
+> 
+> This project i...
+File: trading-copilot/PROJECTS.md
+  - Target: /Users/eriksjaastad/projects/hypocrisynow`
+    Context: ...**Hypocrisy Now** (`/Users/eriksjaastad/projects/hypocrisynow`) - News analysis (s...
+File: trading-copilot/PROJECTS.md
+  - Target: /Users/eriksjaastad/projects/ai-journal`
+    Context: ...
+- **AI Journal** (`/Users/eriksjaastad/projects/ai-journal`) - Session document...
+File: trading-copilot/PROJECT_PHILOSOPHY.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/PROJECT_PHILOSOPHY.md`](../project-scaffolding/PROJECT_PHILOSOPHY.md
+    Context: ... Philosophy
+
+See: [`/Users/eriksjaastad/projects/project-scaffolding/PROJECT_PHILOSOPHY.md`](../project-scaffolding/PROJECT_PHILOSOPHY.md)
+
+This document cov...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/hypocrisynow`
+    Context: ...### Hypocrisy Now (`/Users/eriksjaastad/projects/hypocrisynow`)
+- RSS ingestion in...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/ai-journal`
+    Context: ...)
+
+### AI Journal (`/Users/eriksjaastad/projects/ai-journal`)
+- Document learnin...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/image-workflow`
+    Context: ...ference Project:** `/Users/eriksjaastad/projects/image-workflow`
+> 
+> This project i...
+File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+  - Target: /Users/eriksjaastad/projects/image-workflow/scripts/backup/incremental_backup.py`
+    Context: ...w Files Created
+1. `/Users/eriksjaastad/projects/image-workflow/scripts/backup/incremental_backup.py`
+   - Smart incremen...
+File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+  - Target: /Users/eriksjaastad/projects/image-workflow/scripts/backup/analyze_backups.py`
+    Context: ...duplication
+   
+2. `/Users/eriksjaastad/projects/image-workflow/scripts/backup/analyze_backups.py`
+   - Backup analysi...
+File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+  - Target: /Users/eriksjaastad/projects/image-workflow/Documents/INCREMENTAL_BACKUP_GUIDE.md`
+    Context: ...leanup tool
+   
+3. `/Users/eriksjaastad/projects/image-workflow/Documents/INCREMENTAL_BACKUP_GUIDE.md`
+   - Complete usage...
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/templates/.cursorrules-template`
+    Context: .... ✅ **Template** - `/Users/eriksjaastad/projects/project-scaffolding/templates/.cursorrules-template`
+
+### `.cursorignore...
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/patterns/cursor-configuration.md`
+    Context: ...on
+- **Location:** `/Users/eriksjaastad/projects/project-scaffolding/patterns/cursor-configuration.md`
+- **Template:** `/U...
+File: _obsidian/DELIVERY_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/`
+    Context: ...oss-reference with `/Users/eriksjaastad/projects/project-scaffolding/` for:
+- Pattern extr...
+File: _obsidian/DELIVERY_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/ai-journal/`
+    Context: ...ttern extraction
+- `/Users/eriksjaastad/projects/ai-journal/` - Learning journal
+...
+File: _obsidian/DELIVERY_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/project-tracker/`
+    Context: ...Learning journal
+- `/Users/eriksjaastad/projects/project-tracker/` - Status monitoring...
+File: _obsidian/DELIVERY_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/_tools/`
+    Context: ...tatus monitoring
+- `/Users/eriksjaastad/projects/_tools/` - Shared utilities
+...
+File: _obsidian/INDEX.md
+  - Target: /Users/eriksjaastad/projects/_obsidian/`
+    Context: ...vault location to: `/Users/eriksjaastad/projects/_obsidian/`
+2. Open: README.md ...
+File: _obsidian/INDEX.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/`
+    Context: ... This Repository
+- `/Users/eriksjaastad/projects/project-scaffolding/` - Pattern extractio...
+File: _obsidian/INDEX.md
+  - Target: /Users/eriksjaastad/projects/ai-journal/`
+    Context: ...ttern extraction
+- `/Users/eriksjaastad/projects/ai-journal/` - Learning journal
+...
+File: _obsidian/INDEX.md
+  - Target: /Users/eriksjaastad/projects/project-tracker/`
+    Context: ...Learning journal
+- `/Users/eriksjaastad/projects/project-tracker/` - Status monitoring...
+File: _obsidian/INDEX.md
+  - Target: /Users/eriksjaastad/projects/_tools/`
+    Context: ...tatus monitoring
+- `/Users/eriksjaastad/projects/_tools/` - Shared utilities
+...
+File: _obsidian/QUICK_START.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/EXTERNAL_RESOURCES.md`
+    Context: ...g costs:**
+→ Check `/Users/eriksjaastad/projects/project-scaffolding/EXTERNAL_RESOURCES.md`
+
+#### If you're **l...
+File: _obsidian/README.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/EXTERNAL_RESOURCES.md`
+    Context: ... tracking?** → See `/Users/eriksjaastad/projects/project-scaffolding/EXTERNAL_RESOURCES.md`
+
+---
+
+## 📄 Core Doc...
+File: _obsidian/README.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/`
+    Context: ...### In This Repo
+- `/Users/eriksjaastad/projects/project-scaffolding/` - Pattern extractio...
+File: _obsidian/README.md
+  - Target: /Users/eriksjaastad/projects/ai-journal/`
+    Context: ...ttern extraction
+- `/Users/eriksjaastad/projects/ai-journal/` - Learning journal
+...
+File: _obsidian/README.md
+  - Target: /Users/eriksjaastad/projects/project-tracker/`
+    Context: ...Learning journal
+- `/Users/eriksjaastad/projects/project-tracker/` - Status monitoring...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/audit-agent/test_yaml_log.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/audit-agent/test_yaml_log.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/2025-12-31T22-00-00Z__claudeCode__brutal-code-review-silent-failures-and-memory.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/2025-12-31T22-00-00Z__claudeCode__brutal-code-review-silent-failures-and-memory.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/CODE_REVIEW.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/CODE_REVIEW.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/CODE_REVIEW_REQUEST.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/CODE_REVIEW_REQUEST.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/COMPLETION_SUMMARY.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/COMPLETION_SUMMARY.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/DISCUSSION_SUMMARY_2025-12-30.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/DISCUSSION_SUMMARY_2025-12-30.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/HANDOFF_SERVICES_ISSUE.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/HANDOFF_SERVICES_ISSUE.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/IMPLEMENTATION_HANDOFF.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/IMPLEMENTATION_HANDOFF.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/project-tracker/pytest-cache-files-cu2nu74j/README.md
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/project-tracker/pytest-cache-files-cu2nu74j/README.md'''
+- timestamp: '20...
+File: _obsidian/WARDEN_LOG.yaml
+  - Target: /Users/eriksjaastad/projects/audit-agent/debug_script.py
+    Context: ...ile or directory: ''/Users/eriksjaastad/projects/audit-agent/debug_script.py'''
+- timestamp: '20...
+File: _tools/ollama-mcp/Documents/core/OPERATIONS_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+    Context: ... **Command:** `node /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+
+## Telemetry & Mai...
+File: _tools/ollama-mcp/Documents/guides/SETUP_CHECKLIST.md
+  - Target: /Users/eriksjaastad/projects/_tools/ollama-mcp`
+    Context: ...ject scaffolded in `/Users/eriksjaastad/projects/_tools/ollama-mcp`
+- [x] Dependencies ...
+File: _tools/ollama-mcp/Documents/guides/SETUP_CHECKLIST.md
+  - Target: /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+    Context: ... `node`
+   - Args: `/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+
+**Option B: Manual...
+File: agent-skills-library/INTEGRATION_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/templates/.cursorrules.template
+    Context: ...# In new project
+cp /Users/eriksjaastad/projects/project-scaffolding/templates/.cursorrules.template .cursorrules
+
+# Tem...
+File: agent-skills-library/claude-skills/ai-router-delegation/SKILL.md
+  - Target: /Users/eriksjaastad/projects/agent-skills-library/playbooks/ai-router-delegation/README.md`
+    Context: ...Follow Playbook:** `/Users/eriksjaastad/projects/agent-skills-library/playbooks/ai-router-delegation/README.md`
+
+## When to Apply
+W...
+File: agent-skills-library/claude-skills/youtube-channel-analysis/SKILL.md
+  - Target: /Users/eriksjaastad/projects/agent-skills-library/playbooks/youtube-channel-analysis/README.md`
+    Context: ...al instructions:** `/Users/eriksjaastad/projects/agent-skills-library/playbooks/youtube-channel-analysis/README.md`
+
+---
+
+## When to Ac...
+File: agent-skills-library/cursor-rules/ai-router-delegation/RULE.md
+  - Target: /Users/eriksjaastad/projects/agent-skills-library/playbooks/ai-router-delegation/README.md`
+    Context: ... full playbook at:
+`/Users/eriksjaastad/projects/agent-skills-library/playbooks/ai-router-delegation/README.md`
+
+## 📋 Core Rules
+1....
+File: agent-skills-library/cursor-rules/youtube-channel-analysis/RULE.md
+  - Target: /Users/eriksjaastad/projects/agent-skills-library/playbooks/youtube-channel-analysis/README.md`
+    Context: ...aybook location:** `/Users/eriksjaastad/projects/agent-skills-library/playbooks/youtube-channel-analysis/README.md`
+
+---
+
+## How to Use...
+File: audit-agent/DEPLOYMENT_READY.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/test.md
+    Context: ..."# Test Document" > /Users/eriksjaastad/projects/audit-agent/test.md
+
+# Watch the logs (...
+File: audit-agent/DEPLOYMENT_READY.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+    Context: ..."# Test comment" >> /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+
+# Expected output:...
+File: audit-agent/DEPLOYMENT_READY.md
+  - Target: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+    Context: ... the Warden log
+cat /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+
+# Should show rece...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+    Context: ...bsidian
+Warden Log: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+Ignored dirs: .git,...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/start_warden.sh
+    Context: ...**
+```bash
+chmod +x /Users/eriksjaastad/projects/audit-agent/start_warden.sh
+```
+
+### Warden Not...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/test.md
+    Context: ...ile
+echo "# Test" > /Users/eriksjaastad/projects/audit-agent/test.md
+
+# Check logs
+tail ...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/start_warden.sh</string
+    Context: ...ay>
+        <string>/Users/eriksjaastad/projects/audit-agent/start_warden.sh</string>
+    </array>
+    <...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/logs/stdout.log</string
+    Context: ...h</key>
+    <string>/Users/eriksjaastad/projects/audit-agent/logs/stdout.log</string>
+    <key>StandardE...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/logs/stderr.log</string
+    Context: ...h</key>
+    <string>/Users/eriksjaastad/projects/audit-agent/logs/stderr.log</string>
+</dict>
+</plist>
+`...
+File: audit-agent/docs/COMMAND_CENTER_COMPLETE.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/test.md
+    Context: ...
+   echo "# Test" > /Users/eriksjaastad/projects/audit-agent/test.md
+   
+   # Watch the ...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/scripts/install_git_warden.sh
+    Context: ...ct folder:
+
+```bash
+/Users/eriksjaastad/projects/audit-agent/scripts/install_git_warden.sh
+```
+
+**What it does...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/src/git_warden.py`
+    Context: ...
+- **Git Warden:** `/Users/eriksjaastad/projects/audit-agent/src/git_warden.py`
+- **Post-Commit Hoo...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/.git/hooks/post-commit`
+    Context: ...ost-Commit Hook:** `/Users/eriksjaastad/projects/audit-agent/.git/hooks/post-commit`
+
+### Logs
+- **Activ...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/logs/git_warden_activity.log`
+    Context: ... **Activity Log:** `/Users/eriksjaastad/projects/audit-agent/logs/git_warden_activity.log`
+- **Warden Log:** `...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md`
+    Context: ...
+- **Warden Log:** `/Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md`
+
+### Documentation
+...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/docs/GIT_INTEGRATION.md`
+    Context: ...
+- **This Guide:** `/Users/eriksjaastad/projects/audit-agent/docs/GIT_INTEGRATION.md`
+- **Architecture:**...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/docs/ARCHITECTURE.md`
+    Context: ... **Architecture:** `/Users/eriksjaastad/projects/audit-agent/docs/ARCHITECTURE.md`
+
+---
+
+## 🎓 How It's...
+File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+    Context: ...bsidian
+Warden Log: /Users/eriksjaastad/projects/_obsidian/WARDEN_LOG.md
+Ignored dirs: .git,...
+File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/test.md
+    Context: ...ile
+echo "# Test" > /Users/eriksjaastad/projects/audit-agent/test.md
+
+# Check logs
+tail ...
+File: audit-agent/docs/IMPLEMENTATION_SUMMARY.md
+  - Target: /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+    Context: ..."# Test comment" >> /Users/eriksjaastad/projects/audit-agent/src/vault_warden.py
+
+# Check logs
+tail ...
+File: hypocrisynow/MERGE_COMPLETE.md
+  - Target: /Users/eriksjaastad/projects/hypocrisynow/`
+    Context: ...nified location:** `/Users/eriksjaastad/projects/hypocrisynow/`
+
+---
+
+## What Was D...
+File: image-workflow/Documents/INCREMENTAL_BACKUP_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/image-workflow/scripts/backup/setup_cron_backup.sh`
+    Context: ...le backups)
+
+Edit: `/Users/eriksjaastad/projects/image-workflow/scripts/backup/setup_cron_backup.sh`
+
+Change the backup ...
+File: image-workflow/TODO.md
+  - Target: /Users/eriksjaastad/projects/image-workflow/sandbox/dashboard_test_$(date
+    Context: ...board.py 2>&1 | tee /Users/eriksjaastad/projects/image-workflow/sandbox/dashboard_test_$(date -u +%Y%m%dT%H%M%SZ)...
+File: image-workflow/data/projects/mojo3.project.json
+  - Target: /Users/eriksjaastad/projects/image-workflow/mojo3_final.zip
+    Context: ...r": {
+      "zip": "/Users/eriksjaastad/projects/image-workflow/mojo3_final.zip",
+      "eligibleCo...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_image-workflow_mojo3_progress.json
+  - Target: /Users/eriksjaastad/projects/image-workflow/mojo3
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/image-workflow/mojo3",
+  "session_start"...
+File: project-scaffolding/_cursorrules_backups/manifest.json
+  - Target: /Users/eriksjaastad/projects/project-scaffolding/_cursorrules_backups/2026-01-10T21-21-27/Tax
+    Context: ...
+        "backup": "/Users/eriksjaastad/projects/project-scaffolding/_cursorrules_backups/2026-01-10T21-21-27/tax-organizer/.cursorr...
+
+--- Broken Markdown Link ---
+File: holoscape/ROADMAP.md
+  - Target: docs/IMPLEMENTATION_DIRECTIVES.md
+File: smart-invoice-workflow/Documents/guides/SETUP.md
+  - Target: README.md
+File: smart-invoice-workflow/Documents/guides/SETUP.md
+  - Target: Automatic_Invoice_Collection_System_From_Scratch.md
+File: smart-invoice-workflow/README.md
+  - Target: QUICK_START.md
+File: smart-invoice-workflow/README.md
+  - Target: SETUP.md
+File: smart-invoice-workflow/README.md
+  - Target: GOOGLE_SHEET_TEMPLATE.md
+File: smart-invoice-workflow/README.md
+  - Target: Automatic_Invoice_Collection_System_From_Scratch.md
+File: solutions-architect/platform engineering and solutions architect.md
+  - Target: www.terraform.io
+File: solutions-architect/platform engineering and solutions architect.md
+  - Target: www.pulumi.com
+File: solutions-architect/platform engineering and solutions architect.md
+  - Target: backstage.io
+File: trading-copilot/PROJECTS.md
+  - Target: MODEL_ARENA_ROADMAP.md
+File: trading-copilot/PROJECTS.md
+  - Target: docs/reviews/
+File: trading-copilot/PROJECT_PHILOSOPHY.md
+  - Target: MODEL_ARENA_ROADMAP.md
+File: agent-skills-library/claude-skills/README.md
+  - Target: reference.md
+File: agent-skills-library/claude-skills/README.md
+  - Target: examples.md
+File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+  - Target: ../Documents/PROJECT_MANIFEST_GUIDE.md
+File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+  - Target: ../Documents/SPEC_PROJECT_CLI.md
+File: image-workflow/Documents/PROJECT_LIFECYCLE_SCRIPTS.md
+  - Target: ./dashboard/README.md
+File: image-workflow/Documents/ai/AI_DOCUMENTS_INDEX.md
+  - Target: ../core/DEVELOPER_ONBOARDING.md
+File: image-workflow/Documents/ai/AI_DOCUMENTS_INDEX.md
+  - Target: ../AI_PROJECT_IMPLEMENTATION_PLAN.md
+File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+  - Target: ai/AI_TRAINING_GUIDE.md
+File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+  - Target: AI_PROJECT_IMPLEMENTATION_PLAN.md
+File: image-workflow/Documents/ai/AI_TRAINING_DATA_STRUCTURE.md
+  - Target: data/PROJECT_MANIFEST_GUIDE.md
+File: image-workflow/Documents/video_creation/README.md
+  - Target: ./Image-to-Video%20Generation%20-%20System%20Audit%20and%20Blueprint.md
+File: image-workflow/Documents/video_creation/README.md
+  - Target: ./Three-Model%20Video%20Generation%20Shootout%20Plan.md
+File: project-scaffolding/Documents/PROJECT_STRUCTURE_STANDARDS.md
+  - Target: PROJECT_STRUCTURE_STANDARDS.md#documentation-structure
+File: project-tracker/Documents/CODE_QUALITY_STANDARDS.md
+  - Target: reports/trustworthy_ai_report.md
+File: project-tracker/Documents/README.md
+  - Target: planning/phase4_telemetry/PHASE4_PROMPTS_INDEX.md
+
+--- Broken Relative Cross-Ref ---
+File: trading-copilot/PROJECT_PHILOSOPHY.md
+  - Target: ../project-scaffolding/PROJECT_PHILOSOPHY.md)
+    Context: ...roject-scaffolding](../project-scaffolding/PROJECT_PHILOSOPHY.md) meta-project.
+
+This...
+File: image-workflow/scripts/ai/train_ranker_v3.py
+  - Target: ../image-workflow/mojo2/_mixed/file.png
+    Context: ...paths like: /Users/.../image-workflow/mojo2/_mixed/file.png
+    """
+    p = Pat...
+File: project-scaffolding/Documents/CODE_QUALITY_STANDARDS.md
+  - Target: ../agent-skills-library
+    Context: ...SKILLS_LIBRARY_PATH=../agent-skills-library`).
+2. Include a `ch...
+File: project-tracker/Documents/CODE_QUALITY_STANDARDS.md
+  - Target: ../agent-skills-library
+    Context: ...SKILLS_LIBRARY_PATH=../agent-skills-library`).
+2. Include a `ch...
+File: project-tracker/Documents/CODE_REVIEW_PHASE4_TELEMETRY.md
+  - Target: ../_tools/ai_router/logs/telemetry.jsonl
+    Context: ...tion
+TELEMETRY_PATH=../_tools/ai_router/logs/telemetry.jsonl
+
+# Cron Health Moni...
+File: project-tracker/Documents/CODE_REVIEW_PHASE4_TELEMETRY.md
+  - Target: ../trading-copilot/logs/arena.log
+    Context: ...ng
+CRON_TRADING_LOG=../trading-copilot/logs/arena.log
+CRON_CORTANA_LOG=.....
+File: project-tracker/Documents/CODE_REVIEW_PHASE4_TELEMETRY.md
+  - Target: ../cortana-personal-ai/logs/daily.log
+    Context: ...og
+CRON_CORTANA_LOG=../cortana-personal-ai/logs/daily.log
+```
+
+### Rule #6: U...
+File: project-tracker/Documents/INTEGRATION_WITH_SCAFFOLDING.md
+  - Target: ../project-scaffolding/EXTERNAL_RESOURCES.md
+    Context: ...""
+    path = Path("../project-scaffolding/EXTERNAL_RESOURCES.md")
+    resources = p...
+File: project-tracker/Documents/README.md
+  - Target: ../project-scaffolding/AGENTS.md)**
+    Context: ...
+- **[AGENTS.md](../../project-scaffolding/AGENTS.md)** — Ecosystem Constit...
+File: project-tracker/Documents/README.md
+  - Target: ../project-scaffolding/patterns/)**
+    Context: ...
+- **[patterns/](../../project-scaffolding/patterns/)** — Proven patterns l...
+File: project-tracker/Documents/README.md
+  - Target: ../project-scaffolding/Documents/CODE_QUALITY_STANDARDS.md)**
+    Context: ...TY_STANDARDS.md](../../project-scaffolding/Documents/CODE_QUALITY_STANDARDS.md)** — 4 critical rules
+...
+File: project-tracker/Documents/README.md
+  - Target: ../project-scaffolding/)
+    Context: ...ect-scaffolding](../../project-scaffolding/) Flat Root documenta...
+File: project-tracker/README.md
+  - Target: ../audit-agent/`
+    Context: ...all by building in `../audit-agent/`
+  - Ensure the `aud...
+
+--- Broken WikiLink ---
+File: AGENTS.md
+  - Target: memory:9061563
+File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+  - Target: "Reddit → Set"
+File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+  - Target: "Instagram → Set"
+File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+  - Target: "TikTok → Set (optional)"
+File: automation-consulting/n8n/n8n_social_to_sheets_slack_blueprint.md
+  - Target: "Merge (Append)"
+File: tax-organizer/AGENTS.md
+  - Target: Project Philosophy
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: services
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: Project Name
+File: _obsidian/DELIVERY_SUMMARY.md
+  - Target: page
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: audit-agent
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: project-scaffolding
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: _obsidian
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: audit-agent/TODO
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: audit-agent/docs/VIDEO_RESEARCH_OBSIDIAN_DEV
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: WARDEN_LOG
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: audit-agent/README
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: audit-agent/QUICKSTART
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: trading-copilot/PROJECT_PHILOSOPHY
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: trading-copilot
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: image-workflow
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: Hologram
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: audit-agent
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: project-scaffolding
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: _obsidian
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: Meta/Code_Redundancies_and_Patterns
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: WARDEN_LOG
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: audit-agent/TODO
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: Daily_Vault_Pulse_2025-12-30
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: Weekly_Vault_Summary_2025-W52
+File: _obsidian/INDEX.md
+  - Target: Document Name
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_3d-pose-factory
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_character-creation
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_dashboard
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_pose-rendering
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_ai-usage-billing-tracker
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_documents
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_cortana-personal-ai
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_country-ai-futures-tracker
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_tax-organizer
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_trading-copilot
+File: _obsidian/Master_Tasks.md
+  - Target: 00_Index_actionable-ai-intel
+File: _obsidian/PROJECT_ECOSYSTEM_DASHBOARD.md
+  - Target: Tech-Stack-Matrix
+File: _obsidian/PROJECT_ECOSYSTEM_DASHBOARD.md
+  - Target: Pattern-Analysis
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_Speech-to-text
+File: _obsidian/Project_Health.md
+  - Target: 00_Index__tools
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_hologram
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_trading-copilot
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_country-ai-futures-tracker
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_cortana-personal-ai
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_ai-model-testing
+File: _obsidian/Project_Health.md
+  - Target: 00_Index_solutions-architect
+File: _obsidian/Project_Health.md
+  - Target: 00_Index__obsidian
+File: _obsidian/README.md
+  - Target: wikilinks
+File: _obsidian/TAG_INDEX.md
+  - Target: Tech-Stack-Matrix
+File: _obsidian/TAG_INDEX.md
+  - Target: Pattern-Analysis
+File: _obsidian/Warden_Dashboard.md
+  - Target: WARDEN_LOG.yaml
+File: _obsidian/Warden_Dashboard.md
+  - Target: audit-agent/TODO
+File: _obsidian/Warden_Dashboard.md
+  - Target: audit-agent/README
+File: _obsidian/Warden_Dashboard.md
+  - Target: audit-agent/QUICKSTART
+File: _obsidian/Warden_Dashboard.md
+  - Target: Meta/Code_Redundancies_and_Patterns
+File: _obsidian/Warden_Dashboard.md
+  - Target: project-scaffolding/EXTERNAL_RESOURCES
+File: _obsidian/Warden_Dashboard.md
+  - Target: project-tracker/TODO
+File: _obsidian/Warden_Dashboard.md
+  - Target: WARDEN_LOG
+File: _tools/ai_router/AGENTS.md
+  - Target: Project Philosophy
+File: _tools/ollama-mcp/AGENTS.md
+  - Target: Project Philosophy
+File: _tools/ollama-mcp/AGENTS.md
+  - Target: Documents/README
+File: analyze-youtube-videos/00_Index_analyze-youtube-videos.md
+  - Target: analyze-youtube-videos
+File: analyze-youtube-videos/library/00_Index_Library.md
+  - Target: Claude Code's Creator Does This Before Every Single Project
+File: analyze-youtube-videos/library/00_Index_Library.md
+  - Target: Agentic Design Systems in 2026 with Brad Frost
+File: analyze-youtube-videos/library/2025-10-21_Zen_van_Riel_The-Ultimate-Local-AI-Coding-Guide-For-2026.md
+  - Target: The Ultimate Local AI Coding Guide For 2026
+File: analyze-youtube-videos/library/2025-12-03_AWS_Events_AWS-reInvent-2025-Building-Scalable-Self-Orchestra.md
+  - Target: AWS re:Invent 2025 - Building Scalable, Self-Orchestrating AI Workflows with A2A and MCP (DEV415)
+File: analyze-youtube-videos/library/2025-12-11_chromatic_agentic-design-systems-in-2026-with-brad_vg78k3t9.md
+  - Target: Agentic Design Systems in 2026 with Brad Frost
+File: analyze-youtube-videos/library/2025-12-16_Unsupervised_Learning_A-Deepdive-on-my-Personal-AI-Infrastructure-PAI-v2.md
+  - Target: A Deepdive on my Personal AI Infrastructure (PAI v2.0, December 2025)
+File: analyze-youtube-videos/library/2026-01-03_Parker_Prompts_Give-me-9-Min-Become-Dangerously-Good-at-Gemini-30.md
+  - Target: Give me 9 Min, Become Dangerously Good at Gemini 3.0 Pro
+File: analyze-youtube-videos/library/2026-01-05_Aniket_Panjwani_Claude-Code-Skills-vs-MCPs-Complete-Beginners-Guid.md
+  - Target: Claude Code Skills vs MCPs: Complete Beginner's Guide 2026
+File: analyze-youtube-videos/library/2026-01-06_Aniket_Panjwani_The-Creator-of-Claude-Code-Shares-His-Exact-Setup.md
+  - Target: The Creator of Claude Code Shares His Exact Setup
+File: analyze-youtube-videos/library/2026-01-07_Aniket_Panjwani_The-Only-Claude-Code-Skill-You-Need_MMpaPV3K.md
+  - Target: The Only Claude Code Skill You Need
+File: analyze-youtube-videos/library/2026-01-09_ai-labs_claude-codes-creator-does-this-before-ev_b-uxpnek.md
+  - Target: Claude Code's Creator Does This Before Every Single Project
+File: audit-agent/00_Index_audit-agent.md
+  - Target: Code_Redundancies_and_Patterns
+File: audit-agent/00_Index_audit-agent.md
+  - Target: project-scaffolding
+File: audit-agent/00_Index_audit-agent.md
+  - Target: Meta/Code_Redundancies_and_Patterns
+File: audit-agent/00_Index_audit-agent.md
+  - Target: 00_Index__tools
+File: audit-agent/TODO.md
+  - Target: Steipete Pattern
+File: audit-agent/docs/ARCHITECTURE.md
+  - Target: Meta/Code_Redundancies_and_Patterns
+File: audit-agent/docs/ARCHITECTURE.md
+  - Target: image-workflow
+File: audit-agent/docs/ARCHITECTURE.md
+  - Target: trading-copilot
+File: audit-agent/docs/ARCHITECTURE.md
+  - Target: project-scaffolding
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: WARDEN_LOG
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: audit-agent/README
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: audit-agent/QUICKSTART
+File: image-workflow/cursor_global_rules_kit.md
+  - Target: $allowed -eq 0
+File: image-workflow/prompts/README.md
+  - Target: file for review
+File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+  - Target: Documents/core/ARCHITECTURAL_DECISIONS
+File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+  - Target: Documents/core/RECIPE_SCHEMA
+File: muffinpanrecipes/00_Index_MuffinPanRecipes.md
+  - Target: Documents/core/IMAGE_STYLE_GUIDE
+File: muffinpanrecipes/AGENTS.md
+  - Target: Documents/core/RECIPE_SCHEMA
+File: muffinpanrecipes/AGENTS.md
+  - Target: Documents/core/ARCHITECTURAL_DECISIONS
+File: project-scaffolding/Documents/reference/PATTERN_ANALYSIS.md
+  - Target: deploy.cron
+File: project-tracker/00_Index_project-tracker.md
+  - Target: project-tracker
+File: project-tracker/AGENTS.md
+  - Target: Documents/REVIEWS_AND_GOVERNANCE_PROTOCOL
+File: project-tracker/AGENTS.md
+  - Target: .cursorrules
+File: project-tracker/AGENTS.md
+  - Target: Documents/reference/LEARNINGS.md
+File: project-tracker/AGENTS.md
+  - Target: Documents/reference/MODEL_LEARNINGS.md
+File: project-tracker/AGENTS.md
+  - Target: Project Philosophy
+File: project-tracker/AGENTS.md
+  - Target: project-scaffolding
+File: project-tracker/CLAUDE.md
+  - Target: project-scaffolding
+File: project-tracker/QUICKSTART.md
+  - Target: project-tracker
+File: project-tracker/README.md
+  - Target: project-tracker
+File: project-tracker/README.md
+  - Target: audit-agent
+File: project-tracker/TODO.md
+  - Target: project-tracker
+File: project-tracker/USAGE.md
+  - Target: project-tracker
+
+--- Dead Project Directory ---
+File: 3d-pose-factory/spec.md
+  - Target: /Users/eriksjaastad/projects/`
+    Context: ...cursorrules` | 3 | `/Users/eriksjaastad/projects/` |
+| `README.md` | 2...
+File: 3d-pose-factory/spec.md
+  - Target: /Users/eriksjaastad/projects/3D
+    Context: ... `README.md` | 2 | `/Users/eriksjaastad/projects/3d-pose-factory/` |
+| ...
+File: ai-usage-billing-tracker/CODE_REVIEW_PROMPT.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...
+1. **Full repo** (`/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/SETUP_COMPLETE.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...Cookies
+```bash
+cd "/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/docs/DAILY_INGESTION.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...dencies
+```bash
+cd "/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/scripts/daily_ingest.sh
+  - Target: /Users/eriksjaastad/projects/AI\
+    Context: ...etup:
+#   0 2 * * * /Users/eriksjaastad/projects/AI\ usage-billing\ trac...
+File: ai-usage-billing-tracker/scripts/daily_ingest.sh
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...ration
+PROJECT_DIR="/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/scripts/download_and_import_cursor.sh
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...efail
+
+PROJECT_DIR="/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/scripts/download_cursor_with_cookies.sh
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...efail
+
+PROJECT_DIR="/Users/eriksjaastad/projects/AI usage-billing track...
+File: ai-usage-billing-tracker/scripts/setup_cron.sh
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...efail
+
+PROJECT_DIR="/Users/eriksjaastad/projects/AI usage-billing track...
+File: automation-consulting/AI Consulting Discovery Toolkit/scripts/run_wizard.sh
+  - Target: /Users/eriksjaastad/projects/DiscoveryToolkit/scripts
+    Context: ...Wizard Launcher
+cd "/Users/eriksjaastad/projects/DiscoveryToolkit/scripts"
+source venv/bin/ac...
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...me)
+0 8 * * 1-5 cd "/Users/eriksjaastad/projects/trading-copilot" && source...
+File: trading-copilot/Documents/core/MODEL_ARENA_ROADMAP.md
+  - Target: /Users/eriksjaastad/projects/agent-os`
+    Context: ...cts
+
+### Agent OS (`/Users/eriksjaastad/projects/agent-os`)
+- Central API key ...
+File: trading-copilot/Documents/guides/discord_webhook_setup.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...cation
+
+```bash
+cd "/Users/eriksjaastad/projects/trading-copilot"
+source ve...
+File: trading-copilot/Documents/guides/discord_webhook_setup.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot\
+    Context: ...cron
+0 8 * * 1-5 cd /Users/eriksjaastad/projects/trading-copilot\ Projects && source ...
+File: trading-copilot/Documents/guides/local_llm_setup_guide.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...
+
+```bash
+mkdir -p "/Users/eriksjaastad/projects/trading-copilot/prompts"
+`...
+File: trading-copilot/Documents/reference/CODE_REVIEW_REQUEST.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ... Setup
+
+```bash
+cd "/Users/eriksjaastad/projects/trading-copilot"
+python3 -...
+File: trading-copilot/PROJECTS.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...ally:**
+```bash
+cd "/Users/eriksjaastad/projects/trading-copilot"
+source ve...
+File: trading-copilot/PROJECTS.md
+  - Target: /Users/eriksjaastad/projects/agent-os`
+    Context: ...s
+
+- **Agent OS** (`/Users/eriksjaastad/projects/agent-os`) - Workflow engine ...
+File: trading-copilot/data/alpha_reports/10-1-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-10-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-13-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-14-2025 Alpha Report Ready.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-15-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-16-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-17-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-2-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-20-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-21-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-22-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-23-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-24-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-27-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-28-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-29-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-3-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-30-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-31-2025 Alpha Report (1).json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-31-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-6-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-7-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-8-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/10-9-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-10-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-11-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-12-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-13-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-14-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-17-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-18-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-3-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-4-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-5-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-6-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/11-7-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-08-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-09-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-10-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-11-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-12-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-15-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-16-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/12-17-2025 Alpha Report.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Append.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-19-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-20-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-21-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-24-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-25-202.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-26-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 11-28-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 12-1-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 12-2-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 12-4-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/data/alpha_reports/Alpha Report 12-5-2025.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...{
+  "source": "/Users/eriksjaastad/projects/trading-copilot/data/Alfa ...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...me)
+0 8 * * 1-5 cd "/Users/eriksjaastad/projects/trading-copilot" && source...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/agent-os`
+    Context: ...cts
+
+### Agent OS (`/Users/eriksjaastad/projects/agent-os`)
+- Central API key ...
+File: trading-copilot/full_repo_context.txt
+  - Target: /Users/eriksjaastad/projects/trading-copilot\
+    Context: ...cron
+0 8 * * 1-5 cd /Users/eriksjaastad/projects/trading-copilot\ Projects && source ...
+File: trading-copilot/scripts/alpha_reports_state.json
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...      "json_path": "/Users/eriksjaastad/projects/trading-copilot/scripts/al...
+File: trading-copilot/scripts/morning_briefing_discord.py
+  - Target: /Users/eriksjaastad/projects/trading-copilot
+    Context: ...s):
+0 8 * * 1-5 cd "/Users/eriksjaastad/projects/trading-copilot" && source...
+File: trading-copilot/scripts/process_alpha_reports.md
+  - Target: /Users/eriksjaastad/projects/trading-copilot\
+    Context: ...r:
+   ```bash
+   cd /Users/eriksjaastad/projects/trading-copilot\ Projects
+   python3...
+File: UNDERSCORE_DIRECTORIES.md
+  - Target: /Users/eriksjaastad/projects/`
+    Context: ...etc.
+
+---
+
+Part of `/Users/eriksjaastad/projects/` workspace organizat...
+File: __Knowledge/_archive/BACKUP_SCHEDULE_UPDATE.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...**File Modified**: `/Users/eriksjaastad/projects/AI usage-billing track...
+File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+  - Target: /Users/eriksjaastad/projects/BACKUP_SCHEDULE_UPDATE.md`
+    Context: ...cumentation
+   
+4. `/Users/eriksjaastad/projects/BACKUP_SCHEDULE_UPDATE.md`
+   - Summary of cro...
+File: __Knowledge/_archive/SMART_BACKUP_IMPLEMENTATION.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ... Modified Files
+1. `/Users/eriksjaastad/projects/AI usage-billing track...
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: /Users/eriksjaastad/projects/.cursorrules`
+    Context: ...*Workspace Root:** `/Users/eriksjaastad/projects/.cursorrules` (global defaults)
+
+...
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: /Users/eriksjaastad/projects/Meta/Code_Redundancies_and_Patterns.md`
+    Context: ...ancies Analysis:** `/Users/eriksjaastad/projects/Meta/Code_Redundancies_and_Patterns.md`
+- **Global Rules:**...
+File: _obsidian/CURSOR_CONFIGURATION_DEPLOYMENT.md
+  - Target: /Users/eriksjaastad/projects/.cursorignore`
+    Context: ...**Global Ignore:** `/Users/eriksjaastad/projects/.cursorignore`
+
+---
+
+**Result:** E...
+File: _obsidian/Daily_Vault_Pulse_2025-12-31.md
+  - Target: /Users/eriksjaastad/projects/
+    Context: ...C  
+**Monitoring:** /Users/eriksjaastad/projects/
+
+---
+
+## 📊 Executiv...
+File: _obsidian/Daily_Vault_Pulse_TEMPLATE.md
+  - Target: /Users/eriksjaastad/projects/
+    Context: ...C  
+**Monitoring:** /Users/eriksjaastad/projects/
+
+---
+
+## 📊 Executiv...
+File: _tools/README.md
+  - Target: /Users/eriksjaastad/projects/`
+    Context: ...
+
+---
+
+Part of the `/Users/eriksjaastad/projects/` workspace.
+...
+File: _tools/agent-hub/TODO.md
+  - Target: /Users/eriksjaastad/projects/hub
+    Context: ... Architecture doc: `/Users/eriksjaastad/projects/hub and spoke ai.md`
+- ...
+File: _tools/ai_router/scripts/project_namer_test.py
+  - Target: /Users/eriksjaastad/projects/{dir_name}
+    Context: ...  dir_path = Path(f"/Users/eriksjaastad/projects/{dir_name}")
+        
+        ...
+File: _tools/integrity-warden/integrity_warden.py
+  - Target: /Users/eriksjaastad/projects/
+    Context: ...ute paths, we match /Users/eriksjaastad/projects/ and then try to fin...
+File: agent-skills-library/INTEGRATION_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/my-project/
+    Context: ...g in a project:
+```
+/Users/eriksjaastad/projects/my-project/
+```
+
+The AI tools d...
+File: agent-skills-library/INTEGRATION_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/my-project
+    Context: ...ibrary:
+
+```bash
+cd /Users/eriksjaastad/projects/my-project
+mkdir -p .claude/sk...
+File: agent-os - CHECK IMPORTS BEFORE DELETE/TODO.md
+  - Target: /Users/eriksjaastad/projects/Cortana
+    Context: ... File
+- [ ] Create `/Users/eriksjaastad/projects/cortana-personal-ai/.env`
+-...
+File: agent-os - CHECK IMPORTS BEFORE DELETE/TODO.md
+  - Target: /Users/eriksjaastad/projects/agent-os/.env
+    Context: ...port $(grep -v '^#' /Users/eriksjaastad/projects/agent-os/.env | xargs)`
+  - To: `...
+File: agent-os - CHECK IMPORTS BEFORE DELETE/first project.md
+  - Target: /Users/eriksjaastad/projects/AI
+    Context: ...ay>
+        <string>/Users/eriksjaastad/projects/AI usage-billing track...
+File: audit-agent/00_Index_audit-agent.md
+  - Target: /Users/eriksjaastad/projects/
+    Context: ...itoring Targets
+```
+/Users/eriksjaastad/projects/
+├── 00_Index_*.md f...
+File: audit-agent/QUICKSTART.md
+  - Target: /Users/eriksjaastad/projects/`
+    Context: ...ectory
+- **Root:** `/Users/eriksjaastad/projects/`
+- **Recursive:** Ye...
+File: audit-agent/docs/GIT_INTEGRATION.md
+  - Target: /Users/eriksjaastad/projects/YOUR_PROJECT/.git/hooks/post-commit
+    Context: ...e Hook)
+
+```bash
+rm /Users/eriksjaastad/projects/YOUR_PROJECT/.git/hooks/post-commit
+```
+
+To re-enable, ...
+File: audit-agent/docs/PHASE_3_COMPLETE.md
+  - Target: /Users/eriksjaastad/projects/YOUR_PROJECT
+    Context: ...Project
+
+```bash
+cd /Users/eriksjaastad/projects/YOUR_PROJECT
+
+# Initialize Git i...
+File: image-workflow/Documents/dashboard/DASHBOARD_GUIDE.md
+  - Target: /Users/eriksjaastad/projects/Eros\
+    Context: ...ndencies
+```bash
+cd /Users/eriksjaastad/projects/Eros\ Mate
+pip install -r...
+File: image-workflow/data/character_analysis.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...source_directory": "/Users/eriksjaastad/projects/Eros Mate/selected",
+   ...
+File: image-workflow/data/character_analysis_fixed.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...source_directory": "/Users/eriksjaastad/projects/Eros Mate/selected",
+   ...
+File: image-workflow/data/daily_summaries/audit_files_vs_db_mojo3_20251026_163816.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ..."paths": [
+        "/Users/eriksjaastad/projects/Eros Mate/__cropped/2025...
+File: image-workflow/data/daily_summaries/doc_cleanup_report_20251025.md
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...-25
+Documents root: /Users/eriksjaastad/projects/Eros Mate/Documents
+Scan...
+File: image-workflow/data/daily_summaries/image_counts_20251026_155013.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...      "directory": "/Users/eriksjaastad/projects/Eros Mate/crop",
+      "...
+File: image-workflow/data/daily_summaries/image_counts_20251026_155417.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...      "directory": "/Users/eriksjaastad/projects/Eros Mate/crop",
+      "...
+File: image-workflow/data/daily_summaries/orphan_decisions_20251026T202447Z.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...  "decision_path": "/Users/eriksjaastad/projects/Eros Mate/mojo3/faces/20...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251021/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ts_touched": [
+    "/Users/eriksjaastad/projects/Eros Mate/mojo3/faces",
+...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251022/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ed": [
+    "",
+    "/Users/eriksjaastad/projects/Eros Mate/data/training/...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251023/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ed": [
+    "",
+    "/Users/eriksjaastad/projects/Eros Mate/mojo3",
+    "/...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251024/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ts_touched": [
+    "/Users/eriksjaastad/projects/Eros Mate/mojo3",
+    "c...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251025/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ts_touched": [
+    "/Users/eriksjaastad/projects/Eros Mate/mojo3",
+    "a...
+File: image-workflow/data/snapshot/daily_aggregates_v1/day=20251026/aggregate.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...ts_touched": [
+    "/Users/eriksjaastad/projects/Eros Mate/mojo3",
+    "m...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_crop_clustered_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/crop_clustered...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_crop_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/crop",
+  "sess...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_mojo1_clustered_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/mojo1_clustere...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_mojo2__asian_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/mojo2/_asian",...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_scripts_tests_data_test_subdirs_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/scripts/tests/...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_selected_hannah_hannah_02_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/selected/hanna...
+File: image-workflow/data/sorter_progress/_Users_eriksjaastad_projects_Eros_Mate_selected_progress.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ... "base_directory": "/Users/eriksjaastad/projects/Eros Mate/selected",
+  "...
+File: image-workflow/data/training/anomaly_analysis_report.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...    "chosen_path": "/Users/eriksjaastad/projects/Eros Mate/mojo1/20250708...
+File: image-workflow/data/training/manifests/20251005.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...   {
+      "path": "/Users/eriksjaastad/projects/Eros Mate/data/training/...
+File: image-workflow/data/training/mojo1_extraction_report.json
+  - Target: /Users/eriksjaastad/projects/Eros
+    Context: ...,
+    "directory": "/Users/eriksjaastad/projects/Eros Mate/training data/...
+File: image-workflow/scripts/cleanup_logs.py
+  - Target: /Users/eriksjaastad/projects/Image\
+    Context: ...e:
+    0 2 * * * cd /Users/eriksjaastad/projects/Image\ Processing && pytho...
+File: image-workflow/scripts/tests/README_VISUAL_TESTS.md
+  - Target: /Users/eriksjaastad/projects/Eros\
+    Context: ...(Python)
+```bash
+cd /Users/eriksjaastad/projects/Eros\ Mate
+python scripts...
+File: image-workflow/scripts/tools/recover_from_cursor_history.py
+  - Target: /Users/eriksjaastad/projects/Eros%20Mate/scripts/ai/training_utils_v3.py
+    Context: ..."resource": "file:///Users/eriksjaastad/projects/Eros%20Mate/scripts/ai/training_utils_v3.py",
+        "latest_f...
+File: image-workflow/scripts/tools/recover_from_cursor_history.py
+  - Target: /Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/current_project_dashboard.py
+    Context: ..."resource": "file:///Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/current_project_dashboard.py",
+        "latest_f...
+File: image-workflow/scripts/tools/recover_from_cursor_history.py
+  - Target: /Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/templates/current_project.html
+    Context: ..."resource": "file:///Users/eriksjaastad/projects/Eros%20Mate/scripts/dashboard/templates/current_project.html",
+        "latest_f...
+File: project-scaffolding/_cursorrules_backups/manifest.json
+  - Target: /Users/eriksjaastad/projects/tax-organizer
+    Context: ...       "original": "/Users/eriksjaastad/projects/tax-organizer/.cursorr...
+File: project-scaffolding/patterns/automation-reliability.md
+  - Target: /Users/eriksjaastad/projects/agent-os/venv/bin/activate
+    Context: ... project
+   source "/Users/eriksjaastad/projects/agent-os/venv/bin/activate"
+   /Users/eriksjaa...
+File: project-scaffolding/patterns/automation-reliability.md
+  - Target: /Users/eriksjaastad/projects/agent-os/venv/bin/python
+    Context: ...nv/bin/activate"
+   /Users/eriksjaastad/projects/agent-os/venv/bin/python scripts/core/daily_...
+File: project-scaffolding/patterns/automation-reliability.md
+  - Target: /Users/eriksjaastad/projects/Cortana
+    Context: ...self-sufficient
+cd "/Users/eriksjaastad/projects/cortana-personal-ai"
+export...
+File: sprint.sh
+  - Target: /Users/eriksjaastad/projects/sprint.sh
+    Context: ...l
+
+# USAGE:
+# bash "/Users/eriksjaastad/projects/sprint.sh" 20 3
+
+
+WORK_MIN=${...
