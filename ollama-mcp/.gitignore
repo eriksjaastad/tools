@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+
+# Data and caches
+data/
+*.db
+*.sqlite
+__pycache__/
+.pytest_cache/
+.coverage
+
+# Environment and secrets
+.env
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursorrules_backup
+
+# OS
+.DS_Store
+Thumbs.db

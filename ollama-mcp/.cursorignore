@@ -1,0 +1,19 @@
+# Dependencies & Packages
+node_modules/
+
+# Build Artifacts
+dist/
+build/
+
+# Logs (very large)
+*.jsonl
+*.log
+
+# OS Files
+.DS_Store
+
+# IDE Files
+.vscode/
+.idea/
+.cursorrules_backup
+
