@@ -53,6 +53,11 @@ worker_agent = Agent(
 
 # The Manager - Cloud (Or Smart Model)
 # Instructions: You are the Hub. You plan and delegate.
+
+def transfer_to_worker():
+    """Handoff any file manipulation or local execution tasks to the Worker agent."""
+    return worker_agent
+
 manager_agent = Agent(
     name="Manager",
     model="gpt-4o",
@@ -61,7 +66,7 @@ manager_agent = Agent(
 2. If it requires file manipulation, reading code, or simple execution, hand off the task to the 'Worker' agent.
 3. If it requires high-level planning or architecture, handle that yourself.
 4. Always summarize what was done for the user.""",
-    functions=[worker_agent]
+    functions=[transfer_to_worker]
 )
 
 # 3. CUSTOM CLIENT FOR SWARM (To route to Ollama)

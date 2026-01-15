@@ -185,10 +185,17 @@ $RECYCLE.BIN/
 *.jsonl
 *.pdf
 launch.json
+node_modules/
+dist/
 
 # Logs (each tool manages its own, don't track in git)
 logs/
 *.log
+agent_log.txt
+ssh_agent/queue/
 
 # Named venvs
 pdf_converter_env/
+
+# Ensure PDF converter logs are ignored (specifically requested for line 198)
+pdf-converter/logs/
