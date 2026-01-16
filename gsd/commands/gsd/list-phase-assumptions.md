@@ -48,3 +48,10 @@ Phase number: $ARGUMENTS (required)
 - User prompted for feedback
 - User knows next steps (discuss context, plan phase, or correct assumptions)
   </success_criteria>
+
+## Related Documentation
+
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap

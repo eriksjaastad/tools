@@ -578,3 +578,17 @@ Transition is complete when:
 - [ ] User knows next steps
 
 </success_criteria>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[database_schema]] - database design
+- [[database_setup]] - database
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[session_documentation]] - session notes

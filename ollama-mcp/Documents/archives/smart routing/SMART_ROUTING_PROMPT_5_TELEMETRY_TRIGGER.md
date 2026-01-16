@@ -124,3 +124,9 @@ When they see `telemetry_review_due: true`, they know to:
 3. Run `node scripts/mark_telemetry_reviewed.js`
 
 ---
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

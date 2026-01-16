@@ -144,3 +144,11 @@ Create `.planning/phases/XX-name/DISCOVERY.md`:
 - "How do experts build this" questions
 - Use `/gsd:research-phase` for these
 </guidelines>
+
+
+## Related Documentation
+
+- [[case_studies]] - examples
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+

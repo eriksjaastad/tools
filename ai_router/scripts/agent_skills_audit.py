@@ -12,7 +12,7 @@ def agent_skills_dry_run():
     router = AIRouter()
     
     # Context gathering (Dry run - no file writing)
-    skills_root = Path("/Users/eriksjaastad/projects/agent-skills-library")
+    skills_root = Path("[USER_HOME]/projects/agent-skills-library")
     claude_skills = list((skills_root / "claude-skills").glob("**/SKILL.md"))
     
     skill_summaries = []

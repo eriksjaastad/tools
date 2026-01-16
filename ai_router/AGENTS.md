@@ -15,21 +15,32 @@ AI Router is a tool to optimize AI costs and performance by routing requests bet
 
 ## 📋 Definition of Done (DoD)
 - [ ] Code is documented with type hints.
-- [ ] Technical changes are logged to `_obsidian/WARDEN_LOG.yaml`.
+- [ ] Technical changes are logged to `project-tracker/data/WARDEN_LOG.yaml`.
 - [ ] `00_Index_ai-router.md` is updated with recent activity.
 - [ ] Telemetry logging is verified for any new features.
 
 ## 🚀 Execution Commands
 - Environment: `source venv/bin/activate`
-- Run: `export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH" && python scripts/examples.py`
+- Run: `export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH" && python scripts/examples.py`
 - Test: `python scripts/test_gauntlet.py`
 
 ## ⚠️ Critical Constraints
 - NEVER hard-code API keys, secrets, or credentials in script files. Use `.env` and `os.getenv()`.
-- NEVER use absolute paths (e.g., `/Users/eriksjaastad/...`). ALWAYS use relative paths or `PROJECT_ROOT` env var.
+- NEVER use absolute paths (e.g., `[USER_HOME]/...`). ALWAYS use relative paths or `PROJECT_ROOT` env var.
 - Local models MUST have `num_ctx` explicitly set in the Ollama API call to ensure context window support.
 
 ## 📖 Reference Links
 - [[00_Index_ai-router]]
 - [[Project Philosophy]]
 
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[cost_management]] - cost management
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[ai-usage-billing-tracker/README]] - AI Billing Tracker
+- [[billing_workflows]] - billing/payments

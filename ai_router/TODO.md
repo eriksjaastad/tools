@@ -255,3 +255,21 @@ As a Floor Manager, you should use the AI Router for **atomic, self-contained ta
 
 *Template Version: 1.0*
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[automation_patterns]] - automation
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[hypocrisy_methodology]] - bias detection
+- [[performance_optimization]] - performance
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA
+- [[hypocrisynow/README]] - Hypocrisy Now
+- [[project-scaffolding/README]] - Project Scaffolding
+- [[project-tracker/README]] - Project Tracker

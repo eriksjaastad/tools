@@ -390,3 +390,19 @@ This is useless. No XML structure, no @context, no verification, no specificity.
 - Follow summary.md template structure
 - Document deviations, decisions, issues
   </guidelines>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_schema]] - database design
+- [[database_setup]] - database
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

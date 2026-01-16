@@ -305,3 +305,12 @@ Template for `.planning/codebase/CONVENTIONS.md` - captures coding style and pat
 - Look for config files (.prettierrc, eslint.config.js)
 - Note patterns in imports, comments, function signatures
 </guidelines>
+
+## Related Documentation
+
+- [[CODE_REVIEW_ANTI_PATTERNS]] - code review
+- [[architecture_patterns]] - architecture
+- [[error_handling_patterns]] - error handling
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[testing_strategy]] - testing/QA

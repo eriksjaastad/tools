@@ -119,3 +119,9 @@ After running:
 - Next reminder will fire in 30 days (or 50 runs, whichever is later)
 
 ---
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

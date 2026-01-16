@@ -89,3 +89,16 @@ Check for `.planning/phases/XX-name/{phase}-CONTEXT.md` - bonus context from dis
 - [ ] What NOT to hand-roll is clear
 - [ ] User knows next steps (plan phase)
 </success_criteria>
+
+## Related Documentation
+
+- [[ai_training_methodology]] - AI training
+- [[architecture_patterns]] - architecture
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA
+- [[threejs_visualization]] - 3D visualization
+- [[solutions-architect/README]] - Solutions Architect

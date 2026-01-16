@@ -234,3 +234,11 @@ Context saved to `.planning/MILESTONE-CONTEXT.md`
 - **MILESTONE-CONTEXT.md created** with features, scope, and phase mapping
 - Context handed off to /gsd:new-milestone
 </success_criteria>
+
+
+## Related Documentation
+
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[session_documentation]] - session notes
+

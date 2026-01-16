@@ -46,4 +46,4 @@ def rename_indices(root_dir):
     print(f"\nRenamed {renamed_count} index files.")
 
 if __name__ == "__main__":
-    rename_indices("/Users/eriksjaastad/projects")
+    rename_indices("[USER_HOME]/projects")

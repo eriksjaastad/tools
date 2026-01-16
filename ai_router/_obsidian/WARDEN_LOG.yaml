@@ -1,9 +1,0 @@
-- timestamp: "2026-01-12T14:15:00Z"
-  action: "CLI Interface Implementation for AIRouter"
-  changes:
-    - Created `scripts/cli.py` to wrap `AIRouter` as a command-line tool.
-    - Added support for `--prompt`, `--tier`, `--model`, and `--file` context injection.
-    - Implemented exit code standards (0 for success, 1 for error).
-    - Updated `00_Index_ai-router.md` to reflect the new executable script.
-    - Verified script passes quality standards (type hints, path portability).
-  warden_agent: "AI Router CLI implemented. Tool is now accessible via terminal."

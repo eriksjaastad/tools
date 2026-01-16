@@ -219,3 +219,11 @@ The goal is "read once, know where we are" — if it's too long, that fails.
 - Session Continuity: Resume information
 
 </guidelines>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap

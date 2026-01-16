@@ -326,3 +326,12 @@ Project initialized:
 - [ ] All committed to git
 
 </success_criteria>
+
+## Related Documentation
+
+- [[PROJECT_KICKOFF_GUIDE]] - project setup
+- [[architecture_patterns]] - architecture
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap

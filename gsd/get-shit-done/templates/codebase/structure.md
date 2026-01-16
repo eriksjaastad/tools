@@ -283,3 +283,16 @@ root/
 - Finding where specific logic lives
 - Following existing conventions
 </guidelines>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[database_setup]] - database
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[testing_strategy]] - testing/QA

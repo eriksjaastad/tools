@@ -82,3 +82,12 @@ Check for .planning/STATE.md - loads context if project already initialized
 - [ ] Parallel agents completed without errors
 - [ ] User knows next steps
 </success_criteria>
+
+## Related Documentation
+
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[ai_model_comparison]] - AI models
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

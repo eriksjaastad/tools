@@ -75,3 +75,9 @@ This project follows the **Documents/ pattern** - a centralized documentation di
 
 *This structure is based on the [project-scaffolding](https://github.com/eriksjaastad/project-scaffolding) Documents/ pattern.*
 
+## Related Documentation
+
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[case_studies]] - examples
+- [[project-scaffolding/README]] - Project Scaffolding

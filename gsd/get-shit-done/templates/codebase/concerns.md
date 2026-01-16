@@ -308,3 +308,18 @@ Template for `.planning/codebase/CONCERNS.md` - captures known issues and areas 
 **How this gets populated:**
 Explore agents detect these during codebase mapping. Manual additions welcome for human-discovered issues. This is living documentation, not a complaint list.
 </guidelines>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[discord_integration]] - Discord
+- [[error_handling_patterns]] - error handling
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[sales_strategy]] - sales/business
+- [[security_patterns]] - security

@@ -213,3 +213,11 @@ Before submitting research, verify:
 **Lessons From**: MCP configuration research gap (missed `.mcp.json`)
 </quick_reference>
 </research_pitfalls>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[research_methodology]] - research
+- [[security_patterns]] - security

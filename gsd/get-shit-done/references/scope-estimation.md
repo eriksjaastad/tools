@@ -258,3 +258,13 @@ Each plan: fresh context, peak quality. More plans = more thoroughness, same qua
 **Commit rule:** Each plan produces 3-4 commits total (2-3 task commits + 1 docs commit). More granular history = better observability for Claude.
 </summary>
 </scope_estimation>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[security_patterns]] - security

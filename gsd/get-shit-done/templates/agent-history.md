@@ -261,3 +261,10 @@ If files modified by another agent conflict with files this agent modifies, warn
 **Companion file:** `.planning/current-agent-id.txt` (single agent ID, overwritten on each spawn)
 
 **Purpose:** Enable resume capability for interrupted subagent executions via Task tool's resume parameter.
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[portfolio_content]] - portfolio/career
+- [[security_patterns]] - security

@@ -291,3 +291,13 @@ NOTE: DISCOVERY.md is NOT committed separately. It will be committed with phase 
 - Confidence gate passed
 - Ready to inform PLAN.md creation
 </success_criteria>
+
+## Related Documentation
+
+- [[ai_training_methodology]] - AI training
+- [[architecture_patterns]] - architecture
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[research_methodology]] - research
+- [[security_patterns]] - security

@@ -141,3 +141,10 @@ Template for `.planning/phases/XX-name/{phase}-{plan}-ISSUES.md` - phase-scoped 
 - Include fix reference (commit hash, plan that fixed it)
 - File serves as audit trail
 </guidelines>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

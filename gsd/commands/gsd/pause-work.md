@@ -121,3 +121,11 @@ To resume: /gsd:resume-work
 - [ ] User knows location and how to resume
 </success_criteria>
 ```
+
+
+## Related Documentation
+
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career
+- [[session_documentation]] - session notes
+

@@ -160,3 +160,9 @@ Loop until "Create PROJECT.md" selected.
 - **Shallow acceptance** - Taking vague answers without probing for specifics
 </anti_patterns>
 </questioning_guide>
+
+## Related Documentation
+
+- [[cost_management]] - cost management
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models

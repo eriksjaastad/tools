@@ -26,3 +26,11 @@
 - [ ] Integration with `project-tracker` health scores
 - [ ] Automated model selection based on historical performance
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[dashboard_architecture]] - dashboard/UI
+- [[error_handling_patterns]] - error handling
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[project-tracker/README]] - Project Tracker

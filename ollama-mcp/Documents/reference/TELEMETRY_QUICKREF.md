@@ -139,3 +139,10 @@ cat ~/.ollama-mcp/runs.jsonl | jq -s 'group_by(.model) | map({model: .[0].model,
 **Status:** ✅ Feature Complete & Ready to Use  
 **Next:** Use models, collect data, analyze after 1 week
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[performance_optimization]] - performance
+- [[testing_strategy]] - testing/QA

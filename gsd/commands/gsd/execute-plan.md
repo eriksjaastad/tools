@@ -127,3 +127,10 @@ See ~/.claude/get-shit-done/references/git-integration.md for full commit strate
 - [ ] Metadata committed with docs({phase}-{plan}): complete [plan-name] plan
 - [ ] User informed of next steps
       </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security

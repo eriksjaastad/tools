@@ -1,72 +1,130 @@
 # Agent Hub - TODO
 
-> **What this is:** A Hub-and-Spoke AI orchestration system. You talk to one interface, it delegates to the right models.
-> **Location:** `_tools/agent-hub/`
-> **Created:** January 12, 2026
+> **What this is:** An autonomous multi-agent orchestration system with proposal-driven workflows.  
+> **Location:** `_tools/agent-hub/`  
+> **PRD:** See `PRD.md` for requirements  
+> **Design:** See `Documents/Agentic Blueprint Setup V2.md`  
+> **Created:** January 12, 2026  
+> **Updated:** January 16, 2026
 
 ---
 
-## The Vision
+## The Vision (Updated)
 
 ```
-You → Hub (smart model - orchestrates, plans)
-      → Spokes (local models - have tools, execute grunt work)
-            → Tools: read_file, write_file, list_files, move_file
-      → Hub summarizes result
+Erik + Super Manager (Claude CLI)
+         │
+         ▼ PROPOSAL_FINAL.md
+Floor Manager (Cursor/Gemini)
+         │ understands task, decomposes for local models
+         ▼
+Implementer (Qwen) ──► Local Reviewer (DeepSeek) ──► Judge (Claude CLI)
+         │                                                    │
+         └────────────── Refinement Loop ─────────────────────┘
+                                │
+                                ▼
+                         Merge to main
 ```
-
-**Why this matters:**
-- Local models are FREE but can't act alone (no file access)
-- Cloud models are expensive but smart
-- Hub lets smart models delegate grunt work to free local models WITH file access
-- No more copying prompts between tools
 
 ---
 
-## Phase 1: Foundation
+## Phase 0: Skills & Knowledge Capture ✅
 
-- [ ] **1.1** Install dependencies: `pip install swarm litellm`
-- [ ] **1.2** Create `hub.py` - main CLI script
-- [ ] **1.3** Define tools: `read_file`, `write_file`, `list_files`, `move_file`
-- [ ] **1.4** Create Worker agent (local model + tools)
-- [ ] **1.5** Create Manager agent (smart model + delegation ability)
-- [ ] **1.6** Basic REPL loop (input → process → output)
+- [x] **0.1** Create Floor Manager skill in agent-skills-library
+  - Location: `agent-skills-library/claude-skills/floor-manager-orchestration/SKILL.md`
+  - Includes: model capabilities, task decomposition, stall recovery
+- [x] **0.2** Create cursor rules for Floor Manager trigger
+  - Location: `agent-skills-library/cursor-rules/floor-manager-orchestration/rules.md`
+  - Trigger: `PROPOSAL_FINAL.md` detection
+- [x] **0.3** Create playbook for Floor Manager procedures
+  - Location: `agent-skills-library/playbooks/floor-manager-orchestration/README.md`
+
+---
+
+## Phase 1: Foundation ✅ (Partially Complete)
+
+- [x] **1.1** Install dependencies: `pip install swarm litellm`
+- [x] **1.2** Create `hub.py` - main CLI script
+- [x] **1.3** Define tools: `read_file`, `write_file`, `list_files`, `move_file`
+- [x] **1.4** Create Worker agent (local model + tools)
+- [x] **1.5** Create Manager agent (smart model + delegation ability)
+- [x] **1.6** Basic REPL loop (input → process → output)
 - [ ] **1.7** Test: Ask manager to write a file via worker
 
 ---
 
-## Phase 2: Integration
+## Phase 2: Contract-Driven Pipeline (NEW)
 
-- [ ] **2.1** Add safety checks (no writes outside project, backup before overwrite)
-- [ ] **2.2** Configure LiteLLM proxy for model routing
-- [ ] **2.3** Support multiple local models (Qwen, DeepSeek, Llama)
-- [ ] **2.4** Add `--project` flag to scope file operations to a directory
+- [ ] **2.1** Implement `TASK_CONTRACT.json` schema validation
+  - See: `Documents/Agentic Blueprint Setup V2.md` §2
+- [ ] **2.2** Create `watchdog.py` state machine
+  - Transitions, lock mechanism, circuit breakers
+- [ ] **2.3** Create `watcher.sh` for Claude CLI loop
+  - Detects `REVIEW_REQUEST.md`, invokes Judge
+- [ ] **2.4** Implement atomic file writes (temp → rename)
+- [ ] **2.5** Implement `PROPOSAL_FINAL.md` → contract conversion
+- [ ] **2.6** Test: Full pipeline on a simple doc merge task
 
 ---
 
-## Phase 3: Polish
+## Phase 3: Stall Recovery & Resilience
 
-- [ ] **3.1** Merge or deprecate AI Router (Hub does routing now)
-- [ ] **3.2** Add telemetry (which model handled what, duration, cost estimate)
-- [ ] **3.3** Create README.md with usage examples
-- [ ] **3.4** Decide: keep Swarm or roll custom agent loop
+- [ ] **3.1** Implement Two-Strike Rule in Floor Manager
+  - Strike 1: Diagnose, rework, retry
+  - Strike 2: Escalate with `STALL_REPORT.md`
+- [ ] **3.2** Add timeout detection for all phases
+- [ ] **3.3** Implement circuit breakers (all 9 triggers from V2 doc)
+- [ ] **3.4** Create `ERIK_HALT.md` generation
+- [ ] **3.5** Test: Force a stall, verify recovery flow
+
+---
+
+## Phase 4: Git Integration
+
+- [ ] **4.1** Branch-per-task creation (`task/<task_id>`)
+- [ ] **4.2** Checkpoint commits at each state transition
+- [ ] **4.3** Merge on PASS verdict
+- [ ] **4.4** Rollback capability via checkpoint
+
+---
+
+## Phase 5: Observability
+
+- [ ] **5.1** NDJSON transition logging (`transition.ndjson`)
+- [ ] **5.2** Token/cost tracking per task
+- [ ] **5.3** Metrics dashboard (or CLI summary)
+- [ ] **5.4** Log rotation
 
 ---
 
 ## Questions to Answer
 
-1. **Which smart model for the Manager?** Claude (via API), GPT-4o, or large local (Llama 70B)?
-2. **Which local model for Workers?** Qwen 2.5 Coder, DeepSeek, Llama 3.2?
-3. **Do we need LiteLLM?** Or can we route manually in code?
+1. ~~Which smart model for the Manager?~~ → **Gemini 3 Flash (Floor Manager), Claude CLI (Super Manager/Judge)**
+2. ~~Which local model for Workers?~~ → **Qwen 2.5 Coder (implementation), DeepSeek-R1 (review/reasoning)**
+3. ~~Do we need LiteLLM?~~ → **Yes, for model routing**
+4. **NEW:** How does Cursor detect `PROPOSAL_FINAL.md`? Polling? Workspace watcher?
+5. **NEW:** Should the skill be Cursor-specific or Claude-specific (or both)?
 
 ---
 
 ## Reference
 
-- Architecture doc: `hub and spoke ai.md`
-- AI Router (may merge): `_tools/ai_router/`
-- Ollama MCP (separate): `_tools/ollama-mcp/`
+| Document | Purpose |
+|----------|---------|
+| `PRD.md` | What and why |
+| `Documents/Agentic Blueprint Setup V2.md` | Detailed design |
+| `Documents/Agentic Blueprint.md` | High-level vision |
+| `hub.py` | Phase 1 foundation code |
+| `templates/PROPOSAL_FINAL.template.md` | Proposal format |
 
 ---
 
-**Next step:** Phase 1.1 - Install Swarm and LiteLLM, verify they work
+**Next step:** Phase 2.1 - Implement TASK_CONTRACT.json schema validation
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models

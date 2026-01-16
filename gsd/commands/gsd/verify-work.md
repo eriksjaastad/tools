@@ -69,3 +69,10 @@ Scope: $ARGUMENTS (optional)
 - [ ] Summary presented with verdict
 - [ ] User knows next steps based on results
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[testing_strategy]] - testing/QA

@@ -54,7 +54,7 @@ ollama-mcp/
 ## 🚀 Quick Start
 
 ```bash
-cd /Users/eriksjaastad/projects/_tools/ollama-mcp
+cd [USER_HOME]/projects/_tools/ollama-mcp
 npm install
 npm run build
 npm test
@@ -69,7 +69,7 @@ Add to `~/.cursor/mcp_config.json` or Cursor settings:
   "mcpServers": {
     "ollama": {
       "command": "node",
-      "args": ["/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"]
+      "args": ["[USER_HOME]/projects/_tools/ollama-mcp/dist/server.js"]
     }
   }
 }
@@ -147,4 +147,11 @@ You (Sonnet) act as the **orchestrator**, deciding what to delegate and what to 
 ```
 
 All tests passing. Server ready for use.
+
+
+## Related Documentation
+
+- [[CODE_REVIEW_ANTI_PATTERNS]] - code review
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
 

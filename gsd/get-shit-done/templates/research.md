@@ -527,3 +527,19 @@ function useVehicleControls(rigidBodyRef) {
 - File lives in phase directory: `.planning/phases/XX-name/{phase}-RESEARCH.md`
 - Referenced during planning workflow
 - plan-phase loads it automatically when present
+
+## Related Documentation
+
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[ai_training_methodology]] - AI training
+- [[architecture_patterns]] - architecture
+- [[cloud_gpu_setup]] - cloud GPU
+- [[dashboard_architecture]] - dashboard/UI
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[threejs_visualization]] - 3D visualization
+- [[solutions-architect/README]] - Solutions Architect

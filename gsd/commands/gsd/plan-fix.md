@@ -203,3 +203,11 @@ If execute: `/gsd:execute-plan .planning/phases/XX-name/{plan}-FIX.md`
 - [ ] FIX.md written with proper structure
 - [ ] User offered to execute or review
 </success_criteria>
+
+
+## Related Documentation
+
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[testing_strategy]] - testing/QA
+

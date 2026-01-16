@@ -257,3 +257,10 @@ Resume is complete when:
 - [ ] Current-agent-id.txt cleared
 - [ ] User informed of completion
 </success_criteria>
+
+## Related Documentation
+
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[portfolio_content]] - portfolio/career

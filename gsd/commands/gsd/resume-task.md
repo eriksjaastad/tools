@@ -85,3 +85,9 @@ Check `.planning/agent-history.json` for entries with status "spawned" or "inter
 - [ ] current-agent-id.txt cleared
 - [ ] User informed of result
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career

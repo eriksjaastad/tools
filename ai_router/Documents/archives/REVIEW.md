@@ -10,7 +10,7 @@
 
 ### **[Needs Major Refactor]**
 
-The routing heuristics are a house of cards built on the foundation of `chars // 3` and a hardcoded keyword list. This tool will silently escalate to expensive models the moment a user writes "optimize" in a grocery list, while simultaneously starving complex prompts of context because you never validated that your 128k `num_ctx` allocation will fit in VRAM. The telemetry is one concurrent write away from corruption, and every script in `scripts/` is hardcoded to `/Users/eriksjaastad/projects`—which violates your own `AGENTS.md` rule on line 24. This is not production infrastructure; it's a prototype that hasn't been stress-tested outside your MacBook.
+The routing heuristics are a house of cards built on the foundation of `chars // 3` and a hardcoded keyword list. This tool will silently escalate to expensive models the moment a user writes "optimize" in a grocery list, while simultaneously starving complex prompts of context because you never validated that your 128k `num_ctx` allocation will fit in VRAM. The telemetry is one concurrent write away from corruption, and every script in `scripts/` is hardcoded to `[USER_HOME]/projects`—which violates your own `AGENTS.md` rule on line 24. This is not production infrastructure; it's a prototype that hasn't been stress-tested outside your MacBook.
 
 ---
 
@@ -65,12 +65,12 @@ if model_config_overrides:
 
 #### Hardcoded Paths Violating AGENTS.md
 Your own `AGENTS.md:24` says "NEVER use absolute paths." Yet:
-- `scripts/test_gauntlet.py:6` → `/Users/eriksjaastad/projects`
+- `scripts/test_gauntlet.py:6` → `[USER_HOME]/projects`
 - `scripts/test_local_rigor.py:7` → Uses relative `Path(__file__).parent.parent.parent` (correct)
-- `scripts/test_setup.py:9` → `/Users/eriksjaastad/projects`
-- `scripts/agent_skills_audit.py:6` → `/Users/eriksjaastad/projects`
-- `scripts/audit_skill_proposal.py:6` → `/Users/eriksjaastad/projects`
-- `scripts/project_namer_test.py:7` → `/Users/eriksjaastad/projects`
+- `scripts/test_setup.py:9` → `[USER_HOME]/projects`
+- `scripts/agent_skills_audit.py:6` → `[USER_HOME]/projects`
+- `scripts/audit_skill_proposal.py:6` → `[USER_HOME]/projects`
+- `scripts/project_namer_test.py:7` → `[USER_HOME]/projects`
 
 Five out of six scripts are broken on any machine that isn't yours.
 
@@ -188,7 +188,7 @@ This is a maintenance nightmare. Add "security" to every prompt as a system inst
 | Token estimation | `router.py:178` | `est_tokens = n // 3` | Wrong routing for code/non-English |
 | Missing dependency | `router.py:441` | `import httpx` | Runtime ImportError |
 | Global state mutation | `router.py:140-141` | `MODEL_CONFIG.update(...)` | Multi-instance pollution |
-| Hardcoded paths | `test_gauntlet.py:6` | `/Users/eriksjaastad/projects` | Breaks on any other machine |
+| Hardcoded paths | `test_gauntlet.py:6` | `[USER_HOME]/projects` | Breaks on any other machine |
 | Silent log failure | `router.py:90-92` | `except Exception: pass` | Lost telemetry |
 | No VRAM validation | `router.py:324` | `num_ctx = config.context_window` | OOM or silent truncation |
 | Catch-all exception | `router.py:345` | `except Exception as e:` | Catches fatal errors |
@@ -324,3 +324,10 @@ This is a maintenance nightmare. Add "security" to every prompt as a system inst
 This router is a local-development toy masquerading as infrastructure. You've built the happy path—local Ollama up, models pulled, single-threaded, your MacBook, your paths. The moment any of those assumptions fail, the system silently degrades: telemetry vanishes, routing becomes random, and "strict mode" throws an exception with no actionable context. The token estimation (`chars // 3`) is cargo-cult math, the keyword routing is a game of Jeopardy! where the answer is "things Erik types sometimes," and the 128k context allocation will OOM any consumer GPU on the planet. Fix the data integrity first (file locking, exception handling), then add the safety rails (health checks, retry logic), and finally stop committing absolute paths to your own home directory.
 
 > **"A router that routes based on magic words is not a router—it's a ouija board with an API key."**
+
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

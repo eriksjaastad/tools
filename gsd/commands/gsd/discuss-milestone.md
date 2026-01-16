@@ -45,3 +45,9 @@ Output: Context gathered, then routes to /gsd:new-milestone
 - Milestone scope gathered through adaptive questioning
 - Context handed off to /gsd:new-milestone
   </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap

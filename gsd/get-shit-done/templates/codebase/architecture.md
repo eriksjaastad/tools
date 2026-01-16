@@ -253,3 +253,12 @@ Include file paths as concrete examples of abstractions. Use backtick formatting
 - Identifying where to add code (which layer handles X?)
 - Understanding dependencies between components
 </guidelines>
+
+## Related Documentation
+
+- [[architecture_patterns]] - architecture
+- [[database_setup]] - database
+- [[error_handling_patterns]] - error handling
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[security_patterns]] - security

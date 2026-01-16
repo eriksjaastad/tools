@@ -200,3 +200,11 @@ If issues found:
 - [ ] Summary presented with verdict
 - [ ] User knows next steps based on results
 </success_criteria>
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[research_methodology]] - research
+- [[testing_strategy]] - testing/QA

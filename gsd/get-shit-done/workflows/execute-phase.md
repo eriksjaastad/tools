@@ -897,3 +897,13 @@ All {N} phases finished.
 - ROADMAP.md updated
 - No merge conflicts
 </success_criteria>
+
+## Related Documentation
+
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[orchestration_patterns]] - orchestration
+- [[project_planning]] - planning/roadmap
+- [[testing_strategy]] - testing/QA

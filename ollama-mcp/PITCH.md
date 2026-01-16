@@ -19,3 +19,12 @@ In an ecosystem with 36+ projects, "token burn" is a significant bottleneck. Oll
 ---
 *Status: Production Ready | Domain: Infrastructure*
 
+## Related Documentation
+
+- [[CODE_REVIEW_ANTI_PATTERNS]] - code review
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[tax_documentation]] - tax/accounting
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance

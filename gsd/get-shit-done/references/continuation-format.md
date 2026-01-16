@@ -253,3 +253,12 @@ Sounds like an afterthought. Use "Also available:" instead.
 ```
 
 Fenced blocks inside templates create nesting ambiguity. Use inline backticks instead.
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[queue_processing_guide]] - queue/workflow
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security

@@ -1732,3 +1732,27 @@ Milestone is 100% done.
 - ROADMAP.md updated
 - If codebase map exists: map updated with execution changes (or skipped if no significant changes)
   </success_criteria>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[automation_patterns]] - automation
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_schema]] - database design
+- [[database_setup]] - database
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[sales_strategy]] - sales/business
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

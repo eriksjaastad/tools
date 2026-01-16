@@ -436,7 +436,7 @@ import random
 Find (line 6-8):
 ```python
 # Add the parent directory to sys.path so we can import _tools
-sys.path.append("/Users/eriksjaastad/projects")
+sys.path.append("[USER_HOME]/projects")
 
 from _tools.ai_router import AIRouter
 ```
@@ -457,7 +457,7 @@ from router import AIRouter
 Find (line 9-11):
 ```python
 # Add projects to path if not already there
-projects_path = "/Users/eriksjaastad/projects"
+projects_path = "[USER_HOME]/projects"
 if projects_path not in sys.path:
     sys.path.insert(0, projects_path)
 ```
@@ -486,7 +486,7 @@ from router import AIRouter, AIResult
 Find (line 6-8):
 ```python
 # Add project root to path for _tools access
-sys.path.append("/Users/eriksjaastad/projects")
+sys.path.append("[USER_HOME]/projects")
 
 from _tools.ai_router import AIRouter
 ```
@@ -507,7 +507,7 @@ from router import AIRouter
 Find (line 6-8):
 ```python
 # Add project root to path for _tools access
-sys.path.append("/Users/eriksjaastad/projects")
+sys.path.append("[USER_HOME]/projects")
 
 from _tools.ai_router import AIRouter
 ```
@@ -528,7 +528,7 @@ from router import AIRouter
 Find (line 7-9):
 ```python
 # Add project root to path for _tools access
-sys.path.append("/Users/eriksjaastad/projects")
+sys.path.append("[USER_HOME]/projects")
 
 from _tools.ai_router import AIRouter
 ```
@@ -682,3 +682,9 @@ After all tasks are complete, the router should:
 - ✅ Work from any directory (no hardcoded paths)
 - ✅ Have smarter token estimation
 - ✅ Use safe context limits for local models
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

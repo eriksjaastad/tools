@@ -38,3 +38,9 @@ The workflow handles all resumption logic including:
 6. Routing to appropriate next command
 7. Session continuity updates
    </process>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career

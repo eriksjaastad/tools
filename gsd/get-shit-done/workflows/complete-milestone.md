@@ -641,3 +641,13 @@ Milestone completion is successful when:
 - [ ] User knows next steps
 
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

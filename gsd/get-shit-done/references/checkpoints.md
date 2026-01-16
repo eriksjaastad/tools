@@ -285,3 +285,19 @@ Why bad: Verification fatigue. Combine into one checkpoint at end.
 - Anything with CLI/API available
 
 </summary>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[architecture_patterns]] - architecture
+- [[automation_patterns]] - automation
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[discord_integration]] - Discord
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[portfolio_content]] - portfolio/career
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

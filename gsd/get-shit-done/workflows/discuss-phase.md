@@ -245,3 +245,10 @@ Confirm: "Committed: docs(${PHASE}): capture phase context"
 - CONTEXT.md committed to git
 - User knows next steps (typically: research or plan the phase)
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

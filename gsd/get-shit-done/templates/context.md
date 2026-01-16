@@ -159,3 +159,12 @@ The user does NOT know (and shouldn't be asked):
 - Research phase adds technical context (patterns, risks, constraints)
 - Planning phase creates executable tasks informed by both vision AND research
 </guidelines>
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

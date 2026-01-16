@@ -414,3 +414,19 @@ Milestone creation is complete when:
 - [ ] User knows next steps
 </success_criteria>
 ```
+
+## Related Documentation
+
+- [[CODE_QUALITY_STANDARDS]] - code standards
+- [[architecture_patterns]] - architecture
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[adult_business_compliance]] - adult industry
+- [[ai_model_comparison]] - AI models
+- [[deployment_patterns]] - deployment
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[session_documentation]] - session notes

@@ -91,3 +91,11 @@ The file exists only to pass context from `discuss-milestone` to `create-milesto
 - Detailed phase specifications (create-milestone handles that)
 - Implementation details
 </guidelines>
+
+
+## Related Documentation
+
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[session_documentation]] - session notes
+
