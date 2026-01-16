@@ -205,3 +205,12 @@ Phase addition is complete when:
 - [ ] Next phase number calculated correctly (ignoring decimals)
 - [ ] User informed of next steps
       </success_criteria>
+
+
+## Related Documentation
+
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+

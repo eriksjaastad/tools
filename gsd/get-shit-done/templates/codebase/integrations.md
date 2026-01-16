@@ -278,3 +278,20 @@ Template for `.planning/codebase/INTEGRATIONS.md` - captures external service de
 **Security note:**
 Document WHERE secrets live (env vars, Vercel dashboard, 1Password), never WHAT the secrets are.
 </guidelines>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[discord_integration]] - Discord
+- [[error_handling_patterns]] - error handling
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[sales_strategy]] - sales/business
+- [[security_patterns]] - security

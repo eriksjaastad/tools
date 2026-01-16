@@ -57,3 +57,11 @@ Milestone name: $ARGUMENTS (optional - will prompt if not provided)
 - Git commit made
 - User knows next steps
   </success_criteria>
+
+## Related Documentation
+
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

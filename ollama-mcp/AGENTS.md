@@ -11,7 +11,7 @@ Bridge between the MCP protocol and local Ollama models. Provides tools for AI a
 
 ## 📋 Definition of Done (DoD)
 - [ ] Code is documented with explicit types (no `any`).
-- [ ] Technical changes are logged to `_obsidian/WARDEN_LOG.yaml`.
+- [ ] Technical changes are logged to `project-tracker/data/WARDEN_LOG.yaml`.
 - [ ] `00_Index_ollama-mcp.md` is updated with recent activity.
 - [ ] Telemetry logging is verified for any new tool or model interaction.
 - [ ] All model names and inputs are sanitized to prevent command injection.
@@ -36,3 +36,8 @@ Bridge between the MCP protocol and local Ollama models. Provides tools for AI a
 - [[Project Philosophy]]
 - [[Documents/README]]
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[error_handling_patterns]] - error handling
+- [[performance_optimization]] - performance

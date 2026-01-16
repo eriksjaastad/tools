@@ -261,3 +261,12 @@ Each phase involves reading files, running commands, analyzing output. The back-
 
 Single feature focus ensures full quality throughout the cycle.
 </context_budget>
+
+## Related Documentation
+
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[error_handling_patterns]] - error handling
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[testing_strategy]] - testing/QA

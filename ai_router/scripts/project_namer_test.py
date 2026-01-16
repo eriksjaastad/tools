@@ -29,7 +29,7 @@ def project_namer_test():
     
     for dir_name in weird_dirs:
         print(f"🔍 Analyzing directory: {dir_name}...")
-        dir_path = Path(f"/Users/eriksjaastad/projects/{dir_name}")
+        dir_path = Path(f"[USER_HOME]/projects/{dir_name}")
         
         # 1. LOCAL TIER: Get a quick summary of what's inside
         # We'll just pass the file list to the local model

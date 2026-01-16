@@ -96,3 +96,12 @@ You should see 1 entry in the log and basic stats!
 **Next:** Test with real workload, gather data for 1 week  
 **Future:** Optional task_type tagging (if you want to group by "unit_tests" vs "code_review")
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[testing_strategy]] - testing/QA

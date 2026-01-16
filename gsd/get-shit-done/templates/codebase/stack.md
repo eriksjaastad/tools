@@ -184,3 +184,15 @@ Template for `.planning/codebase/STACK.md` - captures the technology foundation.
 - Choosing implementation approach (must work with existing stack)
 - Understanding build requirements
 </guidelines>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[architecture_patterns]] - architecture
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[sales_strategy]] - sales/business
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

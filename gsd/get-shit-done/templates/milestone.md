@@ -113,3 +113,13 @@ If MILESTONES.md doesn't exist, create it with header:
 **What's next:** Security audit and hardening for v1.1
 ```
 </example>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[dashboard_architecture]] - dashboard/UI
+- [[error_handling_patterns]] - error handling
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security

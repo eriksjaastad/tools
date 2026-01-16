@@ -2,64 +2,49 @@
 
 Builder utilities and helper scripts for working across all projects.
 
-## 🤖 AI Router (`ai_router/`)
-
-**Cost-optimized routing between local Ollama and cloud AI models**
-
-Routes AI requests automatically:
-- Simple tasks → Local Ollama (FREE)
-- Medium tasks → gpt-4o-mini (cheap)
-- Complex tasks → gpt-4o (expensive)
-
-With automatic escalation on failures.
-
-**Documentation:** [`ai_router/README.md`](ai_router/README.md)
-
-**Quick start:**
-```python
-from _tools.ai_router import AIRouter
-
-router = AIRouter()
-result = router.chat([{"role": "user", "content": "Is this spam?"}])
-print(result.text)  # Uses local model (FREE)
-```
-
 ---
 
-## 📄 PDF to Markdown Converter
+## 🛠️ Active Tools
 
+### 🤖 AI Router (`ai_router/`)
+Cost-optimized routing between local Ollama and cloud AI models.
+- **Documentation:** [[ai_router/README|AI Router README]]
+- **Logic:** [[router.py|AIRouter Library]]
+
+### 🛡️ Integrity Warden (`integrity-warden/`)
+Ecosystem health checks and automated remediation.
+- **Documentation:** [[integrity-warden/README|Integrity Warden README]]
+- **Core Logic:** [[integrity_warden.py|Integrity Warden Core]]
+
+### 🔌 Ollama MCP (`ollama-mcp/`)
+Model Context Protocol integration for local Ollama instances.
+- **Documentation:** [[ollama-mcp/README|Ollama MCP README]]
+
+### 🔑 SSH Agent (`ssh_agent/`)
+Automated SSH management and host routing.
+- **Documentation:** [[ssh_agent/README|SSH Agent README]]
+- **Agent:** [[agent.py|SSH Agent Logic]]
+
+### 📄 PDF to Markdown Converter (`pdf-converter/`)
 Convert PDFs to clean markdown for processing.
+- **Converter:** [[pdf_to_markdown_converter.py|PDF Converter]]
+- **Cleanup:** [[cleanup_converted_pdfs.py|Cleanup Utility]]
 
-**Usage:**
-```bash
-cd _tools
-source pdf_converter_env/bin/activate
-python3 pdf_to_markdown_converter.py input.pdf output.md
-```
+### 💬 Claude CLI (`claude-cli/`)
+Legacy command-line interface to Claude.
+- **Script:** [[claude-cli.py|Claude CLI Script]]
 
-**Cleanup after conversion:**
-```bash
-python3 cleanup_converted_pdfs.py
-```
-
----
-
-## 💬 Claude CLI
-
-Command-line interface to Claude (legacy - consider using Cursor instead).
-
-**Usage:**
-```bash
-python3 claude-cli.py "Your prompt here"
-```
+### 🏗️ Agent Hub (`agent-hub/`)
+Central orchestration point for agent communication.
+- **Index:** [[agent-hub/00_Index_agent-hub|Agent Hub Index]]
+- **Hub:** [[hub.py|Hub Core]]
 
 ---
 
 ## 📋 Planning Templates
-
-- **`create-prd.md`** - Template for Product Requirements Documents
-- **`baseline_metrics_plan.md`** - Framework for measuring project baselines
-- **`project_lifecycle_tracking_blueprint.md`** - Tracking project progress
+- [[create-prd|Create PRD Template]]
+- [[baseline_metrics_plan|Baseline Metrics Plan]]
+- [[project_lifecycle_tracking_blueprint|Project Lifecycle Tracking]]
 
 ---
 
@@ -71,7 +56,7 @@ To use tools from any project:
 
 ```bash
 # Add to ~/.zshrc (or ~/.bashrc)
-echo 'export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH"' >> ~/.zshrc
+echo 'export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -148,4 +133,34 @@ _tools/
 
 ---
 
-Part of the `/Users/eriksjaastad/projects/` workspace.
+Part of the `..` workspace.
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[cortana_architecture]] - Cortana AI
+- [[cortana-personal-ai/README]] - Cortana AI
+
+## Development Resources
+- [[_tools/integrity-warden/integrity_warden.py|integrity_warden.py]]
+- [[_tools/integrity-warden/deep_cleanup.py|deep_cleanup.py]]
+- [[_tools/integrity-warden/remediate_renames.py|remediate_renames.py]]
+- [[_tools/integrity-warden/rename_indices.py|rename_indices.py]]
+- [[_tools/ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json]]
+- [[_tools/ollama-mcp/package-lock.json|package-lock.json]]
+- [[_tools/ollama-mcp/tsconfig.json|tsconfig.json]]
+- [[_tools/ollama-mcp/config/routing.yaml|routing.yaml]]
+- [[_tools/agent-hub/hub.py|hub.py]]
+- [[_tools/ai_router/router.py|router.py]]
+- [[_tools/ai_router/Documents/README.md|README.md]]
+- [[_tools/pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py]]
+- [[_tools/claude-cli/claude-cli.py|claude-cli.py]]
+- [[_tools/ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml]]
+- [[_tools/ssh_agent/README.md|README.md]]
+- [[_tools/ssh_agent/agent.py|agent.py]]
+- [[_tools/ssh_agent/queue/.agent_state.json|.agent_state.json]]

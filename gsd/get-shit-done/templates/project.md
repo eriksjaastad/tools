@@ -182,3 +182,12 @@ See: .planning/PROJECT.md (updated [date])
 This ensures Claude reads current PROJECT.md context.
 
 </state_reference>
+
+## Related Documentation
+
+- [[cost_management]] - cost management
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security

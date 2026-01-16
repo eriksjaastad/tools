@@ -48,10 +48,10 @@ WIKILINK_MAP = [
 
 # Path replacements for trading reports and other code
 PATH_REPLACEMENTS = [
-    (r"/Users/eriksjaastad/projects/trading-copilot", "/Users/eriksjaastad/projects/trading-copilot"),
-    (r"/Users/eriksjaastad/projects/trading-copilot", "/Users/eriksjaastad/projects/trading-copilot"),
-    (r"/Users/eriksjaastad/projects/tax-organizer", "/Users/eriksjaastad/projects/tax-organizer"),
-    (r"/Users/eriksjaastad/projects/tax-organizer", "/Users/eriksjaastad/projects/tax-organizer"),
+    (r"[USER_HOME]/projects/trading-copilot", "[USER_HOME]/projects/trading-copilot"),
+    (r"[USER_HOME]/projects/trading-copilot", "[USER_HOME]/projects/trading-copilot"),
+    (r"[USER_HOME]/projects/tax-organizer", "[USER_HOME]/projects/tax-organizer"),
+    (r"[USER_HOME]/projects/tax-organizer", "[USER_HOME]/projects/tax-organizer"),
     (r"agent-os", "agent-os"), # Wait, we are getting rid of agent-os, but if we refer to the retired one it should be kebab
 ]
 
@@ -95,5 +95,5 @@ def run_cleanup(root_dir):
 
 if __name__ == "__main__":
     import sys
-    target = sys.argv[1] if len(sys.argv) > 1 else "/Users/eriksjaastad/projects"
+    target = sys.argv[1] if len(sys.argv) > 1 else "[USER_HOME]/projects"
     run_cleanup(target)

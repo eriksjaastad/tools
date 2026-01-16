@@ -311,3 +311,11 @@ Resume is complete when:
 - [ ] User knows exactly where project stands
 - [ ] Session continuity updated
       </success_criteria>
+
+## Related Documentation
+
+- [[PROJECT_KICKOFF_GUIDE]] - project setup
+- [[queue_processing_guide]] - queue/workflow
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

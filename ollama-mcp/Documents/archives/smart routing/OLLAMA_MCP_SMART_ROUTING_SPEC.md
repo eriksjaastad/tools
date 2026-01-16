@@ -224,3 +224,9 @@ This is the 3-Strike Escalation Rule, now enforced structurally.
 ---
 
 *This spec supersedes RETRY_ESCALATION_SPEC.md with a more comprehensive approach.*
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

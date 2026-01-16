@@ -45,7 +45,7 @@ Timeouts: 1 (20.0%)
 Errors: 0 (0.0%)
 Average duration: 38.7s
 
-Log file: /Users/eriksjaastad/.ollama-mcp/runs.jsonl
+Log file: [USER_HOME]/.ollama-mcp/runs.jsonl
 
 📊 Analysis by Model
 ================================================================================
@@ -141,3 +141,8 @@ With 50-100 runs per model, you'll have:
 
 **This is what you'll see after your first few model runs!**
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance

@@ -121,3 +121,12 @@ _For current project status, see .planning/ROADMAP.md_
 - Update PROJECT.md to brownfield format with Current State section
 - Continue phase numbering in next milestone (never restart at 01)
   </guidelines>
+
+## Related Documentation
+
+- [[cost_management]] - cost management
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security

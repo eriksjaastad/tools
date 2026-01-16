@@ -75,7 +75,7 @@ Add to your Cursor MCP config file (typically `~/.cursor/mcp_config.json` or in 
   "mcpServers": {
     "ollama": {
       "command": "node",
-      "args": ["/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"]
+      "args": ["dist/server.js"]
     }
   }
 }
@@ -157,6 +157,12 @@ npm test
 - Reduce `maxConcurrency` in `ollama_run_many`
 - Default is 3; try 2 for slower machines
 
+## Configuration Files
+- [[cursor_mcp_config_example.json|Cursor MCP Config Example]] - Example configuration for Cursor.
+- [[config/routing.yaml|Routing Config]] - YAML-based routing logic for model selection.
+- [[package-lock.json|Dependency Lock]] - Locked versions of npm dependencies.
+- [[tsconfig.json|TypeScript Config]] - Build and linting configuration for the server.
+
 ## Future Extensions
 
 To extend this server later:
@@ -193,3 +199,13 @@ Local LLM models
 
 Adjust constants in `src/server.ts` if needed.
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[architecture_patterns]] - architecture
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[sales_strategy]] - sales/business

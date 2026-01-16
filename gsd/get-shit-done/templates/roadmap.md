@@ -194,3 +194,11 @@ Plans:
 - Current/future milestones expanded
 - Continuous phase numbering (01-99)
 - Progress table includes milestone column
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security

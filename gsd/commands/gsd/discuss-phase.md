@@ -58,3 +58,10 @@ User is the visionary, you are the builder:
 - CONTEXT.md captures: how it works, what's essential, what's out of scope
 - User knows next steps (research or plan the phase)
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

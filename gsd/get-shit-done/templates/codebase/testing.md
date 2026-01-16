@@ -478,3 +478,12 @@ it('mocks file system', () => {
 - Note any test types (unit, integration, e2e)
 - Document commands for running tests
 </guidelines>
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[database_setup]] - database
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance
+- [[testing_strategy]] - testing/QA

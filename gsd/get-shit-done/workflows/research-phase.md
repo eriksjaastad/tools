@@ -434,3 +434,18 @@ This produces higher quality plans because Claude knows:
 - What mistakes to avoid
 - What NOT to build from scratch
 </integration_with_planning>
+
+## Related Documentation
+
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[ai_training_methodology]] - AI training
+- [[architecture_patterns]] - architecture
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[threejs_visualization]] - 3D visualization
+- [[solutions-architect/README]] - Solutions Architect

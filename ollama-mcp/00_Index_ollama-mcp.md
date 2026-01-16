@@ -36,3 +36,41 @@ Bridge between the Model Context Protocol (MCP) and local Ollama models. Enables
 **Status:** #status/complete
 **Last Major Update:** 2026-01-01 (Standardization and Telemetry Complete)
 
+<!-- LIBRARIAN-INDEX-START -->
+
+### File Index
+
+| File | Description |
+| :--- | :--- |
+| [[AGENTS.md]] | 🎯 Project Overview |
+| [[CLAUDE.md]] | 🛑 IMPORTANT: READ AGENTS.md FIRST |
+| [[CODE_REVIEW_REQUEST.md]] | No description available. |
+| [[Documents/README.md]] | No description available. |
+| [[PITCH.md]] | Strategic value and high-level project summary |
+| [[README.md]] | No description available. |
+| [[ROADMAP.md]] | No description available. |
+| [[TODO.md]] | No description available. |
+| [[config/routing.yaml]] | No description available. |
+| [[cursor_mcp_config_example.json]] | No description available. |
+| [[package-lock.json]] | No description available. |
+| [[package.json]] | No description available. |
+| [[scripts/analyze-runs.js]] | Performance analysis of model runs |
+| [[scripts/analyze_routing_performance.js]] | No description available. |
+| [[scripts/mark_telemetry_reviewed.js]] | No description available. |
+| [[scripts/smoke_test.js]] | Server validation script |
+| [[scripts/test_routing.js]] | No description available. |
+| [[setup_local_ai.sh]] | No description available. |
+| [[src/logger.ts]] | Telemetry logging system (JSON Lines) |
+| [[src/server.ts]] | MCP protocol implementation and tool registration |
+| [[tsconfig.json]] | No description available. |
+
+<!-- LIBRARIAN-INDEX-END -->
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[architecture_patterns]] - architecture
+- [[error_handling_patterns]] - error handling
+- [[ai_model_comparison]] - AI models
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance

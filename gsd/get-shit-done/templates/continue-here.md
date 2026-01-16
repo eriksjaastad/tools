@@ -76,3 +76,11 @@ Required YAML frontmatter:
 - The `<next_action>` should be actionable without reading anything else
 - This file gets DELETED after resume - it's not permanent storage
 </guidelines>
+
+
+## Related Documentation
+
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career
+- [[security_patterns]] - security
+

@@ -225,3 +225,11 @@ Phase insertion is complete when:
 - [ ] Decimal number calculated correctly (based on existing decimals)
 - [ ] User informed of next steps and dependency implications
       </success_criteria>
+
+
+## Related Documentation
+
+- [[case_studies]] - examples
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+

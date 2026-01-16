@@ -180,3 +180,11 @@ Would you like to:
 - [ ] STATE.md updated if exists
 - [ ] Todo and state committed to git
 </success_criteria>
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[ai_model_comparison]] - AI models
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

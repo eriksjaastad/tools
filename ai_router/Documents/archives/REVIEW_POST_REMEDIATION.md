@@ -74,8 +74,8 @@ Gemini added the new import but didn't remove the existing one, resulting in dup
 
 These scripts still reference absolute paths in their **business logic** (not imports):
 
-- `scripts/agent_skills_audit.py:17`: `Path("/Users/eriksjaastad/projects/agent-skills-library")`
-- `scripts/project_namer_test.py:31`: `Path(f"/Users/eriksjaastad/projects/{dir_name}")`
+- `scripts/agent_skills_audit.py:17`: `Path("[USER_HOME]/projects/agent-skills-library")`
+- `scripts/project_namer_test.py:31`: `Path(f"[USER_HOME]/projects/{dir_name}")`
 
 **Impact:** These are test/demo scripts that reference external projects. They won't work on other machines, but this is expected for personal tooling. Low priority.
 
@@ -178,3 +178,9 @@ Gemini 3 Flash performed exceptionally well on this structured remediation task.
 The only gap was missing `examples.py` in Task 8, likely because that file wasn't explicitly listed with a "Find/Replace" block (it was mentioned in the original review but not the Gemini prompt with the same detail as other files).
 
 **Lesson:** When giving Gemini remediation tasks, list every file with explicit before/after code blocks. Don't assume it will infer which files need changes.
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+

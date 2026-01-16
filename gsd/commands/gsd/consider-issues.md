@@ -200,3 +200,11 @@ Use AskUserQuestion with appropriate options based on findings:
 - [ ] ISSUES.md updated if user takes action
 - [ ] STATE.md updated if issue count changes
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[testing_strategy]] - testing/QA

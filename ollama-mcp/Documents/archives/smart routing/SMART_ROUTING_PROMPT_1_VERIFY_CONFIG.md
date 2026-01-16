@@ -67,3 +67,10 @@ node -e "const yaml = require('js-yaml'); const fs = require('fs'); console.log(
 6. Report any discrepancies found
 
 ---
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+

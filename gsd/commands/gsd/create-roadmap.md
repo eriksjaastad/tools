@@ -117,3 +117,10 @@ Roadmap created:
 - [ ] Phase directories created
 - [ ] Changes committed
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research

@@ -398,3 +398,19 @@ MIT License. See [LICENSE](LICENSE) for details.
 **Claude Code is powerful. GSD makes it reliable.**
 
 </div>
+
+## Related Documentation
+
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[automation_patterns]] - automation
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[session_documentation]] - session notes
+- [[testing_strategy]] - testing/QA

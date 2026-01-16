@@ -35,7 +35,7 @@ To use this server in Cursor:
 2. Add a new MCP Server:
    - **Name:** Ollama
    - **Type:** command
-   - **Command:** `node /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+   - **Command:** `node ../../dist/server.js`
 
 ## Telemetry & Maintenance
 
@@ -52,3 +52,9 @@ node scripts/analyze-runs.js
 ### Log Rotation
 Currently, logs are append-only. If the file becomes too large, it can be manually moved or deleted. A rotation script is a future consideration.
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance
+- [[testing_strategy]] - testing/QA

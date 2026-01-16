@@ -104,7 +104,7 @@ result = router.chat(
 
 ```bash
 # Set PYTHONPATH
-export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH"
+export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"
 
 # Run tests
 python scripts/test_gauntlet.py
@@ -130,3 +130,18 @@ python -c 'from _tools.ai_router import AIRouter; print(AIRouter().get_performan
 
 *This project follows the [project-scaffolding](https://github.com/eriksjaastad/project-scaffolding) patterns.*
 
+## Related Documentation
+
+- [[CODE_QUALITY_STANDARDS]] - code standards
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project-scaffolding/README]] - Project Scaffolding
+- [[project-tracker/README]] - Project Tracker

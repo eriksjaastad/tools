@@ -45,7 +45,7 @@ except ImportError as e:
     print("\nTroubleshooting:")
     print("1. Make sure you're in the projects directory")
     print("2. Or add to PYTHONPATH:")
-    print("   export PYTHONPATH='/Users/eriksjaastad/projects:$PYTHONPATH'")
+    print("   export PYTHONPATH='[USER_HOME]/projects:$PYTHONPATH'")
     sys.exit(1)
 except Exception as e:
     print(f"❌ Test failed: {e}")

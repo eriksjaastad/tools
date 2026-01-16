@@ -319,3 +319,13 @@ All {N} phases finished!
 - [ ] User confirms before any action
 - [ ] Seamless handoff to appropriate gsd command
       </success_criteria>
+
+## Related Documentation
+
+- [[PROJECT_KICKOFF_GUIDE]] - project setup
+- [[ai_model_comparison]] - AI models
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[session_documentation]] - session notes
+- [[testing_strategy]] - testing/QA

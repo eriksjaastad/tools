@@ -479,3 +479,19 @@ Roadmap is complete when:
 - [ ] Status tracking in place
 </success_criteria>
 ```
+
+## Related Documentation
+
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[discord_integration]] - Discord
+- [[adult_business_compliance]] - adult industry
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[deployment_patterns]] - deployment
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security

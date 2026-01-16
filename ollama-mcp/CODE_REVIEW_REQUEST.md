@@ -100,3 +100,14 @@ Documents pattern complete:
 
 *This review follows the project-scaffolding standardization.*
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[error_handling_patterns]] - error handling
+- [[adult_business_compliance]] - adult industry
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+- [[project-scaffolding/README]] - Project Scaffolding

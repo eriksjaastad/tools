@@ -52,3 +52,11 @@ Smart routing between local and cloud AI models based on complexity heuristics, 
 **Created:** 2026-01-05  
 **Location:** `_tools/ai_router/00_Index_ai-router.md`
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[cost_management]] - cost management
+- [[dashboard_architecture]] - dashboard/UI
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance

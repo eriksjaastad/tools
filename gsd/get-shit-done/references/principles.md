@@ -155,3 +155,12 @@ NEVER include:
 If it sounds like corporate PM theater, delete it.
 </anti_enterprise>
 </principles>
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security

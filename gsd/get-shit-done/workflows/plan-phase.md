@@ -585,3 +585,21 @@ Phase planning complete when:
 - [ ] PLAN file(s) committed to git
 - [ ] User knows next steps
 </success_criteria>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[automation_patterns]] - automation
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[research_methodology]] - research
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

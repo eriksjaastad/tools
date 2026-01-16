@@ -82,7 +82,7 @@ You should see JSON entries like:
 
 ### Step 4: Run Analysis
 ```bash
-node /Users/eriksjaastad/projects/_tools/ollama-mcp/scripts/analyze-runs.js
+node [USER_HOME]/projects/_tools/ollama-mcp/scripts/analyze-runs.js
 ```
 
 You should see:
@@ -176,4 +176,9 @@ After testing:
 **Ready for:** Real-world testing and data collection  
 
 **Your Turn:** Restart Cursor → Use models → Collect data → Analyze!
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
 

@@ -7,7 +7,7 @@ A **cost-optimized AI routing system** that sits in `_tools/ai_router/` and can 
 ## Location
 
 ```
-/Users/eriksjaastad/projects/_tools/ai_router/
+[USER_HOME]/projects/_tools/ai_router/
 ```
 
 ## Features
@@ -51,7 +51,7 @@ _tools/ai_router/
 
 ```bash
 # Add to ~/.zshrc
-echo 'export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH"' >> ~/.zshrc
+echo 'export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -69,7 +69,7 @@ print(result.text)
 
 ```python
 import sys
-sys.path.insert(0, "/Users/eriksjaastad/projects")
+sys.path.insert(0, "[USER_HOME]/projects")
 
 from _tools.ai_router import AIRouter
 ```
@@ -151,12 +151,12 @@ This is **not just a wrapper** - it's a smart router with:
 
 ## Comparison with Ollama MCP
 
-**Ollama MCP** (`/Users/eriksjaastad/projects/_tools/ollama-mcp/`):
+**Ollama MCP** (`[USER_HOME]/projects/_tools/ollama-mcp/`):
 - Exposes Ollama to Cursor (TypeScript)
 - Used BY you (Sonnet) to delegate work
 - Tool calls from within Cursor
 
-**AI Router** (`/Users/eriksjaastad/projects/_tools/ai_router/`):
+**AI Router** (`[USER_HOME]/projects/_tools/ai_router/`):
 - Routes Python code requests
 - Used BY Erik's projects (actionable-ai-intel, Cortana, etc.)
 - Function calls from Python scripts
@@ -220,6 +220,12 @@ Start with **actionable-ai-intel** or **Cortana** to validate the cost savings, 
 ---
 
 *Built: 2025-12-31*  
-*Location: `/Users/eriksjaastad/projects/_tools/ai_router/`*  
+*Location: `[USER_HOME]/projects/_tools/ai_router/`*  
 *Status: Production ready*
+
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
 

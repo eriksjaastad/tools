@@ -426,3 +426,19 @@ If a task is trivial, combine with related tasks.
 
 **Note on scope:** If a phase has >3 tasks or spans multiple subsystems, split into multiple plans using the naming convention `{phase}-{plan}-PLAN.md`. See `./scope-estimation.md` for guidance.
 </sizing_tasks>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[deployment_patterns]] - deployment
+- [[portfolio_content]] - portfolio/career
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

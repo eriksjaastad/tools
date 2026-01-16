@@ -118,3 +118,11 @@ After all tasks complete:
 - [ ] Metadata committed by orchestrator
 - [ ] Phase progress updated
 </success_criteria>
+
+## Related Documentation
+
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[orchestration_patterns]] - orchestration
+- [[project_planning]] - planning/roadmap
+- [[security_patterns]] - security

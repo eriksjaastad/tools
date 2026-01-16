@@ -47,3 +47,12 @@ A utility to process the telemetry logs and provide performance insights (avg du
 - **Timeouts**: Default 120s timeout on all Ollama calls to prevent hanging processes.
 - **Concurrency Limit**: Hard-capped at 8 concurrent runs to prevent system overload.
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[architecture_patterns]] - architecture
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[security_patterns]] - security

@@ -1,0 +1,170 @@
+You're right. Here's the deep review of doc 2 as it stands:
+
+---
+
+## Deep Review: Multi-Agent Documentation Pipeline
+
+### 1. Role Ambiguity: Who is the Worker?
+
+The Worker is defined as "Local LLM (or Gemini)." This is a problem because Gemini is *also* the Floor Manager. You've collapsed two roles into one agent conditionally, which means:
+
+- When does Gemini delegate vs execute itself?
+- If Gemini is both orchestrating AND executing, who validates that it followed its own contract?
+
+**Fix:** Either the Worker is always local (Ollama/Qwen), or you need explicit criteria for when Gemini self-executes vs delegates.
+
+---
+
+### 2. File List Inconsistency
+
+Section 2 defines four handoff files:
+- `PROPOSAL.md`
+- `TASK_CONTRACT.json`
+- `WORK_OUTPUT.md`
+- `JUDGE_REPORT.log`
+
+But Phase 3 introduces `REVIEW_REQUEST.md` as a trigger file. It's not in your source-of-truth list. Either add it to Section 2 or remove it from the flow.
+
+---
+
+### 3. No Contract Schema
+
+Doc 1 gave you a detailed JSON schema with `task_id`, `status`, `specification`, `handoff_data`, and `history`. Doc 2 just says Gemini "converts that proposal into a strict set of instructions."
+
+Without a schema:
+- How does the Worker know what fields to read?
+- How does the Watchdog know what status to check?
+- How do you validate that Gemini produced a well-formed contract?
+
+---
+
+### 4. The `pending_review` Status Has No Home
+
+Phase 3 says: "Once the Worker marks the task as `pending_review` in the contract..."
+
+But you haven't defined:
+- Where in `TASK_CONTRACT.json` this status lives
+- What other valid statuses exist
+- How the Worker updates the JSON (does it have write access? does it know the schema?)
+
+---
+
+### 5. "Non-Prompt-Based Check" is Undefined
+
+Phase 4 says the Judge runs checks for:
+- Valid internal links
+- No placeholder text
+- 14pt-readability logic
+
+Is this actually scripted validation (regex, link checkers, readability scores)? Or is it a standardized prompt that Claude executes? These are architecturally different:
+
+- **Scripted:** Deterministic, fast, cheap, but rigid
+- **Prompt-based:** Flexible, expensive, can hallucinate
+
+If it's scripted, who writes those validators? If it's prompt-based, where's the prompt template?
+
+---
+
+### 6. No Failure/Retry Logic
+
+Section 2 says: "If it says FAIL, Gemini is triggered to redo the task."
+
+But:
+- How many retries before escalation?
+- Does Gemini modify the contract based on Judge feedback, or just re-run with identical instructions?
+- What if the Judge is wrong? (No rebuttal mechanism exists in this doc)
+
+---
+
+### 7. Circuit Breakers Are Gone
+
+Doc 1 had five specific halt conditions:
+1. Rebuttal limit exceeded
+2. Destructive deletion threshold
+3. Logical paradox between reviewers
+4. Hallucination/regression loop
+5. "GPT-Energy" style nitpicking
+
+Doc 2 has zero. Your automation has no brakes.
+
+---
+
+### 8. The `.cursorrules` Instruction is Too Vague
+
+You tell Gemini: "Execute the next task in MASTER_PLAN.md. Do not provide advice."
+
+But:
+- What's "next"? First incomplete item? Highest priority? Dependencies resolved?
+- What if two tasks are ready simultaneously?
+- What format does MASTER_PLAN.md use so Gemini can parse "ready" vs "done"?
+
+---
+
+### 9. WORK_OUTPUT.md vs Actual Files
+
+The Worker writes to `WORK_OUTPUT.md`. But your goal is to edit real documentation files like `auth.md` or `login-flow.md`.
+
+Who moves content from `WORK_OUTPUT.md` to the actual target file? When? Is that the Floor Manager's job post-review? This handoff is missing.
+
+---
+
+### 10. Same Tool, Two Roles
+
+Claude Code CLI is both Supermanager and Judge. These require completely different system prompts and contexts:
+
+- **Supermanager mode:** "Scan 30 projects, identify merge targets, write MASTER_PLAN.md"
+- **Judge mode:** "Review this single document against this checklist, write JUDGE_REPORT.log"
+
+How do you switch modes? Separate bash aliases with different prompts? Different working directories? This isn't specified.
+
+---
+
+### 11. No Definition of "Golden Document"
+
+You use this term but never define it. What makes a document golden?
+- Passed Judge review?
+- Matches a template?
+- Contains specific sections?
+
+Without a definition, the Judge has no objective standard.
+
+---
+
+### 12. MASTER_PLAN.md Format is Undefined
+
+Phase 1 outputs "a list of Merge Targets." But:
+- Is it a markdown checklist?
+- A table?
+- Does each item have a status field?
+
+Gemini needs to parse this programmatically. No format = Gemini guesses.
+
+---
+
+### 13. No History/Audit Trail
+
+Doc 1 had a `history` array to track iterations. This doc has nothing. You lose:
+- The ability to detect regression (hallucination loop)
+- Debugging capability when something fails on iteration 4
+- Fodder for your AI journals
+
+---
+
+## Summary: What Doc 2 Needs
+
+| Gap | Priority |
+|-----|----------|
+| Contract schema with status field | Critical |
+| Circuit breaker conditions | Critical |
+| Failure/retry logic with limits | High |
+| MASTER_PLAN.md format spec | High |
+| Worker role clarification | High |
+| File list consistency (add REVIEW_REQUEST.md) | Medium |
+| Golden Document definition | Medium |
+| Supermanager vs Judge mode switching | Medium |
+| WORK_OUTPUT.md → target file handoff | Medium |
+| History tracking mechanism | Medium |
+
+---
+
+Want me to help you address these gaps one by one, or would you prefer to revise the doc yourself and come back for another pass?

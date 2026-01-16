@@ -2,7 +2,7 @@
 
 ## ✅ Installation Complete
 
-- [x] Project scaffolded in `/Users/eriksjaastad/projects/_tools/ollama-mcp`
+- [x] Project scaffolded in `../..`
 - [x] Dependencies installed
 - [x] TypeScript compiled
 - [x] Smoke tests passing
@@ -17,7 +17,7 @@
 3. Add a new MCP server with:
    - Name: `ollama`
    - Command: `node`
-   - Args: `/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+   - Args: `../../dist/server.js`
 
 **Option B: Manual Config File**
 1. Locate your Cursor MCP config (usually `~/.cursor/mcp_config.json`)
@@ -27,7 +27,7 @@
   "mcpServers": {
     "ollama": {
       "command": "node",
-      "args": ["/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"]
+      "args": ["../../dist/server.js"]
     }
   }
 }
@@ -76,7 +76,7 @@ ollama pull llama3.2
 
 ### Problem: "Server not responding" in Cursor
 **Solution:**
-1. Check if server starts: `node /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js`
+1. Check if server starts: `node ../../dist/server.js`
    - Should print: "Ollama MCP server running on stdio"
    - If error, check Node.js is installed: `node --version`
 2. Restart Cursor
@@ -85,7 +85,7 @@ ollama pull llama3.2
 ### Problem: "Permission denied"
 **Solution:**
 ```bash
-chmod +x /Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js
+chmod +x ../../dist/server.js
 ```
 
 ### Problem: Models timing out
@@ -118,3 +118,8 @@ These will be fixed in v2 with HTTP API support.
 
 The MCP server is built, tested, and ready to use. Configure Cursor and start delegating tasks to your local models!
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[dashboard_architecture]] - dashboard/UI
+- [[prompt_engineering_guide]] - prompt engineering

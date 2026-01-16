@@ -68,3 +68,13 @@ node scripts/analyze_routing_performance.js
 
 *This file is based on the [project-scaffolding](https://github.com/eriksjaastad/project-scaffolding) CLAUDE.md pattern.*
 
+## Related Documentation
+
+- [[CODE_QUALITY_STANDARDS]] - code standards
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[ai_model_comparison]] - AI models
+- [[performance_optimization]] - performance
+- [[project-scaffolding/README]] - Project Scaffolding

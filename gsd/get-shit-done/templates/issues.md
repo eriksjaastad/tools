@@ -30,3 +30,10 @@ Enhancements discovered during execution. Not critical - address in future phase
 **Entry format:** Copy the ISS-001 block, update number and fields.
 
 **Closing issues:** Move entire block to "Closed Enhancements" section, add resolution note.
+
+
+## Related Documentation
+
+- [[performance_optimization]] - performance
+- [[testing_strategy]] - testing/QA
+

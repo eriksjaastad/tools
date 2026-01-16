@@ -104,3 +104,10 @@ Output: Milestone archived, roadmap reorganized, git tagged.
 - **One-line summary:** Collapsed milestone in ROADMAP.md should be single line with link
 - **Context efficiency:** Archive keeps ROADMAP.md constant size
   </critical_rules>
+
+## Related Documentation
+
+- [[prompt_engineering_guide]] - prompt engineering
+- [[queue_processing_guide]] - queue/workflow
+- [[ai_model_comparison]] - AI models
+- [[project_planning]] - planning/roadmap

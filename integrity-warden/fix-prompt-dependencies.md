@@ -9,7 +9,7 @@
 ### 1. flo-fi - CRITICAL: Next.js vulnerabilities
 
 ```bash
-cd /Users/eriksjaastad/projects/flo-fi
+cd ../../flo-fi
 
 # Check current Next.js version
 cat package.json | grep next
@@ -29,7 +29,7 @@ npm audit 2>&1 | grep -i "next\|critical"
 ### 2. ollama-mcp - HIGH: SDK vulnerability
 
 ```bash
-cd /Users/eriksjaastad/projects/_tools/ollama-mcp
+cd ../ollama-mcp
 
 # Check what sdk package has the issue
 npm audit 2>&1 | head -40
@@ -53,7 +53,7 @@ npm audit 2>&1 | grep -i "high\|critical"
 ### 3. portfolio-ai - MODERATE: esbuild/vite vulnerabilities
 
 ```bash
-cd /Users/eriksjaastad/projects/portfolio-ai
+cd ../../portfolio-ai
 
 # Update vite and esbuild
 npm update vite esbuild
@@ -70,7 +70,7 @@ npm audit 2>&1 | grep -i "moderate\|high\|critical"
 ### 4. tax-organizer - MODERATE: esbuild/vite vulnerabilities
 
 ```bash
-cd /Users/eriksjaastad/projects/tax-organizer/frontend
+cd ../../tax-organizer/frontend
 
 # Update vite and esbuild
 npm update vite esbuild
@@ -87,7 +87,7 @@ npm audit 2>&1 | grep -i "moderate\|high\|critical"
 ### 5. national-cattle-brands - SETUP: Playwright missing
 
 ```bash
-cd /Users/eriksjaastad/projects/national-cattle-brands/texas_brand_scraper
+cd ../../national-cattle-brands/texas_brand_scraper
 
 # Activate venv
 source venv/bin/activate
@@ -107,7 +107,7 @@ python -c "from playwright.sync_api import sync_playwright; print('OK')"
 The `greenlet` dependency fails to build on Python 3.14. Need to use Python 3.11 or 3.12.
 
 ```bash
-cd /Users/eriksjaastad/projects/ai-usage-billing-tracker
+cd ../../ai-usage-billing-tracker
 
 # Check current Python version
 python --version
@@ -142,7 +142,7 @@ pip install -r requirements.txt
 
 ## Report Results
 
-After fixing, update `/Users/eriksjaastad/projects/TODO.md`:
+After fixing, update `../../TODO.md`:
 
 Change these rows from `[ ]` to `[x]` in the L3 Deps column if fixed:
 - flo-fi
@@ -179,28 +179,28 @@ Four projects have `.env` but no `.env.example`. Create the example file for eac
 
 **ai-usage-billing-tracker:**
 ```bash
-cd /Users/eriksjaastad/projects/ai-usage-billing-tracker
+cd ../../ai-usage-billing-tracker
 cat .env | sed 's/=.*/=/' > .env.example
 cat .env.example  # Verify it has variable names only
 ```
 
 **cortana-personal-ai:**
 ```bash
-cd /Users/eriksjaastad/projects/cortana-personal-ai
+cd ../../cortana-personal-ai
 cat .env | sed 's/=.*/=/' > .env.example
 cat .env.example
 ```
 
 **holoscape:**
 ```bash
-cd /Users/eriksjaastad/projects/holoscape
+cd ../../holoscape
 cat .env | sed 's/=.*/=/' > .env.example
 cat .env.example
 ```
 
 **trading-copilot:**
 ```bash
-cd /Users/eriksjaastad/projects/trading-copilot
+cd ../../trading-copilot
 cat .env | sed 's/=.*/=/' > .env.example
 cat .env.example
 ```
@@ -212,7 +212,7 @@ cat .env.example
 The `.env` file exists but the code never loads it. Add `load_dotenv()` to the main scripts.
 
 ```bash
-cd /Users/eriksjaastad/projects/cortana-personal-ai/scripts/core
+cd ../../cortana-personal-ai/scripts/core
 
 # Check if python-dotenv is in requirements
 grep dotenv ../requirements.txt || echo "python-dotenv" >> ../requirements.txt
@@ -252,3 +252,23 @@ Verify:
 source venv/bin/activate
 python -c "from scripts.core.personal_ai_listener import *; print('OK')"
 ```
+
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[billing_workflows]] - billing/payments
+- [[dashboard_architecture]] - dashboard/UI
+- [[prompt_engineering_guide]] - prompt engineering
+- [[tax_documentation]] - tax/accounting
+- [[case_studies]] - examples
+- [[cortana_architecture]] - Cortana AI
+- [[holoscape_architecture]] - Holoscape
+- [[portfolio_content]] - portfolio/career
+- [[ai-usage-billing-tracker/README]] - AI Billing Tracker
+- [[cortana-personal-ai/README]] - Cortana AI
+- [[flo-fi/README]] - Flo-Fi
+- [[holoscape/README]] - Holoscape
+- [[national-cattle-brands/README]] - Cattle Brands
+- [[portfolio-ai/README]] - Portfolio AI
+- [[tax-organizer/README]] - Tax Organizer
+- [[trading-copilot/README]] - Trading Copilot

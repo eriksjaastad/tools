@@ -256,3 +256,18 @@ cat ~/.ollama-mcp/runs.jsonl | jq -s 'group_by(.model) | map({model: .[0].model,
 *Last Modified: December 31, 2025*  
 *Source: project-scaffolding/templates/TODO.md.template*
 
+## Related Documentation
+
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+- [[automation_patterns]] - automation
+- [[cost_management]] - cost management
+- [[error_handling_patterns]] - error handling
+- [[prompt_engineering_guide]] - prompt engineering
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[project_planning]] - planning/roadmap
+- [[testing_strategy]] - testing/QA
+- [[project-scaffolding/README]] - Project Scaffolding
+- [[project-tracker/README]] - Project Tracker

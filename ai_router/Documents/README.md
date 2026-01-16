@@ -10,3 +10,9 @@ This directory contains detailed documentation for the AI Router project.
 - `safety/` - Error handling and escalation patterns.
 - `archives/` - Historical documentation and session logs.
 
+
+## Related Documentation
+
+- [[architecture_patterns]] - architecture
+- [[error_handling_patterns]] - error handling
+

@@ -271,3 +271,14 @@ Logged to .planning/ISSUES.md for future consideration:
 - STATE.md updated with position, decisions, issues
 - Next plan can reference decisions made
 </guidelines>
+
+## Related Documentation
+
+- [[api_design_patterns]] - API design
+- [[dashboard_architecture]] - dashboard/UI
+- [[database_setup]] - database
+- [[queue_processing_guide]] - queue/workflow
+- [[case_studies]] - examples
+- [[performance_optimization]] - performance
+- [[security_patterns]] - security
+- [[testing_strategy]] - testing/QA

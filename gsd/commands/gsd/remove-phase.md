@@ -336,3 +336,9 @@ Phase removal is complete when:
 - [ ] No gaps in phase numbering
 - [ ] User informed of changes
 </success_criteria>
+
+## Related Documentation
+
+- [[dashboard_architecture]] - dashboard/UI
+- [[case_studies]] - examples
+- [[project_planning]] - planning/roadmap
