@@ -353,23 +353,102 @@ export OPENAI_API_KEY="sk-..."
 
 Add to PYTHONPATH:
 ```bash
-export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH"
+export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"
 ```
 
 Or add to your shell profile:
 ```bash
-echo 'export PYTHONPATH="/Users/eriksjaastad/projects:$PYTHONPATH"' >> ~/.zshrc
+echo 'export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
+## Tool Support (NEW in v1.1.0)
+
+The AI Router now supports **agentic workflows** with Claude's Tool Runner pattern!
+
+### Quick Start with Tools
+
+```python
+from _tools.ai_router import ToolRouter, tool
+
+# Define a tool using the decorator
+@tool("calculate")
+def calculate(expression: str) -> dict:
+    """Safely evaluate a mathematical expression."""
+    result = eval(expression)  # (use safe eval in production!)
+    return {"expression": expression, "result": result}
+
+@tool("get_time")
+def get_time() -> dict:
+    """Get the current time."""
+    from datetime import datetime
+    return {"time": datetime.now().isoformat()}
+
+# Create tool router
+router = ToolRouter(
+    tools=[calculate, get_time],
+    max_turns=5,
+    verbose=True,
+)
+
+# Run agentic task
+result = router.run("What is 25 * 4? Also, what time is it?")
+print(result.text)
+# Claude will call both tools and provide a combined answer
+```
+
+### Tool Definition Best Practices
+
+```python
+@tool("search_files")
+def search_files(
+    query: str,
+    directory: str = ".",
+    file_type: str = "*"
+) -> list[str]:
+    """
+    Search for files matching a pattern.
+    
+    Use this when the user wants to find specific files.
+    Returns a list of matching file paths.
+    
+    Args:
+        query: Pattern to search for in file names
+        directory: Root directory to search from
+        file_type: File extension filter (e.g., "py", "md")
+    """
+    from pathlib import Path
+    return list(Path(directory).glob(f"**/*{query}*.{file_type}"))
+```
+
+### AgentResult Object
+
+```python
+@dataclass
+class AgentResult:
+    text: str              # Final response from Claude
+    tool_calls: list       # All tools that were executed
+    turns: int             # Number of conversation turns
+    total_duration_ms: int # Total time taken
+    model: str             # Model used
+    stop_reason: str       # Why the conversation ended
+```
+
+### Documentation
+
+- **Skill:** `agent-skills-library/claude-skills/tool-runner-patterns/`
+- **Playbook:** `agent-skills-library/playbooks/tool-runner-patterns/`
+- **Test:** `scripts/test_tool_runner.py`
+
 ## Future Enhancements
 
+- [x] ~~**Multi-provider**: Support Anthropic, Gemini, etc.~~ ✅ Done!
+- [x] ~~**Tool support**: Claude Tool Runner integration~~ ✅ Done!
 - [ ] **Learned routing**: Train on telemetry data for better routing decisions
 - [ ] **Judge model**: Use a small model to evaluate response quality
 - [ ] **Cost tracking**: Built-in logger for cost analysis
 - [ ] **Response caching**: Cache identical prompts
 - [ ] **Streaming support**: Stream responses from both local and cloud
-- [ ] **Multi-provider**: Support Anthropic, Gemini, etc.
 
 ## Philosophy
 
@@ -384,4 +463,82 @@ This follows the **"local-first, cloud-fallback"** pattern from your LOCAL_AI_GA
 ---
 
 Part of the `_tools/` builder utilities collection.
+
+
+## Related Documentation
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[prompt_engineering_guide]] - prompt engineering
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[cortana_architecture]] - Cortana AI
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[security_patterns]] - security
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[prompt_engineering_guide]] - prompt engineering
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[cortana-personal-ai/README]] - Cortana AI
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[prompt_engineering_guide]] - prompt engineering
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[ai_model_comparison]] - AI models
+- [[case_studies]] - examples
+- [[cortana_architecture]] - Cortana AI
+- [[performance_optimization]] - performance
+- [[portfolio_content]] - portfolio/career
+- [[security_patterns]] - security
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
+
+- [[api_design_patterns]] - API design
+- [[architecture_patterns]] - architecture
+- [[cost_management]] - cost management
+- [[prompt_engineering_guide]] - prompt engineering
+
+
+- [[DOPPLER_SECRETS_MANAGEMENT]] - secrets management
+- [[LOCAL_MODEL_LEARNINGS]] - local AI
+- [[PROJECT_STRUCTURE_STANDARDS]] - project structure
 
