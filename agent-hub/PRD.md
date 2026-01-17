@@ -75,7 +75,8 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 **Acceptance Criteria:**
 - Claude CLI acts as Super Manager when invoked for planning
 - We collaborate to refine scope, requirements, and acceptance criteria
-- When I approve, Super Manager writes `PROPOSAL_FINAL.md` to `_handoff/`
+- When Erik says **"Write PROPOSAL_FINAL"** (formalized trigger phrase), Super Manager commits the proposal
+- Super Manager writes `PROPOSAL_FINAL.md` to `_handoff/`
 - This file triggers the Floor Manager (Cursor) to take over
 
 #### Story 1: Proposal → Contract Conversion
@@ -153,7 +154,8 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 | ID | Requirement |
 |----|-------------|
 | FR-00 | Floor Manager MUST detect `PROPOSAL_FINAL.md` in `_handoff/` and convert to contract |
-| FR-01 | Super Manager (Claude CLI) MUST be able to write `PROPOSAL_FINAL.md` to trigger pipeline |
+| FR-00a | Floor Manager MUST write `PROPOSAL_REJECTED.md` if proposal is malformed/vague (with specific issues) |
+| FR-01 | Super Manager (Claude CLI) MUST write `PROPOSAL_FINAL.md` when Erik says "Write PROPOSAL_FINAL" |
 | FR-02 | System MUST invoke local Ollama models for implementation |
 | FR-03 | System MUST invoke Claude CLI for architectural review |
 | FR-04 | System MUST produce structured JSON verdict from Judge |
@@ -172,7 +174,7 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 |----|-------------|
 | FR-11 | System SHOULD support parallel tasks across different projects |
 | FR-12 | System SHOULD track token usage per task |
-| FR-13 | System SHOULD support complexity-based rebuttal limits |
+| FR-13 | System SHOULD support complexity-based rebuttal limits AND cost ceilings ($0.25-$5.00) |
 | FR-14 | System SHOULD send notifications on halt (email/webhook) |
 | FR-15 | System SHOULD provide a `status` command showing all active tasks |
 
@@ -195,7 +197,8 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 |----|-------------|
 | NFR-01 | Watchdog polling interval ≤ 5 seconds |
 | NFR-02 | State transitions complete in < 1 second |
-| NFR-03 | Local model invocation timeout ≤ 10 minutes |
+| NFR-03 | Implementer (Qwen) timeout ≤ 10 minutes |
+| NFR-03a | Local Reviewer (DeepSeek) timeout ≤ 15 minutes (reasoning needs time) |
 | NFR-04 | Cloud model (Judge) timeout ≤ 15 minutes |
 
 ### Reliability
