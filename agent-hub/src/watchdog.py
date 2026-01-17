@@ -11,6 +11,7 @@ from .mcp_client import MCPClient, MCPError
 from .worker_client import WorkerClient
 from .hub_client import HubClient
 from .config import get_config
+from .draft_gate import handle_draft_submission, apply_draft, reject_draft, GateDecision
 
 _config = get_config()
 MCP_SERVER_PATH = _config.mcp_server_path

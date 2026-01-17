@@ -718,11 +718,11 @@ python scripts/test_sandbox_infra.py
 ## Success Criteria
 
 Phase 11 is DONE when:
-- [ ] `_handoff/drafts/` directory exists with README
-- [ ] `.gitignore` excludes draft contents but keeps structure
-- [ ] `src/sandbox.py` exists with all validation functions
-- [ ] All security tests pass (escape attempts blocked)
-- [ ] Smoke test reports "Ready for Phase 12"
+- [x] `_handoff/drafts/` directory exists with README
+- [x] `.gitignore` excludes draft contents but keeps structure
+- [x] `src/sandbox.py` exists with all validation functions
+- [x] All security tests pass (escape attempts blocked)
+- [x] Smoke test reports "Ready for Phase 12"
 
 ---
 
@@ -730,12 +730,14 @@ Phase 11 is DONE when:
 
 Before marking Phase 11 complete, verify:
 
-- [ ] `validate_sandbox_write()` blocks ALL paths outside `_handoff/drafts/`
-- [ ] Path traversal (`..`) is blocked
-- [ ] Only `.draft` and `.submission.json` extensions allowed
-- [ ] Sensitive files (`.env`, `credentials`, etc.) cannot be read for drafting
-- [ ] No shell execution anywhere in sandbox.py
-- [ ] All validation failures are logged with SECURITY prefix
+- [x] `validate_sandbox_write()` blocks ALL paths outside `_handoff/drafts/`
+- [x] Path traversal (`..`) is blocked
+- [x] Only `.draft` and `.submission.json` extensions allowed
+- [x] Sensitive files (`.env`, `credentials`, etc.) cannot be read for drafting
+- [x] No shell execution anywhere in sandbox.py
+- [x] All validation failures are logged with SECURITY prefix
+
+**Status: COMPLETE** (Committed: `d1b08f0`)
 
 ---
 

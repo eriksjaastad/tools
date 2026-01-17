@@ -17,6 +17,7 @@ from .mcp_client import MCPClient, MCPError
 from .hub_client import HubClient
 from .proposal_converter import convert_proposal
 from .watchdog import load_contract, save_contract, transition, log_transition
+from .draft_gate import handle_draft_submission, apply_draft, reject_draft, GateDecision
 from .config import get_config
 
 # Configure logging to console
@@ -149,6 +150,93 @@ class MessageListener:
             self._heartbeat_thread.join(timeout=5)
         logger.info("MessageListener stopped.")
 
+    def _send_message(self, to_agent: str, msg_type: str, payload: dict):
+        """Helper to send a message via the hub."""
+        try:
+            with MCPClient(self.hub_path) as mcp:
+                hub = HubClient(mcp)
+                hub.connect(self.agent_id)
+                hub.send_message(to_agent, msg_type, payload)
+        except Exception as e:
+            logger.error(f"Failed to send message {msg_type} to {to_agent}: {e}")
+
+    def _log_transition(self, event: str, task_id: str):
+        """Helper to log an event to ndjson."""
+        # We can either use watchdog.log_transition if we have a contract,
+        # or just log a simple event to ndjson. 
+        # For draft events, we just log the received message which is already done by _dispatch.
+        # But we'll add an explicit log entry for the decision.
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "agent_id": self.agent_id,
+            "event": event,
+            "task_id": task_id
+        }
+        log_file = self.handoff_dir / "transition.ndjson"
+        try:
+            with open(log_file, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+        except Exception as e:
+            logger.error(f"Failed to log transition {event}: {e}")
+
+    def handle_draft_ready(self, message: dict) -> None:
+        """
+        Handle DRAFT_READY message from a worker.
+
+        Args:
+            message: The MCP message with draft submission info
+        """
+        payload = message.get("payload", {})
+        task_id = payload.get("task_id")
+
+        if not task_id:
+            logger.error("DRAFT_READY missing task_id")
+            return
+
+        logger.info(f"Processing DRAFT_READY for task: {task_id}")
+
+        # Run the gate
+        result = handle_draft_submission(task_id)
+
+        if result.decision == GateDecision.ACCEPT:
+            logger.info(f"Draft ACCEPTED: {result.diff_summary}")
+            if apply_draft(task_id):
+                self._log_transition("draft_accepted", task_id)
+                # Notify worker of success
+                self._send_message(
+                    message.get("from", "worker"),
+                    "DRAFT_ACCEPTED",
+                    {"task_id": task_id, "summary": result.diff_summary}
+                )
+            else:
+                logger.error("Failed to apply accepted draft")
+                self._log_transition("draft_apply_failed", task_id)
+
+        elif result.decision == GateDecision.REJECT:
+            logger.warning(f"Draft REJECTED: {result.reason}")
+            reject_draft(task_id, result.reason)
+            self._log_transition("draft_rejected", task_id)
+            # Notify worker of rejection
+            self._send_message(
+                message.get("from", "worker"),
+                "DRAFT_REJECTED",
+                {"task_id": task_id, "reason": result.reason}
+            )
+
+        elif result.decision == GateDecision.ESCALATE:
+            logger.warning(f"Draft ESCALATED: {result.reason}")
+            self._log_transition("draft_escalated", task_id)
+            # Notify Erik
+            self._send_message(
+                "super_manager",
+                "DRAFT_ESCALATED",
+                {
+                    "task_id": task_id,
+                    "reason": result.reason,
+                    "diff_summary": result.diff_summary
+                }
+            )
+
     def handle_proposal_ready(self, message: dict):
         """
         Handler for PROPOSAL_READY:
@@ -255,6 +343,7 @@ def main():
 
     # Register handlers
     listener.register_handler("PROPOSAL_READY", listener.handle_proposal_ready)
+    listener.register_handler("DRAFT_READY", listener.handle_draft_ready)
     listener.register_handler("STOP_TASK", listener.handle_stop_task)
     listener.register_handler("QUESTION", listener.handle_question)
 

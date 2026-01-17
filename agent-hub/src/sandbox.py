@@ -9,6 +9,8 @@ Any bypass here compromises the entire sandbox model.
 from pathlib import Path
 import hashlib
 import logging
+from enum import Enum
+from dataclasses import dataclass
 from typing import NamedTuple
 
 logger = logging.getLogger(__name__)
@@ -223,3 +225,58 @@ def cleanup_task_drafts(task_id: str) -> int:
 
     logger.info(f"Cleaned up {count} draft files for task {task_id}")
     return count
+
+
+class GateDecision(Enum):
+    """Possible outcomes of the draft gate."""
+    ACCEPT = "accept"
+    REJECT = "reject"
+    ESCALATE = "escalate"
+
+
+@dataclass
+class SafetyAnalysis:
+    """Results of safety analysis on a diff."""
+    has_secrets: bool = False
+    has_hardcoded_paths: bool = False
+    deletion_ratio: float = 0.0
+    added_lines: int = 0
+    removed_lines: int = 0
+    issues: list[str] = None
+
+    def __post_init__(self):
+        if self.issues is None:
+            self.issues = []
+
+
+@dataclass
+class GateResult:
+    """Result of the draft gate decision."""
+    decision: GateDecision
+    reason: str
+    diff_summary: str = ""
+    safety_analysis: SafetyAnalysis | None = None
+
+    @classmethod
+    def accept(cls, diff_summary: str, safety: SafetyAnalysis) -> "GateResult":
+        return cls(
+            decision=GateDecision.ACCEPT,
+            reason="All checks passed",
+            diff_summary=diff_summary,
+            safety_analysis=safety
+        )
+
+    @classmethod
+    def reject(cls, reason: str) -> "GateResult":
+        return cls(
+            decision=GateDecision.REJECT,
+            reason=reason
+        )
+
+    @classmethod
+    def escalate(cls, reason: str, diff_summary: str = "") -> "GateResult":
+        return cls(
+            decision=GateDecision.ESCALATE,
+            reason=reason,
+            diff_summary=diff_summary
+        )
