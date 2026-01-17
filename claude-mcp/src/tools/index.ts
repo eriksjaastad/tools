@@ -10,6 +10,14 @@ import { claudeValidateProposal } from './claude_validate_proposal';
 import { claudeSecurityAudit } from './claude_security_audit';
 import { claudeResolveConflict } from './claude_resolve_conflict';
 import { claudeHealth } from './claude_health';
+import {
+  hubConnect,
+  hubSendMessage,
+  hubReceiveMessages,
+  hubHeartbeat,
+  hubSendAnswer,
+  hubGetAllMessages
+} from './hub';
 
 // The allowed tools - this is the "menu"
 const TOOLS: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
@@ -18,6 +26,12 @@ const TOOLS: Record<string, (args: Record<string, unknown>) => Promise<unknown>>
   'claude_security_audit': claudeSecurityAudit,
   'claude_resolve_conflict': claudeResolveConflict,
   'claude_health': claudeHealth,
+  'hub_connect': hubConnect,
+  'hub_send_message': hubSendMessage,
+  'hub_receive_messages': hubReceiveMessages,
+  'hub_heartbeat': hubHeartbeat,
+  'hub_send_answer': hubSendAnswer,
+  'hub_get_all_messages': hubGetAllMessages,
 };
 
 export async function handleToolCall(

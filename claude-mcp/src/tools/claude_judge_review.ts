@@ -34,7 +34,7 @@ export async function claudeJudgeReview(args: Record<string, unknown>): Promise<
     contract_path,
     report_dir = '_handoff',
     timeout_seconds = 900
-  } = args as JudgeReviewArgs;
+  } = args as any as JudgeReviewArgs;
 
   // Validate contract exists
   if (!existsSync(contract_path)) {
