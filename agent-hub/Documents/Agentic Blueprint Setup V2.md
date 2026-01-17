@@ -141,6 +141,7 @@ Erik + Super Manager (Claude CLI)
          ├── Discuss task scope and approach
          ├── Draft requirements together
          ├── Refine until Erik approves
+         ├── Erik says: "Write PROPOSAL_FINAL" (formalized trigger phrase)
          │
          ▼
    PROPOSAL_FINAL.md written to _handoff/
@@ -148,12 +149,47 @@ Erik + Super Manager (Claude CLI)
          ▼
    Floor Manager (Cursor) DETECTS the file
          │
-         ▼
-   Converts to TASK_CONTRACT.json
+         ├── Valid proposal → Converts to TASK_CONTRACT.json
+         │                    Pipeline begins
          │
-         ▼
-   Pipeline begins (Implementer → Local Review → Judge → ...)
+         └── Malformed/vague → Writes PROPOSAL_REJECTED.md
+                               (Reason + what's missing)
+                               Super Manager revises and resubmits
 ```
+
+### Proposal Rejection
+
+When Floor Manager cannot convert a proposal to a valid contract:
+
+**`PROPOSAL_REJECTED.md` Contents:**
+```markdown
+# Proposal Rejected
+
+**Original Proposal:** PROPOSAL_FINAL.md
+**Rejected At:** 2026-01-16T14:00:00Z
+
+## Issues
+
+1. **Missing target file** - Proposal doesn't specify where output should go
+2. **Vague requirements** - "Make it better" is not actionable
+3. **No acceptance criteria** - How do we know when it's done?
+
+## What's Needed
+
+- Explicit `target_file` path
+- Specific, measurable requirements
+- At least 2 acceptance criteria
+
+## Action Required
+
+Super Manager: Revise proposal and resubmit as PROPOSAL_FINAL.md
+```
+
+**Flow after rejection:**
+1. Super Manager reads `PROPOSAL_REJECTED.md`
+2. Discusses with Erik to clarify
+3. Writes revised `PROPOSAL_FINAL.md`
+4. Floor Manager tries again
 
 ---
 
@@ -197,7 +233,7 @@ The single source of truth for all state transitions.
     "max_review_cycles": 5,
     "timeout_minutes": {
       "implementer": 10,
-      "local_review": 5,
+      "local_review": 15,
       "judge": 15
     },
     "token_budget": 50000,
@@ -263,12 +299,12 @@ The single source of truth for all state transitions.
 ```
 
 ### Complexity Levels
-| Level | Max Rebuttals | Max Review Cycles | Description |
-|-------|--------------|-------------------|-------------|
-| `trivial` | 1 | 2 | Typo fixes, formatting |
-| `minor` | 2 | 5 | Doc merges, small features |
-| `major` | 4 | 8 | Architectural changes, multi-file refactors |
-| `critical` | 6 | 10 | Security-sensitive, breaking changes |
+| Level | Max Rebuttals | Max Review Cycles | Cost Ceiling | Description |
+|-------|--------------|-------------------|--------------|-------------|
+| `trivial` | 1 | 2 | $0.25 | Typo fixes, formatting |
+| `minor` | 2 | 5 | $0.50 | Doc merges, small features |
+| `major` | 4 | 8 | $2.00 | Architectural changes, multi-file refactors |
+| `critical` | 6 | 10 | $5.00 | Security-sensitive, breaking changes |
 
 ---
 
@@ -279,6 +315,7 @@ All handoff files live in `_handoff/` at the project root. **This directory is `
 | File | Purpose | Written By | Read By |
 |------|---------|-----------|---------|
 | `PROPOSAL_FINAL.md` | **TRIGGER:** Approved proposal ready for execution | Super Manager (Claude CLI) | Floor Manager (Cursor) |
+| `PROPOSAL_REJECTED.md` | Floor Manager rejects malformed/vague proposal | Floor Manager | Super Manager (revises) |
 | `TASK_CONTRACT.json` | Source of truth | Floor Manager (creates from proposal), All (updates) | All |
 | `TASK_CONTRACT.json.lock` | Halt state indicator | Watchdog | Erik |
 | `REVIEW_REQUEST.md.tmp` → `REVIEW_REQUEST.md` | Signals Judge to wake | Watchdog | Watcher loop |
