@@ -827,23 +827,25 @@ node scripts/test_draft_tools.js
 ## Success Criteria
 
 Phase 12 is DONE when:
-- [ ] `npm run build` succeeds with no errors
-- [ ] All four draft tools are registered in server.ts
-- [ ] Security tests pass (escape attempts blocked)
-- [ ] `ollama_request_draft` can copy a file to sandbox
-- [ ] `ollama_write_draft` can update draft content
-- [ ] `ollama_submit_draft` creates submission metadata
+- [x] `npm run build` succeeds with no errors
+- [x] All four draft tools are registered in server.ts
+- [x] Security tests pass (escape attempts blocked)
+- [x] `ollama_request_draft` can copy a file to sandbox
+- [x] `ollama_write_draft` can update draft content
+- [x] `ollama_submit_draft` creates submission metadata
 
 ---
 
 ## Security Checklist
 
 Before marking Phase 12 complete, verify:
-- [ ] `validateSandboxWrite()` blocks ALL paths outside sandbox
-- [ ] Path traversal is blocked in TypeScript implementation
-- [ ] Sensitive files cannot be drafted
-- [ ] Atomic writes used (tmp + rename)
-- [ ] All errors are logged
+- [x] `validateSandboxWrite()` blocks ALL paths outside sandbox
+- [x] Path traversal is blocked in TypeScript implementation
+- [x] Sensitive files cannot be drafted
+- [x] Atomic writes used (tmp + rename)
+- [x] All errors are logged
+
+**Status: COMPLETE** (Committed: `86af952`)
 
 ---
 
