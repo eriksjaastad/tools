@@ -1,6 +1,7 @@
 #!/bin/bash
-# watcher.sh - Runs in dedicated terminal
-# Polls for Judge review requests and invokes Claude CLI.
+# DEPRECATED: Phase 8 replaced file polling with message listener.
+# See: src/listener.py
+# This file is kept for reference only.
 
 # Set handoff directory relative to where the script is, or project root
 # For now, assume it's run from the project root.
