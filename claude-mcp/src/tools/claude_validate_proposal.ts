@@ -56,7 +56,7 @@ export async function claudeValidateProposal(args: Record<string, unknown>): Pro
   const {
     proposal_path,
     timeout_seconds = 120
-  } = args as ValidateProposalArgs;
+  } = args as any as ValidateProposalArgs;
 
   if (!existsSync(proposal_path)) {
     return {

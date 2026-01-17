@@ -69,7 +69,7 @@ export async function claudeResolveConflict(args: Record<string, unknown>): Prom
     rebuttal_path,
     judge_report_path,
     timeout_seconds = 300
-  } = args as ResolveConflictArgs;
+  } = args as any as ResolveConflictArgs;
 
   // Read all files
   const files = { contract_path, rebuttal_path, judge_report_path };

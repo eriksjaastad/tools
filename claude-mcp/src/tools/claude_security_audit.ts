@@ -72,7 +72,7 @@ export async function claudeSecurityAudit(args: Record<string, unknown>): Promis
     files,
     working_directory = process.cwd(),
     timeout_seconds = 300
-  } = args as SecurityAuditArgs;
+  } = args as any as SecurityAuditArgs;
 
   // Read all files
   let filesContent = '';
