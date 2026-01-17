@@ -2,6 +2,7 @@ import json
 import os
 import time
 import hashlib
+import logging
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -15,11 +16,17 @@ MODEL_COST_MAP = {
     "deepseek-r1:7b": {"input": 0.0, "output": 0.0},     # Local is free
 }
 
+logger = logging.getLogger(__name__)
+
 def atomic_write(path: Path, content: str) -> None:
     """
     Writes content to a file atomically by writing to a temporary file 
     and then renaming it to the target path.
     """
+    if os.environ.get("AGENT_HUB_DRY_RUN") == "1":
+        logger.info(f"[DRY-RUN] atomic_write to {path}")
+        return
+        
     temp_path = path.with_suffix(path.suffix + ".tmp")
     
     # Ensure parent directory exists
@@ -36,15 +43,15 @@ def atomic_write(path: Path, content: str) -> None:
         if temp_path.exists():
             try:
                 temp_path.unlink()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to cleanup temp file {temp_path}: {e}")
         raise e
     except Exception as e:
         if temp_path.exists():
             try:
                 temp_path.unlink()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"Failed to cleanup temp file {temp_path}: {e}")
         raise e
 
 def atomic_write_json(path: Path, data: dict) -> None:
@@ -94,6 +101,10 @@ def archive_file(path: Path, archive_dir: Path, suffix: str = "") -> Path:
     if not archive_dir.exists():
         archive_dir.mkdir(parents=True, exist_ok=True)
         
+    if os.environ.get("AGENT_HUB_DRY_RUN") == "1":
+        logger.info(f"[DRY-RUN] archive_file {path} to {archive_dir}")
+        return path
+
     if suffix:
         new_name = f"{path.stem}_{suffix}{path.suffix}"
     else:

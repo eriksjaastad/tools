@@ -200,12 +200,19 @@ function validateOptions(options?: OllamaRunOptions): void {
   }
 }
 
+const LIST_MODELS_TIMEOUT_MS = 30000; // 30 seconds
+
 async function ollamaListModels(): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const proc = spawn(OLLAMA_EXECUTABLE, ["list"]);
 
     let stdout = "";
     let stderr = "";
+
+    const timeoutId = setTimeout(() => {
+      proc.kill('SIGTERM');
+      reject(new Error(`Ollama list timed out after ${LIST_MODELS_TIMEOUT_MS}ms`));
+    }, LIST_MODELS_TIMEOUT_MS);
 
     proc.stdout.on("data", (data) => {
       stdout += data.toString();
@@ -216,6 +223,7 @@ async function ollamaListModels(): Promise<string[]> {
     });
 
     proc.on("close", (code) => {
+      clearTimeout(timeoutId);
       if (code !== 0) {
         reject(new Error(`Ollama list failed: ${stderr}`));
         return;
@@ -232,6 +240,7 @@ async function ollamaListModels(): Promise<string[]> {
     });
 
     proc.on("error", (err) => {
+      clearTimeout(timeoutId);
       reject(new Error(`Failed to execute ollama: ${err.message}`));
     });
   });
@@ -701,7 +710,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
+// Rate limiting
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const MAX_CALLS_PER_WINDOW = 100;
+const callTimestamps: number[] = [];
+
+function checkRateLimit(): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+
+  // Remove old timestamps
+  while (callTimestamps.length > 0 && callTimestamps[0] < windowStart) {
+    callTimestamps.shift();
+  }
+
+  if (callTimestamps.length >= MAX_CALLS_PER_WINDOW) {
+    return false; // Rate limited
+  }
+
+  callTimestamps.push(now);
+  return true;
+}
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (!checkRateLimit()) {
+    return {
+      content: [{ type: 'text', text: 'Rate limit exceeded. Please wait.' }],
+      isError: true
+    };
+  }
+
   try {
     switch (request.params.name) {
       case "ollama_list_models": {

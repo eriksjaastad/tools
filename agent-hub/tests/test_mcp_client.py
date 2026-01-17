@@ -82,9 +82,10 @@ def test_mcp_error_response(mock_process):
             client.call_tool("test_tool", {})
 
 # Integration test (skipped if server not found)
-SERVER_PATH = Path("/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js")
+import os
+SERVER_PATH = Path(os.environ.get("OLLAMA_MCP_PATH", ""))
 
-@pytest.mark.skipif(not SERVER_PATH.exists(), reason="MCP server not found")
+@pytest.mark.skipif(not SERVER_PATH or not SERVER_PATH.exists(), reason="OLLAMA_MCP_PATH not set or server not found")
 def test_integration_list_models():
     # This assumes 'ollama' is running on the host and accessible by the node server
     # We set a short timeout
