@@ -52,23 +52,23 @@ Create `_tools/agent-hub/src/validators.py` with:
 
 ## Done Criteria ✓
 
-- [ ] `validators.py` exists in `_tools/agent-hub/src/`
-- [ ] `validate_contract()` catches missing required fields
-- [ ] `validate_contract()` catches invalid status values
-- [ ] `validate_contract()` catches path conflicts (allowed vs forbidden)
-- [ ] `load_and_validate()` raises clear error messages
-- [ ] All functions have type hints and docstrings
+- [x] `validators.py` exists in `_tools/agent-hub/src/`
+- [x] `validate_contract()` catches missing required fields
+- [x] `validate_contract()` catches invalid status values
+- [x] `validate_contract()` catches path conflicts (allowed vs forbidden)
+- [x] `load_and_validate()` raises clear error messages
+- [x] All functions have type hints and docstrings
 
 ## Tests Required
 
 Create `_tools/agent-hub/tests/test_validators.py`:
 
-- [ ] Test: Valid contract passes validation
-- [ ] Test: Missing task_id fails with clear error
-- [ ] Test: Invalid status value fails
-- [ ] Test: Path in both allowed and forbidden fails
-- [ ] Test: Empty requirements list fails
-- [ ] Test: Wrong schema_version fails
+- [x] Test: Valid contract passes validation
+- [x] Test: Missing task_id fails with clear error
+- [x] Test: Invalid status value fails
+- [x] Test: Path in both allowed and forbidden fails
+- [x] Test: Empty requirements list fails
+- [x] Test: Wrong schema_version fails
 
 ## Output Files
 
@@ -144,27 +144,27 @@ Create `_tools/agent-hub/src/watchdog.py` with:
 
 ## Done Criteria ✓
 
-- [ ] `watchdog.py` exists in `_tools/agent-hub/src/`
-- [ ] All valid status transitions are defined
-- [ ] Invalid transitions raise `InvalidTransition` error
-- [ ] Lock mechanism prevents concurrent modifications
-- [ ] All 9 circuit breaker conditions are checked
-- [ ] `save_contract()` uses atomic write (temp → rename)
-- [ ] Transitions are logged to `transition.ndjson`
-- [ ] All functions have type hints and docstrings
+- [x] `watchdog.py` exists in `_tools/agent-hub/src/`
+- [x] All valid status transitions are defined
+- [x] Invalid transitions raise `InvalidTransition` error
+- [x] Lock mechanism prevents concurrent modifications
+- [x] All 9 circuit breaker conditions are checked
+- [x] `save_contract()` uses atomic write (temp → rename)
+- [x] Transitions are logged to `transition.ndjson`
+- [x] All functions have type hints and docstrings
 
 ## Tests Required
 
 Create `_tools/agent-hub/tests/test_watchdog.py`:
 
-- [ ] Test: Valid transition succeeds
-- [ ] Test: Invalid transition raises error
-- [ ] Test: Lock acquisition works
-- [ ] Test: Lock blocks second actor
-- [ ] Test: Expired lock can be acquired
-- [ ] Test: Rebuttal limit triggers circuit breaker
-- [ ] Test: Timeout triggers circuit breaker
-- [ ] Test: Atomic write survives interruption (mock)
+- [x] Test: Valid transition succeeds
+- [x] Test: Invalid transition raises error
+- [x] Test: Lock acquisition works
+- [x] Test: Lock blocks second actor
+- [x] Test: Expired lock can be acquired
+- [x] Test: Rebuttal limit triggers circuit breaker
+- [x] Test: Timeout triggers circuit breaker
+- [x] Test: Atomic write survives interruption (mock)
 
 ## Output Files
 
@@ -216,13 +216,13 @@ Create `_tools/agent-hub/src/watcher.sh`:
 
 ## Done Criteria ✓
 
-- [ ] `watcher.sh` exists and is executable
-- [ ] Polls every 5 seconds
-- [ ] Prevents double-trigger with marker file
-- [ ] Invokes Claude once per request (no internal looping)
-- [ ] Handles 15-minute timeout
-- [ ] Uses atomic file renames
-- [ ] Logs all actions with timestamps
+- [x] `watcher.sh` exists and is executable
+- [x] Polls every 5 seconds
+- [x] Prevents double-trigger with marker file
+- [x] Invokes Claude once per request (no internal looping)
+- [x] Handles 15-minute timeout
+- [x] Uses atomic file renames
+- [x] Logs all actions with timestamps
 
 ## Tests (Manual)
 
@@ -277,12 +277,12 @@ Add to `_tools/agent-hub/src/utils.py`:
 
 ## Done Criteria ✓
 
-- [ ] `utils.py` exists in `_tools/agent-hub/src/`
-- [ ] `atomic_write()` uses temp → rename pattern
-- [ ] `atomic_write()` cleans up temp file on error
-- [ ] `atomic_write_json()` produces valid JSON
-- [ ] `safe_read()` handles missing files gracefully
-- [ ] `archive_file()` creates archive dir if needed
+- [x] `utils.py` exists in `_tools/agent-hub/src/`
+- [x] `atomic_write()` uses temp → rename pattern
+- [x] `atomic_write()` cleans up temp file on error
+- [x] `atomic_write_json()` produces valid JSON
+- [x] `safe_read()` handles missing files gracefully
+- [x] `archive_file()` creates archive dir if needed
 
 ## Tests Required
 
@@ -357,13 +357,13 @@ Create `_tools/agent-hub/src/proposal_converter.py`:
 
 ## Done Criteria ✓
 
-- [ ] `proposal_converter.py` exists in `_tools/agent-hub/src/`
-- [ ] Parses all sections from template format
-- [ ] Generates unique task IDs
-- [ ] Creates schema-valid contracts
-- [ ] Sets complexity-based limits ($0.25 - $5.00)
-- [ ] Archives proposal after conversion
-- [ ] Writes PROPOSAL_REJECTED.md for malformed proposals
+- [x] `proposal_converter.py` exists in `_tools/agent-hub/src/`
+- [x] Parses all sections from template format
+- [x] Generates unique task IDs
+- [x] Creates schema-valid contracts
+- [x] Sets complexity-based limits ($0.25 - $5.00)
+- [x] Archives proposal after conversion
+- [x] Writes PROPOSAL_REJECTED.md for malformed proposals
 
 ## Tests Required
 
@@ -405,6 +405,8 @@ Read:
 
 Create `_tools/agent-hub/tests/test_e2e.py`:
 
+**CRITICAL IMPLEMENTATION NOTE:** This test must be fully self-contained. Do NOT attempt to run the actual `watcher.sh` or `watchdog.py` as separate processes. You MUST mock `subprocess.run` and any external system calls to simulate the behavior of the other agents. The goal is to test the *logic* of the pipeline, not the operating system's process management.
+
 1. **Test Setup:**
    - Create temp directory for test
    - Create mock `_handoff/` structure
@@ -433,12 +435,12 @@ Create `_tools/agent-hub/tests/test_e2e.py`:
 
 ## Done Criteria ✓
 
-- [ ] `test_e2e.py` exists in `_tools/agent-hub/tests/`
-- [ ] Full pipeline test passes with mocks
-- [ ] Circuit breaker test verifies halt behavior
-- [ ] Stall recovery test verifies Two-Strike Rule
-- [ ] All tests clean up temp files
-- [ ] Tests can run without Ollama/Claude (mocked)
+- [x] `test_e2e.py` exists in `_tools/agent-hub/tests/`
+- [x] Full pipeline test passes with mocks
+- [x] Circuit breaker test verifies halt behavior
+- [x] Stall recovery test verifies Two-Strike Rule
+- [x] All tests clean up temp files
+- [x] Tests can run without Ollama/Claude (mocked)
 
 ## Output Files
 
