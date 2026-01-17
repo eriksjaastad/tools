@@ -45,27 +45,18 @@ def save_contract(contract: Dict[str, Any], path: Path) -> None:
     try:
         atomic_write_json(path, contract)
         
-        # Signal Dispatch (Prompt 3.1 Logic for Step 5)
-        # If status moved to pending_judge_review, write signal for watcher.sh
+        # Signal Dispatch (Phase 8: Message Only)
         if contract.get("status") == "pending_judge_review":
-            mcp_mode = os.getenv("WATCHDOG_MCP_MODE") == "1"
-            if mcp_mode:
-                # Prompt 7.4: Replace REVIEW_REQUEST.md with message
-                try:
-                    with MCPClient(HUB_SERVER_PATH) as mcp:
-                        hub = HubClient(mcp)
-                        hub.connect("floor_manager")
-                        hub.send_message("judge", "REVIEW_NEEDED", {
-                            "task_id": contract["task_id"],
-                            "contract_path": str(path)
-                        })
-                except Exception as e:
-                    print(f"Warning: Failed to send MCP REVIEW_NEEDED: {e}")
-            else:
-                signal_path = path.parent / "REVIEW_REQUEST.md"
-                if not signal_path.exists():
-                    signal_content = f"# 🔍 JUDGE REVIEW REQUESTED\n\n**Task:** {contract['task_id']}\n**Time:** {datetime.now(timezone.utc).isoformat()}\n"
-                    signal_path.write_text(signal_content, encoding="utf-8")
+            try:
+                with MCPClient(HUB_SERVER_PATH) as mcp:
+                    hub = HubClient(mcp)
+                    hub.connect("floor_manager")
+                    hub.send_message("judge", "REVIEW_NEEDED", {
+                        "task_id": contract["task_id"],
+                        "contract_path": str(path)
+                    })
+            except Exception as e:
+                print(f"Warning: Failed to send MCP REVIEW_NEEDED: {e}")
                 
     except (PermissionError, IOError) as e:
         raise e
@@ -382,6 +373,15 @@ def start_heartbeat(hub_server_path: Path, task_id: str, stop_event: threading.E
     except Exception:
         pass
 
+def check_hub_available(hub_path: Path) -> bool:
+    """Verify MCP hub is running before any operation."""
+    try:
+        with MCPClient(hub_path) as mcp:
+            hub = HubClient(mcp)
+            return hub.connect("health_check_watchdog")
+    except Exception:
+        return False
+
 def update_cost(contract: Dict[str, Any], tokens_in: int, tokens_out: int, model: str) -> None:
     """Calculates and updates cost in the contract."""
     if "breaker" not in contract:
@@ -437,20 +437,17 @@ def main(argv):
     # Simple CLI for watcher integration
     handoff_dir = Path(os.getenv("HANDOFF_DIR", "_handoff"))
     
-    # Prompt 7.4: Add --mcp-mode flag to CLI
-    use_mcp = "--mcp-mode" in argv
-    if use_mcp:
-        os.environ["WATCHDOG_MCP_MODE"] = "1"
-        # Remove flag from argv to avoid confusing sub-commands
-        argv = [a for a in argv if a != "--mcp-mode"]
+    # Phase 8: Hub health check on startup
+    if not check_hub_available(HUB_SERVER_PATH):
+        print(f"Error: MCP Hub not available at {HUB_SERVER_PATH}. Start claude-mcp first.")
+        sys.exit(1)
     
     if len(argv) > 1:
         cmd = argv[1]
         contract_path = handoff_dir / "TASK_CONTRACT.json"
         
         if cmd == "timeout-judge":
-            if use_mcp:
-                check_for_stop(HUB_SERVER_PATH)
+            check_for_stop(HUB_SERVER_PATH)
             if not contract_path.exists():
                 print(f"Error: {contract_path} not found")
                 sys.exit(1)
@@ -475,8 +472,7 @@ def main(argv):
                 sys.exit(1)
         
         elif cmd == "setup-task":
-            if use_mcp:
-                check_for_stop(HUB_SERVER_PATH)
+            check_for_stop(HUB_SERVER_PATH)
             # New command to initialize the git branch for a task
             if not contract_path.exists():
                 print(f"Error: {contract_path} not found")
@@ -498,8 +494,7 @@ def main(argv):
                 sys.exit(1)
 
         elif cmd == "finalize-task":
-            if use_mcp:
-                check_for_stop(HUB_SERVER_PATH)
+            check_for_stop(HUB_SERVER_PATH)
             # Command to merge the task branch
             if not contract_path.exists():
                 print(f"Error: {contract_path} not found")
@@ -561,89 +556,93 @@ def main(argv):
                         print("Halted: Ollama unavailable")
                         sys.exit(1)
                     
-                    # Prompt 7.4: Heartbeat and STOP check
-                    if use_mcp:
-                        check_for_stop(HUB_SERVER_PATH)
-                        import threading
-                        stop_heartbeat = threading.Event()
-                        hb_thread = threading.Thread(
-                            target=start_heartbeat, 
-                            args=(HUB_SERVER_PATH, contract["task_id"], stop_heartbeat),
-                            daemon=True
-                        )
-                        hb_thread.start()
+                    # Phase 8: Heartbeat and STOP check (Always on)
+                    check_for_stop(HUB_SERVER_PATH)
+                    import threading
+                    stop_heartbeat = threading.Event()
+                    hb_thread = threading.Thread(
+                        target=start_heartbeat, 
+                        args=(HUB_SERVER_PATH, contract["task_id"], stop_heartbeat),
+                        daemon=True
+                    )
+                    hb_thread.start()
                     
                     try:
                         # Log transition to working state
-                    old_status = contract["status"]
-                    new_status, reason = transition(old_status, "lock_acquired", contract)
-                    contract["status"] = new_status
-                    contract["status_reason"] = reason
-                    save_contract(contract, contract_path)
-                    log_transition(contract, "lock_acquired", old_status, git_manager=gm)
-                    
-                    # Run Task
-                    print(f"Invoking Implementer agent ({contract['roles']['implementer']})...")
-                    result = worker.implement_task(contract)
-                    
-                    if result["success"]:
-                        token_stats = result.get("tokens", {})
-                        update_cost(contract, token_stats.get("input", 0), token_stats.get("output", 0), contract["roles"]["implementer"])
-                        contract["handoff_data"]["changed_files"] = result["files_changed"]
-                        
                         old_status = contract["status"]
-                        new_status, reason = transition(old_status, "code_written", contract)
+                        new_status, reason = transition(old_status, "lock_acquired", contract)
                         contract["status"] = new_status
                         contract["status_reason"] = reason
-                        release_lock(contract) # Release lock upon completion
                         save_contract(contract, contract_path)
-                        log_transition(contract, "code_written", old_status, git_manager=gm)
-                        print(f"Implementation complete. Files changed: {result['files_changed']}")
+                        log_transition(contract, "lock_acquired", old_status, git_manager=gm)
+                    
+                        # Run Task
+                        print(f"Invoking Implementer agent ({contract['roles']['implementer']})...")
+                        result = worker.implement_task(contract)
                         
-                        if use_mcp:
-                            stop_heartbeat.set()
-                        
-                    else:
-                        # STALL LOGIC
-                        stall_reason = result.get("stall_reason", "unknown")
-                        attempt = contract.get("attempt", 1)
-                        print(f"Implementer stalled: {stall_reason} (Attempt {attempt})")
-                        
-                        release_lock(contract)
-                        
-                        if attempt < 2:
-                            # Strike 1: Retry
-                            contract["attempt"] = attempt + 1
+                        if result["success"]:
+                            token_stats = result.get("tokens", {})
+                            update_cost(contract, token_stats.get("input", 0), token_stats.get("output", 0), contract["roles"]["implementer"])
+                            contract["handoff_data"]["changed_files"] = result["files_changed"]
+                            
                             old_status = contract["status"]
-                            # Transition back to pending via 'retry' event from timeout_implementer 
-                            # But we are in implementation_in_progress. 
-                            # We treat stall as timeout for state machine purposes?
-                            # Map stall -> timeout -> retry sequence
-                            # 1. To timeout
-                            ns, _ = transition(old_status, "timeout", contract)
-                            # 2. To pending (retry)
-                            ns2, reason = transition(ns, "retry", contract)
-                            contract["status"] = ns2
-                            contract["status_reason"] = f"Retry after stall: {stall_reason}"
+                            new_status, reason = transition(old_status, "code_written", contract)
+                            contract["status"] = new_status
+                            contract["status_reason"] = reason
+                            release_lock(contract) # Release lock upon completion
                             save_contract(contract, contract_path)
-                            log_transition(contract, "implementer_retry", old_status, git_manager=gm)
-                            print("Retrying task (Strike 1)...")
+                            log_transition(contract, "code_written", old_status, git_manager=gm)
+                            print(f"Implementation complete. Files changed: {result['files_changed']}")
+                            
+                            stop_heartbeat.set()
                             
                         else:
-                            # Strike 2: Halt
-                            old_status = contract["status"]
-                            ns, _ = transition(old_status, "timeout", contract)
-                            ns2, reason = transition(ns, "escalate", contract)
-                            contract["status"] = ns2
-                            contract["status_reason"] = f"Stalled twice: {stall_reason}"
+                            # STALL LOGIC
+                            stall_reason = result.get("stall_reason", "unknown")
+                            attempt = contract.get("attempt", 1)
+                            print(f"Implementer stalled: {stall_reason} (Attempt {attempt})")
                             
-                            write_stall_report(contract, stall_reason, contract_path.parent)
-                            save_contract(contract, contract_path)
-                            log_transition(contract, "implementer_stalled", old_status, git_manager=gm)
-                            print("Halted task (Strike 2). Check STALL_REPORT.md")
-                            if use_mcp:
+                            release_lock(contract)
+                            
+                            if attempt < 2:
+                                # Strike 1: Retry
+                                contract["attempt"] = attempt + 1
+                                old_status = contract["status"]
+                                # Transition back to pending via 'retry' event from timeout_implementer 
+                                # But we are in implementation_in_progress. 
+                                # We treat stall as timeout for state machine purposes?
+                                # Map stall -> timeout -> retry sequence
+                                # 1. To timeout
+                                ns, _ = transition(old_status, "timeout", contract)
+                                # 2. To pending (retry)
+                                ns2, reason = transition(ns, "retry", contract)
+                                contract["status"] = ns2
+                                contract["status_reason"] = f"Retry after stall: {stall_reason}"
+                                save_contract(contract, contract_path)
+                                log_transition(contract, "implementer_retry", old_status, git_manager=gm)
+                                print("Retrying task (Strike 1)...")
+                                
+                            else:
+                                # Strike 2: Halt
+                                old_status = contract["status"]
+                                ns, _ = transition(old_status, "timeout", contract)
+                                ns2, reason = transition(ns, "escalate", contract)
+                                contract["status"] = ns2
+                                contract["status_reason"] = f"Stalled twice: {stall_reason}"
+                                
+                                write_stall_report(contract, stall_reason, contract_path.parent)
+                                save_contract(contract, contract_path)
+                                log_transition(contract, "implementer_stalled", old_status, git_manager=gm)
+                                print("Halted task (Strike 2). Check STALL_REPORT.md")
                                 stop_heartbeat.set()
-                            sys.exit(1)
+                                sys.exit(1)
+                    except Exception as e:
+                        # Ensure lock is released if we crash
+                        contract = load_contract(contract_path)
+                        release_lock(contract)
+                        save_contract(contract, contract_path)
+                        print(f"Inner error: {e}")
+                        sys.exit(1)
 
             except Exception as e:
                 # Ensure lock is released if we crash
@@ -654,8 +653,7 @@ def main(argv):
                 sys.exit(1)
 
         elif cmd == "run-local-review":
-            if use_mcp:
-                check_for_stop(HUB_SERVER_PATH)
+            check_for_stop(HUB_SERVER_PATH)
              # Command to invoke Local Reviewer (DeepSeek) via MCP
             if not contract_path.exists():
                 print(f"Error: {contract_path} not found")
@@ -743,8 +741,7 @@ def main(argv):
                 sys.exit(1)
 
         elif cmd == "report-judge":
-            if use_mcp:
-                check_for_stop(HUB_SERVER_PATH)
+            check_for_stop(HUB_SERVER_PATH)
             # Process JUDGE_REPORT.json and update costs
             if not contract_path.exists():
                 print(f"Error: {contract_path} not found")
