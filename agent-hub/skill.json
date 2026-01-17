@@ -1,0 +1,81 @@
+{
+    "name": "floor-manager",
+    "version": "1.0.0",
+    "description": "Autonomous Floor Manager for multi-agent task pipelines",
+    "author": "Erik Sjaastad",
+    "license": "MIT",
+    "entry_point": "src/listener.py",
+    "main_class": "MessageListener",
+    "dependencies": {
+        "python": ">=3.10",
+        "packages": [
+            "pathlib",
+            "uuid",
+            "threading"
+        ],
+        "mcp_servers": [
+            {
+                "name": "claude-mcp",
+                "path": "${CLAUDE_MCP_PATH}",
+                "required": true
+            },
+            {
+                "name": "ollama-mcp",
+                "path": "${OLLAMA_MCP_PATH}",
+                "required": true
+            }
+        ]
+    },
+    "config": {
+        "agent_id": {
+            "type": "string",
+            "default": "floor_manager",
+            "description": "Unique identifier for this Floor Manager instance"
+        },
+        "hub_path": {
+            "type": "path",
+            "default": "${HUB_SERVER_PATH}",
+            "description": "Path to MCP hub server.js"
+        },
+        "handoff_dir": {
+            "type": "path",
+            "default": "_handoff",
+            "description": "Directory for contracts and artifacts"
+        },
+        "heartbeat_interval": {
+            "type": "integer",
+            "default": 30,
+            "description": "Seconds between heartbeats"
+        },
+        "message_poll_interval": {
+            "type": "integer",
+            "default": 5,
+            "description": "Seconds between message checks"
+        }
+    },
+    "commands": {
+        "start": "python -m src.listener",
+        "status": "python -m src.watchdog status",
+        "setup-task": "python -m src.watchdog setup-task",
+        "run-implementer": "python -m src.watchdog run-implementer",
+        "run-local-review": "python -m src.watchdog run-local-review"
+    },
+    "message_types": {
+        "receives": [
+            "PROPOSAL_READY",
+            "STOP_TASK",
+            "QUESTION",
+            "VERDICT_SIGNAL"
+        ],
+        "sends": [
+            "REVIEW_NEEDED",
+            "ANSWER",
+            "HEARTBEAT"
+        ]
+    },
+    "hooks": {
+        "pre_install": "scripts/pre_install.sh",
+        "post_install": "scripts/post_install.sh",
+        "health_check": "scripts/health_check.py"
+    }
+}

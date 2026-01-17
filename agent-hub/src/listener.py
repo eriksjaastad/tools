@@ -16,7 +16,8 @@ from datetime import datetime, timezone
 from .mcp_client import MCPClient, MCPError
 from .hub_client import HubClient
 from .proposal_converter import convert_proposal
-from .watchdog import load_contract, save_contract, transition, log_transition, HUB_SERVER_PATH
+from .watchdog import load_contract, save_contract, transition, log_transition
+from .config import get_config
 
 # Configure logging to console
 logging.basicConfig(
@@ -26,9 +27,10 @@ logging.basicConfig(
 logger = logging.getLogger("MessageListener")
 
 class MessageListener:
-    def __init__(self, agent_id: str, hub_path: Path):
+    def __init__(self, agent_id: str, hub_path: Path, handoff_dir: Path = Path("_handoff")):
         self.agent_id = agent_id
         self.hub_path = hub_path
+        self.handoff_dir = handoff_dir
         self.running = False
         self.handlers = {}  # message_type -> handler function
         self.last_check_timestamp = None
@@ -117,7 +119,7 @@ class MessageListener:
 
     def _log_to_ndjson(self, message: dict):
         """Logs message to transition.ndjson for audit trail."""
-        log_dir = Path("_handoff")
+        log_dir = self.handoff_dir
         if not log_dir.exists():
             log_dir.mkdir(parents=True, exist_ok=True)
             
@@ -156,7 +158,7 @@ class MessageListener:
         """
         payload = message.get("payload", {})
         proposal_path = Path(payload.get("proposal_path", ""))
-        handoff_dir = Path("_handoff")
+        handoff_dir = self.handoff_dir
         
         if not proposal_path.exists():
             logger.error(f"Proposal file not found: {proposal_path}")
@@ -218,7 +220,8 @@ class MessageListener:
             logger.error(f"Failed to send answer: {e}")
 
 def main():
-    listener = MessageListener("floor_manager", HUB_SERVER_PATH)
+    config = get_config()
+    listener = MessageListener(config.agent_id, config.hub_path, config.handoff_dir)
 
     # Register handlers
     listener.register_handler("PROPOSAL_READY", listener.handle_proposal_ready)
