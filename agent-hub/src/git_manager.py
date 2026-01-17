@@ -1,7 +1,10 @@
 import subprocess
 import os
+import logging
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 class GitConflictError(Exception):
     """Raised when a git merge results in conflicts."""
@@ -12,21 +15,33 @@ class GitError(Exception):
     pass
 
 class GitManager:
-    def __init__(self, repo_root: Path):
+    def __init__(self, repo_root: Path, dry_run: bool = False):
         self.repo_root = repo_root
+        self.dry_run = dry_run
         if not (repo_root / ".git").exists():
             # In a real scenario we might want to check this, 
             # but for tests or initialization we might just assume it's a git repo.
             pass
 
     def _run_git(self, args: List[str], check: bool = True) -> subprocess.CompletedProcess:
+        mutating_cmds = ["add", "commit", "merge", "checkout", "branch", "clean", "reset"]
+        is_dry_run = self.dry_run or os.environ.get("AGENT_HUB_DRY_RUN") == "1"
+        if is_dry_run and args and args[0] in mutating_cmds:
+            # Skip branch --list which is not mutating but starts with 'branch'
+            if args[0] == "branch" and "--list" in args:
+                pass
+            else:
+                logger.info(f"[DRY-RUN] git {' '.join(args)}")
+                return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
         try:
             result = subprocess.run(
                 ["git"] + args,
                 cwd=self.repo_root,
                 capture_output=True,
                 text=True,
-                check=check
+                check=check,
+                timeout=60
             )
             return result
         except subprocess.CalledProcessError as e:
@@ -110,8 +125,8 @@ class GitManager:
         """
         try:
             self._run_git(["merge", "--abort"], check=False)
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Merge abort failed (likely no merge in progress): {e}")
             
         self._run_git(["checkout", base_branch])
         # Clean up any untracked files that might have been left over if appropriate

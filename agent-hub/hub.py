@@ -47,7 +47,9 @@ def get_task_status():
         result = subprocess.run(
             ["python3", "src/watchdog.py", "status"],
             capture_output=True,
-            text=True
+            text=True,
+            check=True,
+            timeout=30
         )
         return result.stdout if result.stdout else result.stderr
     except Exception as e:

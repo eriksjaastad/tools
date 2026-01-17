@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync } from "fs";
+import { appendFileSync, mkdirSync, existsSync, statSync, renameSync, unlinkSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 
@@ -27,12 +27,45 @@ interface RunMetadata {
   concurrency?: number;
 }
 
+const MAX_LOG_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_ROTATED_FILES = 5;
+
+function rotateLogIfNeeded(logPath: string): void {
+  try {
+    if (!existsSync(logPath)) return;
+
+    const stats = statSync(logPath);
+    if (stats.size < MAX_LOG_SIZE_BYTES) return;
+
+    // Rotate existing files
+    for (let i = MAX_ROTATED_FILES - 1; i >= 1; i--) {
+      const oldPath = `${logPath}.${i}`;
+      const newPath = `${logPath}.${i + 1}`;
+      if (existsSync(oldPath)) {
+        if (i === MAX_ROTATED_FILES - 1) {
+          unlinkSync(oldPath); // Delete oldest
+        } else {
+          renameSync(oldPath, newPath);
+        }
+      }
+    }
+
+    // Rotate current to .1
+    renameSync(logPath, `${logPath}.1`);
+    console.log(`Rotated log file: ${logPath}`);
+  } catch (error) {
+    console.error(`[logger] Log rotation failed: ${error}`);
+    // Don't throw - logging should never break the main flow
+  }
+}
+
 /**
  * Log a model run to JSON Lines file
  * Each entry is a single line of JSON for easy parsing
  */
 export function logRun(metadata: RunMetadata): void {
   try {
+    rotateLogIfNeeded(LOG_FILE);
     const jsonLine = JSON.stringify(metadata) + "\n";
     appendFileSync(LOG_FILE, jsonLine, "utf8");
   } catch (error) {
@@ -54,4 +87,3 @@ export function generateBatchId(): string {
 export function getLogFilePath(): string {
   return LOG_FILE;
 }
-

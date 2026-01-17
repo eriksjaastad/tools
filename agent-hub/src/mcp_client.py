@@ -4,6 +4,7 @@ import os
 import sys
 import threading
 import time
+import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -14,6 +15,8 @@ class MCPError(Exception):
 class MCPTimeoutError(Exception):
     """Raised when an MCP request times out."""
     pass
+
+logger = logging.getLogger(__name__)
 
 class MCPClient:
     def __init__(self, server_path: Path):
@@ -50,8 +53,8 @@ class MCPClient:
                     self._process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     self._process.kill()
-            except Exception:
-                pass # Already dead
+            except Exception as e:
+                logger.debug(f"MCP process termination failed: {e}")
             finally:
                 self._process = None
 

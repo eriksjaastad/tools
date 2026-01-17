@@ -5,9 +5,16 @@ Reads from skill.json, environment variables, and runtime overrides.
 
 import os
 import json
+import logging
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional
+
+class ConfigError(Exception):
+    """Raised when configuration is missing or invalid."""
+    pass
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class FloorManagerConfig:
@@ -41,8 +48,8 @@ class FloorManagerConfig:
         skill_json = skill_root / "skill.json"
         
         # Default paths to use if nothing else is found
-        default_hub_path = "/Users/eriksjaastad/projects/_tools/claude-mcp/dist/server.js"
-        default_mcp_path = "/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"
+        default_hub_path = None
+        default_mcp_path = None
 
         if skill_json.exists():
             try:
@@ -63,8 +70,8 @@ class FloorManagerConfig:
                                     setattr(config, key, Path(val))
                                 else:
                                     setattr(config, key, val)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Failed to load skill.json config: {e}")
 
         # Environment overrides and specific defaults
         config.hub_path = Path(os.getenv(
@@ -100,3 +107,15 @@ def get_config() -> FloorManagerConfig:
     if _config is None:
         _config = FloorManagerConfig.load()
     return _config
+
+def get_hub_path() -> Path:
+    config = get_config()
+    if not config.hub_path or not config.hub_path.exists():
+        raise ConfigError(f"HUB_SERVER_PATH must be set and valid. Current: {config.hub_path}")
+    return config.hub_path
+
+def get_mcp_path() -> Path:
+    config = get_config()
+    if not config.mcp_server_path or not config.mcp_server_path.exists():
+        raise ConfigError(f"MCP_SERVER_PATH must be set and valid. Current: {config.mcp_server_path}")
+    return config.mcp_server_path

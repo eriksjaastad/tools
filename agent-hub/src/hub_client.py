@@ -1,7 +1,10 @@
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from .mcp_client import MCPClient
+
+logger = logging.getLogger(__name__)
 
 class HubClient:
     VALID_MSG_TYPES = {
@@ -21,7 +24,8 @@ class HubClient:
                 self.agent_id = agent_id
                 return True
             return False
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to connect to hub: {e}")
             return False
 
     def send_message(self, recipient: str, msg_type: str, payload: dict) -> str:
