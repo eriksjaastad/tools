@@ -169,12 +169,42 @@ class MessageListener:
         
         if contract_path:
             logger.info(f"Proposal converted to contract: {contract_path}")
-            # Starting implementation pipeline: usually involves setup-task then run-implementer
-            # Here we might just signal that we're ready or trigger the next step.
-            # In Phase 8, we likely want to automate the transition.
-            # For now, we'll log it. 
+            # Start the pipeline in a background thread
+            pipeline_thread = threading.Thread(
+                target=self._run_pipeline,
+                args=(contract_path,),
+                daemon=True
+            )
+            pipeline_thread.start()
         else:
             logger.error(f"Failed to convert proposal: {proposal_path}")
+
+    def _run_pipeline(self, contract_path: Path):
+        """Runs the full watchdog pipeline for a contract."""
+        import subprocess
+        
+        commands = [
+            ["python", "-m", "src.watchdog", "setup-task", "--contract", str(contract_path)],
+            ["python", "-m", "src.watchdog", "run-implementer", "--contract", str(contract_path)],
+            ["python", "-m", "src.watchdog", "run-local-review", "--contract", str(contract_path)],
+            ["python", "-m", "src.watchdog", "report-judge", "--contract", str(contract_path)],
+            ["python", "-m", "src.watchdog", "finalize-task", "--contract", str(contract_path)]
+        ]
+
+        logger.info(f"Starting pipeline for {contract_path.name}")
+        
+        for cmd in commands:
+            logger.info(f"Executing: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                logger.error(f"Command failed: {' '.join(cmd)}")
+                logger.error(f"Error: {result.stderr}")
+                break
+            
+            logger.info(f"Command succeeded: {cmd[3]}")
+            
+        logger.info(f"Pipeline finished for {contract_path.name}")
 
     def handle_stop_task(self, message: dict):
         """
