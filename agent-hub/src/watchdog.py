@@ -10,9 +10,11 @@ from .git_manager import GitManager, GitError, GitConflictError
 from .mcp_client import MCPClient, MCPError
 from .worker_client import WorkerClient
 from .hub_client import HubClient
+from .config import get_config
 
-MCP_SERVER_PATH = Path(os.getenv("MCP_SERVER_PATH", "/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"))
-HUB_SERVER_PATH = Path(os.getenv("HUB_SERVER_PATH", "/Users/eriksjaastad/projects/_tools/claude-mcp/dist/server.js"))
+_config = get_config()
+MCP_SERVER_PATH = _config.mcp_server_path
+HUB_SERVER_PATH = _config.hub_path
 
 VALID_STATUSES = [
     "pending_implementer",
@@ -434,12 +436,20 @@ def print_status(contract: Dict[str, Any], path: Path) -> None:
 
 def main(argv):
     import sys
-    # Simple CLI for watcher integration
-    handoff_dir = Path(os.getenv("HANDOFF_DIR", "_handoff"))
-    
     # Phase 8: Hub health check on startup
-    if not check_hub_available(HUB_SERVER_PATH):
-        print(f"Error: MCP Hub not available at {HUB_SERVER_PATH}. Start claude-mcp first.")
+    config = get_config()
+    
+    # Phase 9: Config validation
+    errors = config.validate()
+    if errors:
+        for e in errors:
+            print(f"Config error: {e}")
+        sys.exit(1)
+
+    handoff_dir = config.handoff_dir
+    
+    if not check_hub_available(config.hub_path):
+        print(f"Error: MCP Hub not available at {config.hub_path}. Start claude-mcp first.")
         sys.exit(1)
     
     if len(argv) > 1:
