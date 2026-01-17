@@ -1,11 +1,13 @@
 # PRD: Agent Hub - Autonomous Multi-Agent Pipeline
 
-**Version:** 2.0
+**Version:** 3.0
 **Status:** Draft
 **Author:** Erik Sjaastad + Claude (Super Manager)
 **Created:** 2026-01-16
 **Last Updated:** 2026-01-17
-**Changelog:** V2.0 - Added V3 Direct Agent Communication (DAC) requirements, constrained messaging, heartbeat monitoring, MCP Hub architecture.
+**Changelog:**
+- V3.0 - Added V4 Sandbox Draft Pattern: local models can now edit files via sandboxed drafts with Floor Manager gating.
+- V2.0 - Added V3 Direct Agent Communication (DAC) requirements, constrained messaging, heartbeat monitoring, MCP Hub architecture.
 
 ---
 
@@ -207,7 +209,7 @@ These requirements define the MCP-based messaging layer that replaces file polli
 | ID | Requirement |
 |----|-------------|
 | FR-25 | System MUST enforce a fixed menu of message types (no freeform agent-to-agent prompts) |
-| FR-26 | Valid message types: `PROPOSAL_READY`, `REVIEW_NEEDED`, `STOP_TASK`, `QUESTION`, `ANSWER`, `VERDICT_SIGNAL`, `HEARTBEAT` |
+| FR-26 | Valid message types: `PROPOSAL_READY`, `REVIEW_NEEDED`, `STOP_TASK`, `QUESTION`, `ANSWER`, `VERDICT_SIGNAL`, `HEARTBEAT`, `DRAFT_READY`, `DRAFT_ACCEPTED`, `DRAFT_REJECTED`, `DRAFT_ESCALATED` |
 | FR-27 | `QUESTION` messages MUST include 2-4 predefined options (agent cannot ask open-ended questions) |
 | FR-28 | `ANSWER` messages MUST reference the original question and selected option |
 | FR-29 | Floor Manager MUST NOT send arbitrary prompts to Super Manager/Judge |
@@ -238,6 +240,51 @@ These requirements define the MCP-based messaging layer that replaces file polli
 | FR-39 | Phase 7.1 (Mailbox): File polling remains active alongside MCP messages |
 | FR-40 | Phase 7.2 (Hotline): File signals deprecated, all transitions via MCP |
 | FR-41 | `watchdog.py` transitions from driver to observer of MCP Hub |
+
+### V4 Sandbox Draft Pattern Requirements
+
+These requirements define controlled file editing for local models via sandboxed drafts.
+
+#### Problem Solved
+
+In Phase 10 testing, local models (DeepSeek) would overwrite entire files with hallucinated stubs instead of making targeted edits. The Sandbox Draft Pattern gives local models "hands" while keeping the Floor Manager as gatekeeper.
+
+#### Draft Tools (Ollama MCP)
+
+| ID | Requirement |
+|----|-------------|
+| FR-42 | System MUST provide `ollama_request_draft` to copy a file to sandbox |
+| FR-43 | System MUST provide `ollama_write_draft` to edit draft content (sandbox only) |
+| FR-44 | System MUST provide `ollama_read_draft` to read current draft |
+| FR-45 | System MUST provide `ollama_submit_draft` to submit for Floor Manager review |
+| FR-46 | Draft tools MUST validate all paths are within `_handoff/drafts/` |
+| FR-47 | Draft tools MUST block path traversal attempts (`..`) |
+| FR-48 | Draft tools MUST use atomic writes (tmp + rename) |
+
+#### Draft Gate (Floor Manager)
+
+| ID | Requirement |
+|----|-------------|
+| FR-49 | Floor Manager MUST handle `DRAFT_READY` messages from workers |
+| FR-50 | Draft Gate MUST generate unified diff between original and draft |
+| FR-51 | Draft Gate MUST detect secrets (API keys, passwords) and REJECT |
+| FR-52 | Draft Gate MUST detect hardcoded user paths (`/Users/`, `/home/`) and REJECT |
+| FR-53 | Draft Gate MUST escalate destructive diffs (>50% deletion) |
+| FR-54 | Draft Gate MUST detect conflicts (original hash changed) and ESCALATE |
+| FR-55 | Draft Gate MUST log all decisions to `transition.ndjson` |
+| FR-56 | On ACCEPT: Floor Manager copies draft over original, cleans up sandbox |
+| FR-57 | On REJECT: Floor Manager deletes draft, notifies worker with reason |
+| FR-58 | On ESCALATE: Floor Manager notifies Super Manager/Erik for human review |
+
+#### Sandbox Security Model
+
+| ID | Requirement |
+|----|-------------|
+| FR-59 | Workers can ONLY write to `_handoff/drafts/` directory |
+| FR-60 | Workers CANNOT delete files |
+| FR-61 | Workers CANNOT execute shell commands |
+| FR-62 | Sensitive files (`.env`, `credentials`, etc.) CANNOT be drafted |
+| FR-63 | All draft operations MUST be logged with `SECURITY:` prefix on violations |
 
 ---
 
@@ -397,6 +444,10 @@ The following are **explicitly NOT** part of this project:
 | `VERDICT_SIGNAL` | Judge | Floor Manager | Review complete (PASS/FAIL/CONDITIONAL) |
 | `STOP_TASK` | Any | Floor Manager | Halt current task immediately |
 | `HEARTBEAT` | Active Agent | Hub | "I'm alive and working on X" |
+| `DRAFT_READY` | Worker | Floor Manager | Draft submitted for gate review (V4) |
+| `DRAFT_ACCEPTED` | Floor Manager | Worker | Draft approved and applied (V4) |
+| `DRAFT_REJECTED` | Floor Manager | Worker | Draft rejected with reason (V4) |
+| `DRAFT_ESCALATED` | Floor Manager | Super Manager | Draft needs human review (V4) |
 
 **Key Constraint:** Agents cannot send arbitrary prompts to each other. Communication is structured, predictable, and auditable.
 
@@ -412,10 +463,20 @@ The following are **explicitly NOT** part of this project:
 |----------|---------|
 | [Agentic Blueprint.md](Documents/Agentic%20Blueprint.md) | High-level vision and 4-phase pipeline |
 | [Agentic Blueprint Setup V2.md](Documents/Agentic%20Blueprint%20Setup%20V2.md) | V2 design: file-based polling, schema, circuit breakers |
-| [Agentic Blueprint Setup V3.md](Documents/Agentic%20Blueprint%20Setup%20V3.md) | **V3 design: MCP Hub, direct messaging, heartbeats** |
+| [Agentic Blueprint Setup V3.md](Documents/Agentic%20Blueprint%20Setup%20V3.md) | V3 design: MCP Hub, direct messaging, heartbeats |
+| [Agentic Blueprint Setup V4.md](Documents/Agentic%20Blueprint%20Setup%20V4.md) | **V4 design: Sandbox Draft Pattern, local model file editing** |
 | [Direct_Communication_Protocol.md](Documents/Direct_Communication_Protocol.md) | Research doc: MCP as message bus |
 | [TODO.md](TODO.md) | Implementation checklist |
 | [hub.py](hub.py) | Existing foundation (Swarm + LiteLLM) |
+
+### V4 Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `src/sandbox.py` | Path validation, security gatekeeper |
+| `src/draft_gate.py` | Draft review logic (accept/reject/escalate) |
+| `ollama-mcp/src/draft-tools.ts` | Ollama MCP draft tools |
+| `ollama-mcp/src/sandbox-utils.ts` | TypeScript path validation |
 
 ### Required Skill (Agent Skills Library)
 
@@ -440,4 +501,4 @@ The Floor Manager's knowledge should be captured as a reusable skill:
 
 ---
 
-*This PRD defines WHAT we're building and WHY. For HOW, see the [Agentic Blueprint Setup V2](Documents/Agentic%20Blueprint%20Setup%20V2.md).*
+*This PRD defines WHAT we're building and WHY. For HOW, see the [Agentic Blueprint Setup V4](Documents/Agentic%20Blueprint%20Setup%20V4.md) (current) or earlier versions for historical context.*
