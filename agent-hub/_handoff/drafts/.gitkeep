@@ -1,0 +1,2 @@
+# This file ensures the drafts directory exists in git.
+# Contents of this directory are ignored (see .gitignore).

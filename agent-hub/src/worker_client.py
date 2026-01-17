@@ -28,6 +28,23 @@ class WorkerClient:
         for item in result["content"]:
             if item.get("type") == "text":
                 full_text += item.get("text", "")
+        
+        # OLLAMA-MCP COMPATIBILITY:
+        # The ollama-mcp tool returns a JSON string containing structure { stdout, stderr, exitCode, metadata }.
+        # We need to extract 'stdout' from this wrapper if it exists.
+        try:
+            # Heuristic: does it look like the ollama-mcp object?
+            if full_text.strip().startswith("{") and '"stdout":' in full_text:
+                wrapped = json.loads(full_text)
+                if isinstance(wrapped, dict) and "stdout" in wrapped:
+                    # Log metadata for visibility but return just the text
+                    if "metadata" in wrapped and wrapped["metadata"].get("timed_out"):
+                        print(f"Ollama Timeout: {wrapped['metadata']}")
+                        # This might be empty if timed out, but let's return what we have
+                    return wrapped["stdout"]
+        except json.JSONDecodeError:
+            pass
+            
         return full_text
 
     def implement_task(self, contract: Dict[str, Any]) -> Dict[str, Any]:
@@ -75,8 +92,11 @@ CONSTRAINTS:
 
             result = self.mcp.call_tool("ollama_run", {
                 "model": model,
-                "prompt": prompt
-            }, timeout=timeout_sec)
+                "prompt": prompt,
+                "options": {
+                    "timeout": int(timeout_sec * 1000)
+                }
+            }, timeout=timeout_sec + 30)
             
             output_text = self._parse_mcp_response(result)
             
@@ -93,6 +113,10 @@ CONSTRAINTS:
             code_match = re.search(r"```(?:\w+)?\s+(.*?)```", output_text, re.DOTALL)
             if not code_match:
                  # Be lenient? Requirements say "stall_reason": "malformed_output" if no markers
+                 # DEBUG: Log output
+                 with open("_handoff/last_worker_output.txt", "w") as f:
+                     f.write(output_text)
+                 
                  return {
                     "success": False,
                     "stall_reason": "malformed_output",
@@ -164,8 +188,11 @@ Output ONLY the JSON.
             result = self.mcp.call_tool("ollama_run", {
                 "model": model,
                 "prompt": prompt,
-                "format": "json" # Force JSON mode if supported by Ollama
-            }, timeout=timeout_sec)
+                "format": "json", # Force JSON mode if supported by Ollama
+                "options": {
+                    "timeout": int(timeout_sec * 1000)
+                }
+            }, timeout=timeout_sec + 30)
             
             output_text = self._parse_mcp_response(result)
             
