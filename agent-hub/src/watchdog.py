@@ -577,82 +577,80 @@ def main(argv):
                     )
                     hb_thread.start()
                     
-                    try:
-                        # Log transition to working state
-                        old_status = contract["status"]
-                        new_status, reason = transition(old_status, "lock_acquired", contract)
-                        contract["status"] = new_status
-                        contract["status_reason"] = reason
-                        save_contract(contract, contract_path)
-                        log_transition(contract, "lock_acquired", old_status, git_manager=gm)
-                    
-                        # Run Task
-                        print(f"Invoking Implementer agent ({contract['roles']['implementer']})...")
-                        result = worker.implement_task(contract)
-                        
-                        if result["success"]:
-                            token_stats = result.get("tokens", {})
-                            update_cost(contract, token_stats.get("input", 0), token_stats.get("output", 0), contract["roles"]["implementer"])
-                            contract["handoff_data"]["changed_files"] = result["files_changed"]
-                            
+                    while True:
+                        try:
+                            # Log transition to working state
                             old_status = contract["status"]
-                            new_status, reason = transition(old_status, "code_written", contract)
+                            new_status, reason = transition(old_status, "lock_acquired", contract)
                             contract["status"] = new_status
                             contract["status_reason"] = reason
-                            release_lock(contract) # Release lock upon completion
                             save_contract(contract, contract_path)
-                            log_transition(contract, "code_written", old_status, git_manager=gm)
-                            print(f"Implementation complete. Files changed: {result['files_changed']}")
+                            log_transition(contract, "lock_acquired", old_status, git_manager=gm)
+                        
+                            # Run Task
+                            print(f"Invoking Implementer agent ({contract['roles']['implementer']})...")
+                            result = worker.implement_task(contract)
                             
-                            stop_heartbeat.set()
-                            
-                        else:
-                            # STALL LOGIC
-                            stall_reason = result.get("stall_reason", "unknown")
-                            attempt = contract.get("attempt", 1)
-                            print(f"Implementer stalled: {stall_reason} (Attempt {attempt})")
-                            
-                            release_lock(contract)
-                            
-                            if attempt < 2:
-                                # Strike 1: Retry
-                                contract["attempt"] = attempt + 1
+                            if result["success"]:
+                                token_stats = result.get("tokens", {})
+                                update_cost(contract, token_stats.get("input", 0), token_stats.get("output", 0), contract["roles"]["implementer"])
+                                contract["handoff_data"]["changed_files"] = result["files_changed"]
+                                
                                 old_status = contract["status"]
-                                # Transition back to pending via 'retry' event from timeout_implementer 
-                                # But we are in implementation_in_progress. 
-                                # We treat stall as timeout for state machine purposes?
-                                # Map stall -> timeout -> retry sequence
-                                # 1. To timeout
-                                ns, _ = transition(old_status, "timeout", contract)
-                                # 2. To pending (retry)
-                                ns2, reason = transition(ns, "retry", contract)
-                                contract["status"] = ns2
-                                contract["status_reason"] = f"Retry after stall: {stall_reason}"
+                                new_status, reason = transition(old_status, "code_written", contract)
+                                contract["status"] = new_status
+                                contract["status_reason"] = reason
+                                release_lock(contract) # Release lock upon completion
                                 save_contract(contract, contract_path)
-                                log_transition(contract, "implementer_retry", old_status, git_manager=gm)
-                                print("Retrying task (Strike 1)...")
+                                log_transition(contract, "code_written", old_status, git_manager=gm)
+                                print(f"Implementation complete. Files changed: {result['files_changed']}")
+                                
+                                stop_heartbeat.set()
+                                break # Exit loop on success
                                 
                             else:
-                                # Strike 2: Halt
-                                old_status = contract["status"]
-                                ns, _ = transition(old_status, "timeout", contract)
-                                ns2, reason = transition(ns, "escalate", contract)
-                                contract["status"] = ns2
-                                contract["status_reason"] = f"Stalled twice: {stall_reason}"
+                                # STALL LOGIC
+                                stall_reason = result.get("stall_reason", "unknown")
+                                attempt = contract.get("attempt", 1)
+                                print(f"Implementer stalled: {stall_reason} (Attempt {attempt})")
                                 
-                                write_stall_report(contract, stall_reason, contract_path.parent)
-                                save_contract(contract, contract_path)
-                                log_transition(contract, "implementer_stalled", old_status, git_manager=gm)
-                                print("Halted task (Strike 2). Check STALL_REPORT.md")
-                                stop_heartbeat.set()
-                                sys.exit(1)
-                    except Exception as e:
-                        # Ensure lock is released if we crash
-                        contract = load_contract(contract_path)
-                        release_lock(contract)
-                        save_contract(contract, contract_path)
-                        print(f"Inner error: {e}")
-                        sys.exit(1)
+                                release_lock(contract)
+                                
+                                if attempt < 2:
+                                    # Strike 1: Retry
+                                    contract["attempt"] = attempt + 1
+                                    old_status = contract["status"]
+                                    # Transition back to pending via 'retry' event
+                                    ns, _ = transition(old_status, "timeout", contract)
+                                    ns2, reason = transition(ns, "retry", contract)
+                                    contract["status"] = ns2
+                                    contract["status_reason"] = f"Retry after stall: {stall_reason}"
+                                    save_contract(contract, contract_path)
+                                    log_transition(contract, "implementer_retry", old_status, git_manager=gm)
+                                    print("Retrying task (Strike 1)...")
+                                    continue # Retry loop
+                                    
+                                else:
+                                    # Strike 2: Halt
+                                    old_status = contract["status"]
+                                    ns, _ = transition(old_status, "timeout", contract)
+                                    ns2, reason = transition(ns, "escalate", contract)
+                                    contract["status"] = ns2
+                                    contract["status_reason"] = f"Stalled twice: {stall_reason}"
+                                    
+                                    write_stall_report(contract, stall_reason, contract_path.parent)
+                                    save_contract(contract, contract_path)
+                                    log_transition(contract, "implementer_stalled", old_status, git_manager=gm)
+                                    print("Halted task (Strike 2). Check STALL_REPORT.md")
+                                    stop_heartbeat.set()
+                                    sys.exit(1)
+                        except Exception as e:
+                            # Ensure lock is released if we crash
+                            contract = load_contract(contract_path)
+                            release_lock(contract)
+                            save_contract(contract, contract_path)
+                            print(f"Inner error: {e}")
+                            sys.exit(1)
 
             except Exception as e:
                 # Ensure lock is released if we crash
