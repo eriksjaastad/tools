@@ -280,3 +280,4 @@ class GateResult:
             reason=reason,
             diff_summary=diff_summary
         )
+
