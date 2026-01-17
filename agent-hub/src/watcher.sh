@@ -1,0 +1,70 @@
+#!/bin/bash
+# watcher.sh - Runs in dedicated terminal
+# Polls for Judge review requests and invokes Claude CLI.
+
+# Set handoff directory relative to where the script is, or project root
+# For now, assume it's run from the project root.
+HANDOFF_DIR="_handoff"
+LOG_FILE="$HANDOFF_DIR/watcher.log"
+POLL_INTERVAL=5
+MAX_JUDGE_TIME=900  # 15 minutes
+
+mkdir -p "$HANDOFF_DIR"
+
+log_message() {
+    local msg="$1"
+    local timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    echo "$timestamp $msg" | tee -a "$LOG_FILE"
+}
+
+log_message "🚀 Watcher started. Polling $HANDOFF_DIR every $POLL_INTERVAL seconds."
+
+while true; do
+  # Check for review request
+  if [ -f "$HANDOFF_DIR/REVIEW_REQUEST.md" ] && \
+     [ ! -f "$HANDOFF_DIR/REVIEW_IN_PROGRESS.md" ]; then
+    
+    log_message "🔍 Review request detected"
+    
+    # Atomically claim the request
+    mv "$HANDOFF_DIR/REVIEW_REQUEST.md" "$HANDOFF_DIR/REVIEW_IN_PROGRESS.md"
+    
+    log_message "🤖 Invoking Claude (Judge)..."
+
+    # Use timeout to prevent hanging
+    # Note: claude code cli command might vary, using the one from prompt
+    timeout $MAX_JUDGE_TIME claude --dangerously-skip-permissions \
+      "You are the Judge. Read _handoff/TASK_CONTRACT.json. Review the files in handoff_data.changed_files against the specification.requirements and acceptance_criteria. Write your findings to _handoff/JUDGE_REPORT.md.tmp and _handoff/JUDGE_REPORT.json.tmp. When complete, exit immediately."
+    
+    EXIT_CODE=$?
+    
+    if [ $EXIT_CODE -eq 124 ]; then
+      log_message "⏰ Judge timeout (exceeded $MAX_JUDGE_TIME seconds)"
+      # Signal timeout to watchdog
+      # If watchdog.py has a CLI, we call it.
+      if [ -f "watchdog.py" ]; then
+          python3 watchdog.py timeout-judge
+      elif [ -f "src/watchdog.py" ]; then
+          PYTHONPATH=. python3 src/watchdog.py timeout-judge
+      fi
+    elif [ $EXIT_CODE -ne 0 ]; then
+      log_message "❌ Claude exited with error code $EXIT_CODE"
+    else
+      # Atomically publish results
+      [ -f "$HANDOFF_DIR/JUDGE_REPORT.md.tmp" ] && mv "$HANDOFF_DIR/JUDGE_REPORT.md.tmp" "$HANDOFF_DIR/JUDGE_REPORT.md"
+      [ -f "$HANDOFF_DIR/JUDGE_REPORT.json.tmp" ] && mv "$HANDOFF_DIR/JUDGE_REPORT.json.tmp" "$HANDOFF_DIR/JUDGE_REPORT.json"
+      
+      log_message "✅ Judge report published. Updating status..."
+      
+      # Use the new watchdog command
+      if [ -f "src/watchdog.py" ]; then
+          PYTHONPATH=. python3 src/watchdog.py report-judge
+      fi
+    fi
+    
+    # Cleanup marker
+    rm -f "$HANDOFF_DIR/REVIEW_IN_PROGRESS.md"
+  fi
+  
+  sleep $POLL_INTERVAL
+done

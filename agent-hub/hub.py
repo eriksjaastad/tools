@@ -40,6 +40,19 @@ def move_file(src, dst):
     except Exception as e:
         return f"Error moving file: {str(e)}"
 
+def get_task_status():
+    """Returns the current status of the Agent Hub pipeline."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["python3", "src/watchdog.py", "status"],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout if result.stdout else result.stderr
+    except Exception as e:
+        return f"Error getting status: {str(e)}"
+
 # 2. DEFINE AGENTS
 
 # The Worker - Local, runs on Ollama
@@ -48,7 +61,7 @@ worker_agent = Agent(
     name="Worker",
     model="ollama/qwen2.5-coder:7b",
     instructions="You are a fast, efficient coding assistant. You read/write files and execute simple tasks immediately. You are running locally on the user's machine.",
-    functions=[list_files, read_file, write_file, move_file]
+    functions=[list_files, read_file, write_file, move_file, get_task_status]
 )
 
 # The Manager - Cloud (Or Smart Model)

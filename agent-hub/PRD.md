@@ -1,10 +1,11 @@
 # PRD: Agent Hub - Autonomous Multi-Agent Pipeline
 
-**Version:** 1.0  
-**Status:** Draft  
-**Author:** Erik Sjaastad + Claude (Super Manager)  
-**Created:** 2026-01-16  
-**Last Updated:** 2026-01-16
+**Version:** 2.0
+**Status:** Draft
+**Author:** Erik Sjaastad + Claude (Super Manager)
+**Created:** 2026-01-16
+**Last Updated:** 2026-01-17
+**Changelog:** V2.0 - Added V3 Direct Agent Communication (DAC) requirements, constrained messaging, heartbeat monitoring, MCP Hub architecture.
 
 ---
 
@@ -187,6 +188,57 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 | FR-18 | System MAY support custom Judge prompts per project |
 | FR-19 | System MAY auto-learn from rebuttal patterns |
 
+### V3 Direct Agent Communication (DAC) Requirements
+
+These requirements define the MCP-based messaging layer that replaces file polling.
+
+#### Messaging Infrastructure
+
+| ID | Requirement |
+|----|-------------|
+| FR-20 | System MUST provide an MCP Hub (`claude-mcp`) as the central message bus |
+| FR-21 | Agents MUST use `send_message(recipient, payload)` for inter-agent communication |
+| FR-22 | Agents MUST use `receive_message()` to check for incoming signals |
+| FR-23 | System MUST support `open_negotiation_channel(task_id)` for multi-turn planning |
+| FR-24 | Message delivery latency MUST be < 100ms (direct invocation, not polling) |
+
+#### Constrained Message Types
+
+| ID | Requirement |
+|----|-------------|
+| FR-25 | System MUST enforce a fixed menu of message types (no freeform agent-to-agent prompts) |
+| FR-26 | Valid message types: `PROPOSAL_READY`, `REVIEW_NEEDED`, `STOP_TASK`, `QUESTION`, `ANSWER`, `VERDICT_SIGNAL`, `HEARTBEAT` |
+| FR-27 | `QUESTION` messages MUST include 2-4 predefined options (agent cannot ask open-ended questions) |
+| FR-28 | `ANSWER` messages MUST reference the original question and selected option |
+| FR-29 | Floor Manager MUST NOT send arbitrary prompts to Super Manager/Judge |
+
+#### Heartbeat Monitoring (Replaces Hard Time Limits)
+
+| ID | Requirement |
+|----|-------------|
+| FR-30 | All agents in `active` state MUST emit `HEARTBEAT` signals at configurable intervals |
+| FR-31 | MCP Hub MUST detect agent stalls (no heartbeat for X minutes) |
+| FR-32 | On stall detection, Hub MUST notify Erik via CLI alert or system notification |
+| FR-33 | Heartbeat SHOULD include progress indicator (e.g., "reviewing file 3/7") |
+| FR-34 | Stall detection replaces hard timeouts as primary liveness check |
+
+#### Negotiation Protocol
+
+| ID | Requirement |
+|----|-------------|
+| FR-35 | Super Manager and Floor Manager MUST negotiate before finalizing contracts |
+| FR-36 | Negotiation channel preserves context for multi-turn clarification |
+| FR-37 | Contract creation happens ONLY after negotiation concludes |
+| FR-38 | Either party MAY request clarification via `QUESTION` message |
+
+#### Migration Path (Backward Compatibility)
+
+| ID | Requirement |
+|----|-------------|
+| FR-39 | Phase 7.1 (Mailbox): File polling remains active alongside MCP messages |
+| FR-40 | Phase 7.2 (Hotline): File signals deprecated, all transitions via MCP |
+| FR-41 | `watchdog.py` transitions from driver to observer of MCP Hub |
+
 ---
 
 ## 5. Non-Functional Requirements
@@ -195,11 +247,12 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 
 | ID | Requirement |
 |----|-------------|
-| NFR-01 | Watchdog polling interval ≤ 5 seconds |
+| NFR-01 | Watchdog polling interval ≤ 5 seconds (Phase 7.1 only) |
+| NFR-01a | MCP message delivery latency < 100ms (Phase 7.2) |
 | NFR-02 | State transitions complete in < 1 second |
-| NFR-03 | Implementer (Qwen) timeout ≤ 10 minutes |
-| NFR-03a | Local Reviewer (DeepSeek) timeout ≤ 15 minutes (reasoning needs time) |
-| NFR-04 | Cloud model (Judge) timeout ≤ 15 minutes |
+| NFR-03 | Heartbeat interval: 30 seconds for active agents |
+| NFR-03a | Stall detection threshold: 3 missed heartbeats (90 seconds) |
+| NFR-04 | Hard timeout (fallback): 15 minutes if heartbeat system fails |
 
 ### Reliability
 
@@ -230,19 +283,20 @@ Build an autonomous pipeline where Erik collaborates with a **Super Manager** (C
 
 ---
 
-## 6. Out of Scope (V1)
+## 6. Out of Scope (V1/V2)
 
 The following are **explicitly NOT** part of this project:
 
-| Item | Reason |
-|------|--------|
-| Web UI / Dashboard | CLI-first; UI is V2 |
-| Multi-user support | Erik-only system |
-| Cloud deployment | Runs on Erik's Mac |
-| Real-time notifications | Polling-based is fine for V1 |
-| Natural language task creation | Structured CLI input for now |
-| Cross-repo tasks | One repo per task in V1 |
-| Automatic retry on transient failures | Manual resume via CLI |
+| Item | Reason | Status |
+|------|--------|--------|
+| Web UI / Dashboard | CLI-first | Future consideration |
+| Multi-user support | Erik-only system | Not planned |
+| Cloud deployment | Runs on Erik's Mac | Not planned |
+| ~~Real-time notifications~~ | ~~Polling-based is fine for V1~~ | **IN SCOPE (V3)** - Heartbeat + stall alerts |
+| Natural language task creation | Structured CLI input for now | Future consideration |
+| Cross-repo tasks | One repo per task | Future consideration |
+| Automatic retry on transient failures | Manual resume via CLI | Partial - negotiation handles some |
+| Freeform agent-to-agent prompts | Security risk, unpredictable | **EXPLICITLY FORBIDDEN** |
 
 ---
 
@@ -253,24 +307,32 @@ The following are **explicitly NOT** part of this project:
 | Dependency | Risk Level | Mitigation |
 |------------|------------|------------|
 | Ollama running locally | Medium | Health check on watchdog start |
-| Claude CLI installed | Medium | Check version on startup |
+| Claude Code CLI | Medium | Check version on startup |
 | Python 3.11+ | Low | Specified in requirements.txt |
 | Swarm/LiteLLM | Medium | Already integrated in hub.py |
 | Git | Low | Required for branch isolation |
+| **claude-mcp server** | **High** | **Required for V3 messaging; fallback to file polling (V2 mode)** |
+| Node.js 18+ | Low | Required for claude-mcp MCP server |
 
 ### Risks
 
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|------------|
 | Local model quality too low | Medium | High | Use Local Reviewer as safety net; escalate to cloud if needed |
-| Claude CLI API changes | Low | High | Pin version; wrap in abstraction |
-| Infinite loops not caught | Low | High | Multiple circuit breakers; hard timeout |
+| Claude Code API changes | Low | High | Pin version; wrap in abstraction |
+| Infinite loops not caught | Low | High | Heartbeat monitoring + hard timeout fallback |
 | File corruption from race condition | Medium | High | Atomic writes; lock mechanism |
 | Context window overflow | Medium | Medium | Summarize history; limit contract size |
+| **MCP Hub crashes** | Low | **Critical** | **Auto-restart; fallback to V2 file polling** |
+| **Heartbeat false positives** | Medium | Medium | **Tunable thresholds; require 3 missed beats** |
+| **Agent sends malformed message** | Low | Medium | **Schema validation at Hub; reject invalid messages** |
+| **Antigravity IDE limitations** | **High** | **High** | **Single Floor Manager only; no parallel agents in same IDE** |
 
 ---
 
 ## 8. Architecture Overview
+
+### V3 Architecture (Direct Agent Communication)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -278,50 +340,67 @@ The following are **explicitly NOT** part of this project:
 │                    Vision, approval, resolves halts             │
 └─────────────────────────────────────────────────────────────────┘
           │
-          │ Collaborates
+          │ Collaborates (Claude Code CLI)
           ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                   SUPER MANAGER (Claude CLI)                    │
+│                   SUPER MANAGER (Claude Code)                   │
 │         Strategic partner, drafts proposals WITH Erik           │
+│         Negotiates with Floor Manager via MCP Hub               │
 │                                                                 │
-│         Output: PROPOSAL_FINAL.md → _handoff/                   │
+│         Output: PROPOSAL_FINAL.md + PROPOSAL_READY message      │
 └─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  │ File trigger
-                                  ▼
+          │                                               ▲
+          │ MCP Message                                   │ MCP Message
+          ▼                                               │
 ┌─────────────────────────────────────────────────────────────────┐
-│                    FLOOR MANAGER (Gemini/Cursor)                │
-│     Detects PROPOSAL_FINAL.md → Understands task requirements   │
+│                     ╔═══════════════════╗                       │
+│                     ║   CLAUDE MCP HUB  ║                       │
+│                     ║  (Message Bus)    ║                       │
+│                     ║                   ║                       │
+│                     ║  • send_message   ║                       │
+│                     ║  • receive_message║                       │
+│                     ║  • heartbeat      ║                       │
+│                     ║  • negotiate      ║                       │
+│                     ╚═══════════════════╝                       │
+│                          THE CONTROL PLANE                      │
+└─────────────────────────────────────────────────────────────────┘
+          │                       │                       │
+          │ MCP                   │ MCP                   │ MCP
+          ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLOOR MANAGER (Gemini/Antigravity)           │
+│     Receives PROPOSAL_READY → Negotiates if unclear             │
 │     Decomposes into right-sized chunks for local models         │
-│     Knows Qwen (fast coder) vs DeepSeek (strong reasoner)       │
+│     Emits HEARTBEAT every 30s while active                      │
+│     Sends REVIEW_NEEDED → Receives VERDICT_SIGNAL               │
 │              Orchestrates, routes, decides merge/loop           │
 └─────────────────────────────────────────────────────────────────┘
           │                       │                       │
           ▼                       ▼                       ▼
 ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────────┐
 │   IMPLEMENTER   │   │ LOCAL REVIEWER  │   │       JUDGE         │
-│  (Ollama/Qwen)  │   │(Ollama/DeepSeek)│   │   (Claude CLI)      │
+│  (Ollama/Qwen)  │   │(Ollama/DeepSeek)│   │   (Claude Code)     │
 │                 │   │                 │   │                     │
 │  Writes code    │   │ Syntax/security │   │ Deep architectural  │
 │  to target files│   │ first-pass      │   │ review              │
 └─────────────────┘   └─────────────────┘   └─────────────────────┘
-          │                       │                       │
-          └───────────────────────┴───────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      TASK_CONTRACT.json                         │
-│                    (Single Source of Truth)                     │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         WATCHDOG.py                             │
-│              State machine, transitions, circuit breakers       │
-└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Note:** Claude CLI serves TWO roles:
+### Message Types (Constrained Protocol)
+
+| Message | Sender | Receiver | Purpose |
+|---------|--------|----------|---------|
+| `PROPOSAL_READY` | Super Manager | Floor Manager | Proposal file ready for pickup |
+| `QUESTION` | Any | Any | Request clarification (2-4 options required) |
+| `ANSWER` | Any | Any | Response to question (must reference original) |
+| `REVIEW_NEEDED` | Floor Manager | Judge | Implementation ready for review |
+| `VERDICT_SIGNAL` | Judge | Floor Manager | Review complete (PASS/FAIL/CONDITIONAL) |
+| `STOP_TASK` | Any | Floor Manager | Halt current task immediately |
+| `HEARTBEAT` | Active Agent | Hub | "I'm alive and working on X" |
+
+**Key Constraint:** Agents cannot send arbitrary prompts to each other. Communication is structured, predictable, and auditable.
+
+**Note:** Claude Code serves TWO roles:
 - **Super Manager mode:** Strategic planning with Erik (proposal phase)
 - **Judge mode:** Architectural review of completed work (review phase)
 
@@ -332,7 +411,9 @@ The following are **explicitly NOT** part of this project:
 | Document | Purpose |
 |----------|---------|
 | [Agentic Blueprint.md](Documents/Agentic%20Blueprint.md) | High-level vision and 4-phase pipeline |
-| [Agentic Blueprint Setup V2.md](Documents/Agentic%20Blueprint%20Setup%20V2.md) | Detailed design: schema, state machine, circuit breakers |
+| [Agentic Blueprint Setup V2.md](Documents/Agentic%20Blueprint%20Setup%20V2.md) | V2 design: file-based polling, schema, circuit breakers |
+| [Agentic Blueprint Setup V3.md](Documents/Agentic%20Blueprint%20Setup%20V3.md) | **V3 design: MCP Hub, direct messaging, heartbeats** |
+| [Direct_Communication_Protocol.md](Documents/Direct_Communication_Protocol.md) | Research doc: MCP as message bus |
 | [TODO.md](TODO.md) | Implementation checklist |
 | [hub.py](hub.py) | Existing foundation (Swarm + LiteLLM) |
 
