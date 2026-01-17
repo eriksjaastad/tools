@@ -1,0 +1,5 @@
+# Sandbox drafts - ignore contents, keep structure
+drafts/*.draft
+drafts/*.submission.json
+!drafts/.gitkeep
+!drafts/README.md
