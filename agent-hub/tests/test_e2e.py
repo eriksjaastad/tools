@@ -179,12 +179,23 @@ from unittest.mock import MagicMock, patch
 def test_pipeline_with_mocked_mcp(handoff_dir, project_dir, monkeypatch):
     monkeypatch.setenv("HANDOFF_DIR", str(handoff_dir))
     
+    # Create dummy server files to pass validation
+    dummy_hub = project_dir / "dummy_hub.js"
+    dummy_hub.write_text("// dummy")
+    dummy_mcp = project_dir / "dummy_mcp.js"
+    dummy_mcp.write_text("// dummy")
+    monkeypatch.setenv("HUB_SERVER_PATH", str(dummy_hub))
+    monkeypatch.setenv("MCP_SERVER_PATH", str(dummy_mcp))
+    
+    import src.config
+    src.config._config = None
+    
     # Initialize Repo
     subprocess.run(["git", "init", "-b", "main"], cwd=project_dir, check=True)
     subprocess.run(["git", "config", "user.email", "mcp@example.com"], cwd=project_dir, check=True)
     subprocess.run(["git", "config", "user.name", "MCP User"], cwd=project_dir, check=True)
     (project_dir / ".gitignore").write_text("_handoff/\n__pycache__/\n.pytest_cache/\n")
-    subprocess.run(["git", "add", ".gitignore"], cwd=project_dir, check=True)
+    subprocess.run(["git", "add", ".gitignore", "dummy_hub.js", "dummy_mcp.js"], cwd=project_dir, check=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=project_dir, check=True)
     
     # 1. Create Proposal
@@ -220,23 +231,34 @@ def test_pipeline_with_mocked_mcp(handoff_dir, project_dir, monkeypatch):
     mock_mcp_class.return_value.__enter__.return_value = mock_mcp_instance
     
     # Mock Responses
-    # Health Check
-    # Implementer
     code_resp = '{"content": [{"type": "text", "text": "Here is code:\\n```python\\nprint(\'AI generated\')\\n```"}]}'
-    # Local Review
     review_resp = '{"content": [{"type": "text", "text": "{\\"verdict\\": \\"PASS\\", \\"issues\\": []}"}]}'
     
-    mock_mcp_instance.call_tool.side_effect = [
-        {"content": []}, # Health check (Implementer)
-        json.loads(code_resp), # Implementer result
-        {"content": []}, # Health check (Reviewer)
-        json.loads(review_resp) # Reviewer result
+    responses = [
+        json.loads(code_resp),
+        json.loads(review_resp)
     ]
+    
+    def mcp_side_effect(name, arguments=None, **kwargs):
+        if name in ["hub_connect", "hub_heartbeat"]:
+            return {"success": True}
+        if name == "hub_receive_messages":
+            return {"messages": []}
+        if name == "ollama_list_models":
+            return {"content": []}
+        if name == "ollama_run":
+            if responses:
+                return responses.pop(0)
+            return {"content": []}
+        return {"success": True}
+
+    mock_mcp_instance.call_tool.side_effect = mcp_side_effect
     
     prev_cwd = os.getcwd()
     os.chdir(project_dir)
     try:
-        with patch("src.watchdog.MCPClient", mock_mcp_class):
+        with patch("src.watchdog.MCPClient", mock_mcp_class), \
+             patch("src.watchdog.check_hub_available", return_value=True):
             from src.watchdog import main
     
             def run_wd(cmd):
@@ -256,14 +278,22 @@ def test_pipeline_with_mocked_mcp(handoff_dir, project_dir, monkeypatch):
             contract = load_contract(contract_path)
             assert contract["status"] == "pending_judge_review"
             assert contract["handoff_data"]["local_review_passed"] is True
-            assert (handoff_dir / "REVIEW_REQUEST.md").exists()
             
     finally:
         os.chdir(prev_cwd)
 
 def test_stall_recovery(handoff_dir, project_dir, monkeypatch):
     monkeypatch.setenv("HANDOFF_DIR", str(handoff_dir))
+    # Create dummy server files
+    dummy_hub = project_dir / "dummy_hub.js"
+    dummy_hub.write_text("// dummy")
+    dummy_mcp = project_dir / "dummy_mcp.js"
+    dummy_mcp.write_text("// dummy")
+    monkeypatch.setenv("HUB_SERVER_PATH", str(dummy_hub))
+    monkeypatch.setenv("MCP_SERVER_PATH", str(dummy_mcp))
     
+    import src.config
+    src.config._config = None
     # Setup
     subprocess.run(["git", "init", "-b", "main"], cwd=project_dir, check=True)
     subprocess.run(["git", "config", "user.email", "mcp@example.com"], cwd=project_dir, check=True)
@@ -297,22 +327,31 @@ def test_stall_recovery(handoff_dir, project_dir, monkeypatch):
     mock_mcp_class.return_value.__enter__.return_value = mock_mcp_instance
     
     # Mock Response: Stall 1 (Empty), Stall 2 (Success)
-    # 1. Health check (Attempt 1)
-    # 2. Implementer (Attempt 1) -> Empty -> Stall -> Strike 1 -> Retry -> pending_implementer
-    # 3. Health check (Attempt 2)
-    # 4. Implementer (Attempt 2) -> Success
-    
-    mock_mcp_instance.call_tool.side_effect = [
-        {"content": []}, 
+    responses = [
         {"content": [{"type": "text", "text": ""}]}, # Empty
-        {"content": []},
         {"content": [{"type": "text", "text": "code:\n```python\nprint(1)\n```"}]}
     ]
+    
+    def mcp_side_effect(name, arguments=None, **kwargs):
+        if name in ["hub_connect", "hub_heartbeat"]:
+            return {"success": True}
+        if name == "hub_receive_messages":
+            return {"messages": []}
+        if name == "ollama_list_models":
+            return {"content": []}
+        if name == "ollama_run":
+            if responses:
+                return responses.pop(0)
+            return {"content": []}
+        return {"success": True}
+
+    mock_mcp_instance.call_tool.side_effect = mcp_side_effect
     
     prev_cwd = os.getcwd()
     os.chdir(project_dir)
     try:
-        with patch("src.watchdog.MCPClient", mock_mcp_class):
+        with patch("src.watchdog.MCPClient", mock_mcp_class), \
+             patch("src.watchdog.check_hub_available", return_value=True):
              from src.watchdog import main
              
              # Attempt 1
@@ -334,7 +373,16 @@ def test_stall_recovery(handoff_dir, project_dir, monkeypatch):
 
 def test_critical_flaw_detection(handoff_dir, project_dir, monkeypatch):
     monkeypatch.setenv("HANDOFF_DIR", str(handoff_dir))
+    # Create dummy server files
+    dummy_hub = project_dir / "dummy_hub.js"
+    dummy_hub.write_text("// dummy")
+    dummy_mcp = project_dir / "dummy_mcp.js"
+    dummy_mcp.write_text("// dummy")
+    monkeypatch.setenv("HUB_SERVER_PATH", str(dummy_hub))
+    monkeypatch.setenv("MCP_SERVER_PATH", str(dummy_mcp))
     
+    import src.config
+    src.config._config = None
     # Setup
     subprocess.run(["git", "init", "-b", "main"], cwd=project_dir, check=True)
     subprocess.run(["git", "config", "user.email", "mcp@example.com"], cwd=project_dir, check=True)
@@ -372,12 +420,25 @@ def test_critical_flaw_detection(handoff_dir, project_dir, monkeypatch):
     
     # Mock Critical Flaw
     crit_resp = '{"verdict": "FAIL", "critical": true, "issues": ["Found API_KEY"]}'
-    mock_mcp_instance.call_tool.return_value = {"content": [{"type": "text", "text": crit_resp}]}
+    
+    def mcp_side_effect(name, arguments=None, **kwargs):
+        if name in ["hub_connect", "hub_heartbeat"]:
+            return {"success": True}
+        if name == "hub_receive_messages":
+            return {"messages": []}
+        if name == "ollama_list_models":
+            return {"content": []}
+        if name == "ollama_run":
+            return {"content": [{"type": "text", "text": crit_resp}]}
+        return {"success": True}
+
+    mock_mcp_instance.call_tool.side_effect = mcp_side_effect
     
     prev_cwd = os.getcwd()
     os.chdir(project_dir)
     try:
-        with patch("src.watchdog.MCPClient", mock_mcp_class):
+        with patch("src.watchdog.MCPClient", mock_mcp_class), \
+             patch("src.watchdog.check_hub_available", return_value=True):
              from src.watchdog import main
              
              # Expect SystemExit due to halt

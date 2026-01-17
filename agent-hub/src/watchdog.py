@@ -1,6 +1,8 @@
 import json
 import os
 import uuid
+import logging
+import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Tuple, Dict, Any, Optional
@@ -16,6 +18,8 @@ from .draft_gate import handle_draft_submission, apply_draft, reject_draft, Gate
 _config = get_config()
 MCP_SERVER_PATH = _config.mcp_server_path
 HUB_SERVER_PATH = _config.hub_path
+
+logger = logging.getLogger(__name__)
 
 VALID_STATUSES = [
     "pending_implementer",
@@ -92,8 +96,8 @@ def log_transition(contract: Dict[str, Any], event: str, old_status: str, log_di
     try:
         with open(log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Failed to log transition to {log_file}: {e}")
 
     # Git Checkpoint
     if git_manager:
@@ -108,9 +112,8 @@ def log_transition(contract: Dict[str, Any], event: str, old_status: str, log_di
                     event,
                     allowed_paths=allowed_paths
                 )
-        except GitError:
-            # In a real scenario, we might want to trigger a halt if git fails
-            pass
+        except GitError as e:
+            logger.warning(f"Git checkpoint failed for task {contract['task_id']}: {e}")
 
 def transition(state: str, event: str, contract: Dict[str, Any]) -> Tuple[str, str]:
     """
@@ -361,8 +364,8 @@ def check_for_stop(hub_server_path: Path) -> None:
                     print(f"Received STOP signal: {msg['payload']}")
                     import sys
                     sys.exit(0)
-    except Exception:
-        pass # Don't block if hub is down
+    except Exception as e:
+        logger.debug(f"Hub unreachable during STOP_TASK check: {e}")
 
 def start_heartbeat(hub_server_path: Path, task_id: str, stop_event: threading.Event):
     """Background thread to emit heartbeats."""
@@ -373,8 +376,8 @@ def start_heartbeat(hub_server_path: Path, task_id: str, stop_event: threading.E
             while not stop_event.is_set():
                 hub.emit_heartbeat(f"implementing {task_id}")
                 time.sleep(30)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Heartbeat thread failed: {e}")
 
 def check_hub_available(hub_path: Path) -> bool:
     """Verify MCP hub is running before any operation."""
@@ -438,6 +441,11 @@ def print_status(contract: Dict[str, Any], path: Path) -> None:
 def main(argv):
     import sys
     
+    if "--dry-run" in argv:
+        os.environ["AGENT_HUB_DRY_RUN"] = "1"
+        argv.remove("--dry-run")
+        print("DRY-RUN mode enabled. No changes will be saved to disk or git.")
+
     if "--version" in argv or "-v" in argv:
         try:
             with open("skill.json", "r") as f:

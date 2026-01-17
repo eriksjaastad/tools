@@ -5,7 +5,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-HUB_PATH="${HUB_SERVER_PATH:-/Users/eriksjaastad/projects/_tools/claude-mcp/dist/server.js}"
+HUB_PATH="${HUB_SERVER_PATH:?Error: HUB_SERVER_PATH must be set}"
 
 echo "=== Agent Hub Startup ==="
 

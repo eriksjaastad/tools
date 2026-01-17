@@ -283,7 +283,7 @@ class MessageListener:
         
         for cmd in commands:
             logger.info(f"Executing: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             
             if result.returncode != 0:
                 logger.error(f"Command failed: {' '.join(cmd)}")

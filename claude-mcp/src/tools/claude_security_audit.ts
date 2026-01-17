@@ -6,6 +6,26 @@
 
 import { spawn } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
+import { resolve, relative, sep } from 'path';
+
+/**
+ * Validate that a requested path stays within the base directory.
+ * Returns null if path traversal is detected.
+ */
+export function safePath(base: string, requested: string): string | null {
+  const fullPath = resolve(base, requested);
+  const baseResolved = resolve(base);
+
+  // Check if resolved path is within base
+  const rel = relative(baseResolved, fullPath);
+
+  // If relative path starts with ".." or is absolute, reject
+  if (rel.startsWith('..') || rel.startsWith(sep) || resolve(rel) === fullPath) {
+    return null;
+  }
+
+  return fullPath;
+}
 
 interface SecurityAuditArgs {
   files: string[];
@@ -75,16 +95,37 @@ export async function claudeSecurityAudit(args: Record<string, unknown>): Promis
   } = args as any as SecurityAuditArgs;
 
   // Read all files
+  const MAX_TOTAL_CHARS = 400000; // ~100k tokens
+  let totalChars = 0;
   let filesContent = '';
+
   for (const file of files) {
-    const fullPath = `${working_directory}/${file}`;
+    const fullPath = safePath(working_directory, file);
+
+    if (!fullPath) {
+      filesContent += `\n### ${file}\n(BLOCKED: Path traversal attempt)\n`;
+      console.warn(`SECURITY: Blocked path traversal attempt: ${file}`);
+      continue;
+    }
+
     if (existsSync(fullPath)) {
       const content = readFileSync(fullPath, 'utf-8');
+
+      if (totalChars + content.length > MAX_TOTAL_CHARS) {
+        filesContent += `\n### ${file}\n(SKIPPED: Context limit reached - ${totalChars} chars already included)\n`;
+        console.warn(`Skipping ${file}: would exceed context limit`);
+        continue;
+      }
+
+      totalChars += content.length;
       filesContent += `\n### ${file}\n\`\`\`\n${content}\n\`\`\`\n`;
     } else {
       filesContent += `\n### ${file}\n(File not found)\n`;
     }
   }
+
+  // Log final size
+  console.log(`Security audit: included ${totalChars} chars from ${files.length} files`);
 
   const prompt = SECURITY_PROMPT_TEMPLATE.replace('{{FILES_CONTENT}}', filesContent);
 

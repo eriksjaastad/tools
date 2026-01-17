@@ -1,9 +1,28 @@
 import json
 import re
+import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from .mcp_client import MCPClient, MCPError, MCPTimeoutError
 from .utils import safe_read, atomic_write
+
+logger = logging.getLogger(__name__)
+
+MAX_INPUT_TOKENS = 100000  # Adjust based on model limits
+
+def estimate_tokens(text: str) -> int:
+    """Rough estimate: 1 token ~ 4 characters."""
+    return len(text) // 4
+
+def prepare_prompt(content: str) -> str:
+    """Prepare prompt with token safety check."""
+    estimated = estimate_tokens(content)
+    if estimated > MAX_INPUT_TOKENS:
+        logger.warning(f"Content exceeds token limit ({estimated} > {MAX_INPUT_TOKENS}), truncating")
+        # Truncate to approximate limit
+        max_chars = MAX_INPUT_TOKENS * 4
+        content = content[:max_chars] + "\n\n[TRUNCATED - content exceeded token limit]"
+    return content
 
 class WorkerClient:
     def __init__(self, mcp_client: MCPClient):
@@ -42,8 +61,8 @@ class WorkerClient:
                         print(f"Ollama Timeout: {wrapped['metadata']}")
                         # This might be empty if timed out, but let's return what we have
                     return wrapped["stdout"]
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as e:
+            logger.debug(f"Failed to parse ollama-mcp response as JSON: {e}")
             
         return full_text
 
@@ -80,6 +99,7 @@ CONSTRAINTS:
 - Do not use placeholders.
 - Output ONLY the code for the target file, inside a code block.
 """
+        prompt = prepare_prompt(prompt)
         model = contract.get("roles", {}).get("implementer", "qwen2.5-coder:14b")
         
         try:
@@ -179,6 +199,7 @@ Return a JSON object with this structure:
 }}
 Output ONLY the JSON.
 """
+        prompt = prepare_prompt(prompt)
         model = contract.get("roles", {}).get("local_reviewer", "deepseek-r1:7b")
         
         try:

@@ -4,12 +4,33 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, writeFileSync, existsSync, renameSync, unlinkSync } from 'fs';
+import { join, basename, dirname } from 'path';
+import { tmpdir } from 'os';
 
-const HUB_STATE_FILE = join(process.cwd(), '_handoff', 'hub_state.json');
+/**
+ * Write file atomically using temp file + rename pattern.
+ */
+function atomicWriteSync(filePath: string, content: string): void {
+    const tempPath = join(tmpdir(), `${basename(filePath)}.${Date.now()}.tmp`);
 
-interface Message {
+    try {
+        writeFileSync(tempPath, content, 'utf-8');
+        renameSync(tempPath, filePath);
+    } catch (error) {
+        // Clean up temp file if rename fails
+        try {
+            unlinkSync(tempPath);
+        } catch {
+            // Ignore cleanup errors
+        }
+        throw error;
+    }
+}
+
+export const HUB_STATE_FILE = join(process.cwd(), '_handoff', 'hub_state.json');
+
+export interface Message {
     id: string;
     type: string;
     from: string;
@@ -18,23 +39,23 @@ interface Message {
     timestamp: string;
 }
 
-interface Heartbeat {
+export interface Heartbeat {
     agent_id: string;
     progress: string;
     timestamp: string;
 }
 
-interface HubState {
+export interface HubState {
     messages: Message[];
     heartbeats: Record<string, Heartbeat>;
     agents: string[];
 }
 
-class MessageHub {
-    private loadState(): HubState {
-        if (existsSync(HUB_STATE_FILE)) {
+export class MessageHub {
+    public loadState(filePath: string = HUB_STATE_FILE): HubState {
+        if (existsSync(filePath)) {
             try {
-                return JSON.parse(readFileSync(HUB_STATE_FILE, 'utf-8'));
+                return JSON.parse(readFileSync(filePath, 'utf-8'));
             } catch (e) {
                 return { messages: [], heartbeats: {}, agents: [] };
             }
@@ -42,14 +63,14 @@ class MessageHub {
         return { messages: [], heartbeats: {}, agents: [] };
     }
 
-    private saveState(state: HubState) {
+    public saveState(state: HubState, filePath: string = HUB_STATE_FILE) {
         // Ensure directory exists
-        const dir = join(process.cwd(), '_handoff');
+        const dir = dirname(filePath);
         if (!existsSync(dir)) {
             const { mkdirSync } = require('fs');
             mkdirSync(dir, { recursive: true });
         }
-        writeFileSync(HUB_STATE_FILE, JSON.stringify(state, null, 2));
+        atomicWriteSync(filePath, JSON.stringify(state, null, 2));
     }
 
     connect(agent_id: string) {
