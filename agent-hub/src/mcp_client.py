@@ -84,79 +84,61 @@ class MCPClient:
             self._request_id += 1
             request_id = self._request_id
             
-        payload = {
-            "jsonrpc": "2.0",
-            "id": request_id,
-            "method": "tools/call",
-            "params": {
-                "name": name,
-                "arguments": arguments
+            payload = {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "tools/call",
+                "params": {
+                    "name": name,
+                    "arguments": arguments
+                }
             }
-        }
-        
-        request_str = json.dumps(payload)
-        
-        # Log request (DEBUG)
-        # print(f"DEBUG: MCP TX: {request_str}", file=sys.stderr)
-        
-        try:
-            self._process.stdin.write(request_str + "\n")
-            self._process.stdin.flush()
-        except (BrokenPipeError, IOError) as e:
-            raise MCPError(f"Failed to send request: {e}")
-
-        # Basic timeout mechanism using polling isn't ideal for synchronous readline, 
-        # but for simplicity we rely on the server responding. 
-        # A true robust implementation would use threads/asyncio.
-        # Here we will assume the server is responsive or we rely on 'poll' checks.
-        # To implement timeout properly with blocking I/O is hard without threads/non-blocking.
-        # Given requirements, we will use a simple threaded reader or select approach? 
-        # Actually, let's just use a thread to read with timeout.
-        
-        result_container = {}
-        
-        def read_thread():
+            
+            request_str = json.dumps(payload)
+            
             try:
-                line = self._read_response()
-                result_container["line"] = line
-            except Exception as e:
-                result_container["error"] = e
+                self._process.stdin.write(request_str + "\n")
+                self._process.stdin.flush()
+            except (BrokenPipeError, IOError) as e:
+                raise MCPError(f"Failed to send request: {e}")
+
+            result_container = {}
+            
+            def read_thread():
+                try:
+                    line = self._read_response()
+                    result_container["line"] = line
+                except Exception as e:
+                    result_container["error"] = e
+                    
+            t = threading.Thread(target=read_thread, daemon=True)
+            t.start()
+            t.join(timeout=timeout)
+            
+            if t.is_alive():
+                self.stop() 
+                raise MCPTimeoutError(f"Tool call '{name}' timed out after {timeout}s")
                 
-        t = threading.Thread(target=read_thread, daemon=True)
-        t.start()
-        t.join(timeout=timeout)
-        
-        if t.is_alive():
-            # Timeout happened
-            # We might need to kill the process because we can't interrupt the read
-             # But let's try to just raise error and leave the state potentially messy (requires reconnect)
-             # Ideally we restart the process on timeout
-            self.stop() 
-            raise MCPTimeoutError(f"Tool call '{name}' timed out after {timeout}s")
+            if "error" in result_container:
+                raise result_container["error"]
+                
+            response_str = result_container.get("line")
             
-        if "error" in result_container:
-            raise result_container["error"]
-            
-        response_str = result_container.get("line")
-        # print(f"DEBUG: MCP RX: {response_str}", file=sys.stderr)
-        
-        try:
-            response = json.loads(response_str)
-        except json.JSONDecodeError:
-            raise MCPError(f"Invalid JSON response: {response_str}")
-            
-        if response.get("id") != request_id:
-            # In a real async server we'd match IDs, but here we expect sync 1:1
-            # If mismatch, we might have read a previous delayed response?
-            raise MCPError(f"Request ID mismatch. Expected {request_id}, got {response.get('id')}")
-            
-        if "error" in response:
-            error = response["error"]
-            msg = error.get("message", "Unknown error")
-            data = error.get("data")
-            raise MCPError(f"MCP Error {error.get('code')}: {msg} - {data}")
-            
-        if "result" not in response:
-            raise MCPError("Response missing 'result' field")
-            
-        return response["result"]
+            try:
+                response = json.loads(response_str)
+            except json.JSONDecodeError:
+                raise MCPError(f"Invalid JSON response: {response_str}")
+                
+            if response.get("id") != request_id:
+                raise MCPError(f"Request ID mismatch. Expected {request_id}, got {response.get('id')}")
+                
+            if "error" in response:
+                error = response["error"]
+                msg = error.get("message", "Unknown error")
+                data = error.get("data")
+                raise MCPError(f"MCP Error {error.get('code')}: {msg} - {data}")
+                
+            if "result" not in response:
+                raise MCPError("Response missing 'result' field")
+                
+            return response["result"]

@@ -40,7 +40,9 @@ with MCPClient(Path('$HUB_PATH')) as mcp:
 # 3. Start message listener
 echo "Starting Message Listener..."
 cd "$PROJECT_ROOT"
-# Use -m to run as module so absolute imports work
+if [ -d "venv" ]; then
+    source venv/bin/activate
+fi
 PYTHONPATH=. python3 -m src.listener
 
 echo "Agent Hub stopped."
