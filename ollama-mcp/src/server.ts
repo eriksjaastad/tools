@@ -13,6 +13,13 @@ import { fileURLToPath } from "url";
 import readline from "readline";
 import yaml from "js-yaml";
 import { logRun, generateBatchId } from "./logger.js";
+import {
+  requestDraft,
+  writeDraft,
+  readDraft,
+  submitDraft,
+} from './draft-tools.js';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -179,13 +186,13 @@ function validatePrompt(prompt: string): void {
 
 function validateOptions(options?: OllamaRunOptions): void {
   if (!options) return;
-  
+
   if (options.num_predict !== undefined) {
     if (typeof options.num_predict !== "number" || options.num_predict < 1 || options.num_predict > MAX_NUM_PREDICT) {
       throw new Error(`num_predict must be between 1 and ${MAX_NUM_PREDICT}`);
     }
   }
-  
+
   if (options.temperature !== undefined) {
     if (typeof options.temperature !== "number" || options.temperature < 0 || options.temperature > 2) {
       throw new Error("temperature must be between 0 and 2");
@@ -245,7 +252,7 @@ async function ollamaRun(
 
   const timeout = options?.timeout || DEFAULT_TIMEOUT_MS;
   const args = ["run", model];
-  
+
   // Capture start time for logging
   const startTime = new Date().toISOString();
   const startMs = Date.now();
@@ -253,7 +260,7 @@ async function ollamaRun(
   // Note: ollama CLI doesn't support temperature/num_predict directly via flags
   // These would need to be set via Modelfile or API
   // For now, we just use basic run command
-  
+
   // Prepend system prompt if provided
   let fullPrompt = prompt;
   if (options?.system) {
@@ -286,11 +293,11 @@ async function ollamaRun(
 
     proc.on("close", (code) => {
       clearTimeout(timeoutHandle);
-      
+
       // Capture end time and log metrics
       const endTime = new Date().toISOString();
       const durationMs = Date.now() - startMs;
-      
+
       logRun({
         timestamp: startTime,
         model,
@@ -304,7 +311,7 @@ async function ollamaRun(
         concurrency: concurrency,
         task_type: task_type,
       });
-      
+
       if (timedOut) {
         resolve({
           stdout: stdout,
@@ -343,11 +350,11 @@ async function ollamaRun(
 
     proc.on("error", (err) => {
       clearTimeout(timeoutHandle);
-      
+
       // Log error case
       const endTime = new Date().toISOString();
       const durationMs = Date.now() - startMs;
-      
+
       logRun({
         timestamp: startTime,
         model,
@@ -361,7 +368,7 @@ async function ollamaRun(
         concurrency: concurrency,
         task_type: task_type,
       });
-      
+
       resolve({
         stdout,
         stderr: stderr + "\n" + err.message,
@@ -614,6 +621,82 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["jobs"],
         },
       },
+      {
+        name: "ollama_request_draft",
+        description: "Request a copy of a file to edit in the sandbox. Returns the draft path for subsequent edits.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            source_path: {
+              type: "string",
+              description: "Path to the source file to draft"
+            },
+            task_id: {
+              type: "string",
+              description: "Current task identifier"
+            }
+          },
+          required: ["source_path", "task_id"]
+        }
+      },
+      {
+        name: "ollama_write_draft",
+        description: "Write content to a draft file. Can ONLY write to sandbox drafts directory.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            draft_path: {
+              type: "string",
+              description: "Path to the draft file (must be in sandbox)"
+            },
+            content: {
+              type: "string",
+              description: "New content for the draft"
+            }
+          },
+          required: ["draft_path", "content"]
+        }
+      },
+      {
+        name: "ollama_read_draft",
+        description: "Read the current content of a draft file.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            draft_path: {
+              type: "string",
+              description: "Path to the draft file"
+            }
+          },
+          required: ["draft_path"]
+        }
+      },
+      {
+        name: "ollama_submit_draft",
+        description: "Submit a completed draft for Floor Manager review. Creates submission metadata.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            draft_path: {
+              type: "string",
+              description: "Path to the completed draft"
+            },
+            original_path: {
+              type: "string",
+              description: "Path to the original file"
+            },
+            task_id: {
+              type: "string",
+              description: "Current task identifier"
+            },
+            change_summary: {
+              type: "string",
+              description: "Brief description of changes made"
+            }
+          },
+          required: ["draft_path", "original_path", "task_id", "change_summary"]
+        }
+      },
     ],
   };
 });
@@ -640,10 +723,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           options?: OllamaRunOptions;
           task_type?: "classification" | "extraction" | "code" | "reasoning" | "file_mod" | "auto";
         };
-        
+
         console.error(`[ollama_run] task_type=${task_type || 'none'}, model=${model || 'auto'}`);
         const result = await ollamaRunWithRouting({ model, prompt, options, task_type });
-        
+
         return {
           content: [
             {
@@ -660,10 +743,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           jobs: OllamaJob[];
           maxConcurrency?: number;
         };
-        
+
         console.error(`[ollama_run_many] jobs=${jobs.length}, concurrency=${maxConcurrency || DEFAULT_CONCURRENCY}`);
         const results = await ollamaRunMany(jobs, maxConcurrency);
-        
+
         return {
           content: [
             {
@@ -671,6 +754,46 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify({ results }, null, 2),
             },
           ],
+        };
+      }
+
+      case "ollama_request_draft": {
+        const result = requestDraft(request.params.arguments as any);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
+      case "ollama_write_draft": {
+        const result = writeDraft(request.params.arguments as any);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
+      case "ollama_read_draft": {
+        const result = readDraft(request.params.arguments as any);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
+      case "ollama_submit_draft": {
+        const result = submitDraft(request.params.arguments as any);
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
         };
       }
 
