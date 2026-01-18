@@ -19,6 +19,8 @@ import {
   readDraft,
   submitDraft,
 } from './draft-tools.js';
+import { runAgentLoop } from './agent-loop.js';
+import { AgentLoopOptions } from './agent-types.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -706,6 +708,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["draft_path", "original_path", "task_id", "change_summary"]
         }
       },
+      {
+        name: "ollama_agent_run",
+        description: "Run a prompt through an agent loop that can execute tools. The model can call ollama_request_draft, ollama_write_draft, ollama_read_draft, and ollama_submit_draft to edit files in the sandbox.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            prompt: {
+              type: "string",
+              description: "The task prompt for the agent"
+            },
+            max_iterations: {
+              type: "number",
+              description: "Maximum loop iterations (default: 10)"
+            },
+            timeout_ms: {
+              type: "number",
+              description: "Total timeout in milliseconds (default: 300000)"
+            },
+            model: {
+              type: "string",
+              description: "Override model selection"
+            },
+            task_type: {
+              type: "string",
+              description: "Task type for smart routing (e.g., 'code', 'reasoning')"
+            }
+          },
+          required: ["prompt"]
+        }
+      },
     ],
   };
 });
@@ -832,6 +864,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             type: "text",
             text: JSON.stringify(result, null, 2)
           }]
+        };
+      }
+
+      case "ollama_agent_run": {
+        const { prompt, max_iterations, timeout_ms, model, task_type } = request.params.arguments as {
+          prompt: string;
+          max_iterations?: number;
+          timeout_ms?: number;
+          model?: string;
+          task_type?: string;
+        };
+
+        console.error(`[ollama_agent_run] Starting agent loop`);
+        
+        // Create wrapper function for ollamaRun that matches expected signature
+        const ollamaRunWrapper = async (model: string, prompt: string, options?: any) => {
+          return await ollamaRun(model, prompt, options);
+        };
+        
+        const options: AgentLoopOptions = {
+          max_iterations,
+          timeout_ms,
+          model,
+          task_type,
+        };
+        
+        const result = await runAgentLoop(prompt, ollamaRunWrapper, options);
+        
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }],
+          isError: !result.success,
         };
       }
 

@@ -455,6 +455,50 @@ The following are **explicitly NOT** part of this project:
 - **Super Manager mode:** Strategic planning with Erik (proposal phase)
 - **Judge mode:** Architectural review of completed work (review phase)
 
+### V4 Simplified Pipeline
+
+The V4 architecture clarifies roles: **Floor Manager is a dispatcher, not a reviewer.**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    V4 PIPELINE (SIMPLIFIED)                 │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Super Manager              Floor Manager        Workers    │
+│  (Plans tasks)              (Dispatches)         (Ollama)   │
+│       │                          │                  │       │
+│       │  Task spec               │                  │       │
+│       ├─────────────────────────▶│                  │       │
+│       │                          │  ollama_agent_run│       │
+│       │                          ├─────────────────▶│       │
+│       │                          │                  │       │
+│       │                          │◀─────────────────┤       │
+│       │                          │  Draft in sandbox│       │
+│       │                          │                  │       │
+│       │                          │                  │       │
+│  Claude (Judge)◀─────────────────┤                  │       │
+│       │         Submission       │                  │       │
+│       │                          │                  │       │
+│       ├─────────────────────────▶│                  │       │
+│       │  ACCEPT/REJECT           │                  │       │
+│       │                          │                  │       │
+│       │                          │  Apply changes   │       │
+│       │                          ├─────────────────▶│       │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Role Definitions (V4):**
+
+| Role | Responsibility | Does NOT Do |
+|------|----------------|-------------|
+| **Super Manager** | Plans tasks, creates specs, works with Erik | Execute tasks |
+| **Floor Manager** | Dispatches to Workers, collects drafts, routes to Claude | Review code, make judgments |
+| **Workers (Ollama)** | Execute tasks, create drafts in sandbox | Write outside sandbox |
+| **Claude (Judge)** | Reviews ALL submissions, ACCEPT/REJECT | Execute code |
+
+**Key Principle:** Floor Manager is a relay. All review decisions flow through Claude.
+
 ---
 
 ## 9. Related Documents
