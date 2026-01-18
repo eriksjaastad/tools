@@ -6,6 +6,7 @@
  */
 
 import { claudeJudgeReview } from './claude_judge_review';
+import { requestDraftReview, submitReviewVerdict } from './draft_review';
 import { claudeValidateProposal } from './claude_validate_proposal';
 import { claudeSecurityAudit } from './claude_security_audit';
 import { claudeResolveConflict } from './claude_resolve_conflict';
@@ -22,6 +23,8 @@ import {
 // The allowed tools - this is the "menu"
 const TOOLS: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
   'claude_judge_review': claudeJudgeReview,
+  'request_draft_review': requestDraftReview,
+  'submit_review_verdict': submitReviewVerdict,
   'claude_validate_proposal': claudeValidateProposal,
   'claude_security_audit': claudeSecurityAudit,
   'claude_resolve_conflict': claudeResolveConflict,

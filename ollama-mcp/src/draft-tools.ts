@@ -29,8 +29,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Default workspace root - points to the _tools directory
-const DEFAULT_WORKSPACE = path.resolve(__dirname, '../../');
+// Default workspace root - points to the projects directory
+const DEFAULT_WORKSPACE = path.resolve(__dirname, '../../../');
 
 /**
  * Request a draft copy of a file for editing.
@@ -63,9 +63,11 @@ export function requestDraft(input: RequestDraftInput): RequestDraftResult {
             };
         }
 
-        // Copy source to draft
+        // Copy source to draft (atomic write with tmp+rename)
         const sourceContent = fs.readFileSync(readValidation.resolvedPath!, 'utf-8');
-        fs.writeFileSync(draftPath, sourceContent, 'utf-8');
+        const tmpPath = `${draftPath}.tmp`;
+        fs.writeFileSync(tmpPath, sourceContent, 'utf-8');
+        fs.renameSync(tmpPath, draftPath);
 
         // Compute hash and line count
         const originalHash = computeFileHash(readValidation.resolvedPath!);

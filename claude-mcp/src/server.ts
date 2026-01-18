@@ -78,6 +78,8 @@ async function main() {
           result: {
             tools: [
               { name: 'claude_judge_review', description: 'Code review with structured verdict' },
+              { name: 'request_draft_review', description: 'Request Claude to review a draft submission' },
+              { name: 'submit_review_verdict', description: 'Record Claude review verdict' },
               { name: 'claude_validate_proposal', description: 'Check proposal completeness' },
               { name: 'claude_security_audit', description: 'Deep security review' },
               { name: 'claude_resolve_conflict', description: 'Resolve disputes' },
