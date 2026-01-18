@@ -1,0 +1,67 @@
+# Unified Agent System - Routing Configuration
+# Copy to routing.yaml and customize for your environment
+
+version: "1.0"
+
+# Model tier definitions
+tiers:
+  tier_1_free:
+    description: "Local Ollama models - no API cost"
+    models:
+      - alias: "local-fast"
+        provider: "ollama"
+        model: "llama3.2:1b"
+        use_case: "triage, simple tasks"
+      - alias: "local-coder"
+        provider: "ollama"
+        model: "qwen2.5-coder:14b"
+        use_case: "code generation"
+      - alias: "local-reasoning"
+        provider: "ollama"
+        model: "deepseek-r1-distill-qwen:32b"
+        use_case: "complex reasoning"
+
+  tier_2_cheap:
+    description: "Cloud models with low cost"
+    models:
+      - alias: "cloud-fast"
+        provider: "gemini"
+        model: "gemini-2.0-flash"
+        cost_per_million_tokens: 0.10
+
+  tier_3_premium:
+    description: "High-capability cloud models"
+    models:
+      - alias: "cloud-premium"
+        provider: "anthropic"
+        model: "claude-sonnet-4-20250514"
+        cost_per_million_tokens: 3.00
+
+# Fallback chains (try in order)
+fallback_chains:
+  default:
+    - "local-fast"
+    - "cloud-fast"
+    - "cloud-premium"
+  code_generation:
+    - "local-coder"
+    - "cloud-fast"
+    - "cloud-premium"
+  complex_reasoning:
+    - "local-reasoning"
+    - "cloud-premium"
+
+# Cooldown settings
+cooldown:
+  default_seconds: 60
+  allowed_fails: 3
+
+# Provider-specific settings
+providers:
+  ollama:
+    base_url: "http://localhost:11434"
+    keep_alive: "5m"
+  gemini:
+    safety_settings: "BLOCK_NONE"
+  anthropic:
+    max_tokens: 4096

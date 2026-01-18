@@ -1,0 +1,66 @@
+{
+  "session_id": "7777dee0f114",
+  "session_start": "2026-01-18T21:30:56.325601+00:00",
+  "session_cloud_cost": 2.625e-05,
+  "daily_cloud_cost": 2.625e-05,
+  "session_local_calls": 0,
+  "session_local_tokens": 0,
+  "session_limit": 1.0,
+  "daily_limit": 5.0,
+  "last_updated": "2026-01-18T22:22:31.581032+00:00",
+  "current_date": "2026-01-18",
+  "cloud_escapes": [
+    {
+      "timestamp": "2026-01-18T21:30:56.325819+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T21:33:18.356351+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T21:33:42.045459+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T21:46:19.464884+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T21:47:01.590652+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T21:59:39.379311+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    },
+    {
+      "timestamp": "2026-01-18T22:22:31.581029+00:00",
+      "model": "cloud-fast",
+      "task_type": "default",
+      "cost": 3.75e-06,
+      "tokens": 20
+    }
+  ],
+  "override_active": false,
+  "override_reason": "",
+  "override_expires": ""
+}
