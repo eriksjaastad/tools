@@ -78,12 +78,18 @@ async function main() {
           result: {
             tools: [
               { name: 'claude_judge_review', description: 'Code review with structured verdict' },
-              { name: 'request_draft_review', description: 'Request Claude to review a draft submission' },
+              { name: 'request_draft_review', description: 'Request Claude to review a draft' },
               { name: 'submit_review_verdict', description: 'Record Claude review verdict' },
               { name: 'claude_validate_proposal', description: 'Check proposal completeness' },
               { name: 'claude_security_audit', description: 'Deep security review' },
               { name: 'claude_resolve_conflict', description: 'Resolve disputes' },
-              { name: 'claude_health', description: 'Check CLI availability' }
+              { name: 'claude_health', description: 'Check CLI availability' },
+              { name: 'hub_connect', description: 'Register agent with the hub' },
+              { name: 'hub_send_message', description: 'Send message to another agent' },
+              { name: 'hub_receive_messages', description: 'Check inbox for pending messages' },
+              { name: 'hub_heartbeat', description: 'Signal agent is alive' },
+              { name: 'hub_send_answer', description: 'Answer a previous question' },
+              { name: 'hub_get_all_messages', description: 'Get all messages (debug)' }
             ]
           }
         };
