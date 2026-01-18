@@ -289,14 +289,16 @@ class MessageListener:
         
         for cmd in commands:
             logger.info(f"Executing: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-            
-            if result.returncode != 0:
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=True)
+                logger.info(f"Command succeeded: {cmd[3]}")
+            except subprocess.CalledProcessError as e:
                 logger.error(f"Command failed: {' '.join(cmd)}")
-                logger.error(f"Error: {result.stderr}")
+                logger.error(f"Error output: {e.stderr}")
                 break
-            
-            logger.info(f"Command succeeded: {cmd[3]}")
+            except subprocess.TimeoutExpired:
+                logger.error(f"Command timed out: {' '.join(cmd)}")
+                break
             
         logger.info(f"Pipeline finished for {contract_path.name}")
 

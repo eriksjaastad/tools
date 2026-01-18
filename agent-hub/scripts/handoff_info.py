@@ -69,6 +69,7 @@ def get_ollama_models() -> list[dict]:
             capture_output=True,
             text=True,
             timeout=10,
+            check=False
         )
         if result.returncode != 0:
             return []
