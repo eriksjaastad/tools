@@ -2,6 +2,26 @@
 
 This guide explains how to configure Cursor to communicate with the Agent Hub ecosystem using the Model Context Protocol (MCP).
 
+## Prerequisites
+
+Before configuring Cursor MCP, ensure you have:
+
+1. **Node.js** (v18+) - Required for MCP servers and hooks
+   ```bash
+   node --version  # Should output v18.x.x or higher
+   ```
+
+2. **MCP servers built** - Run in the `_tools` directory:
+   ```bash
+   cd claude-mcp && npm install && npm run build
+   cd ../ollama-mcp && npm install && npm run build
+   ```
+
+3. **Ollama running** (for ollama-mcp):
+   ```bash
+   ollama list  # Should show available models
+   ```
+
 ## 1. MCP Server Configuration
 
 To use the tools provided by the Agent Hub, you must add the following MCP servers to your Cursor settings.
@@ -39,9 +59,13 @@ Copy the JSON below and follow the instructions in the next section to apply it.
      - Type: `command`
      - Command: `node <ABSOLUTE_PATH>/ollama-mcp/dist/server.js`
 
-Alternatively, some versions of Cursor allow editing the configuration file directly at:
-- macOS: `~/Library/Application Support/Cursor/User/globalStorage/continuedev.continue/config.json`
-- Windows: `%APPDATA%\Cursor\User\globalStorage\continuedev.continue\config.json`
+Currently, the most reliable way to configure MCP is through the Cursor UI as described above. 
+
+If you prefer file-based configuration, check if your version of Cursor supports the `mcp` key in your global `settings.json`:
+- macOS: `~/Library/Application Support/Cursor/User/settings.json`
+- Windows: `%APPDATA%\Cursor\User\settings.json`
+
+If the `mcp` key is present, you can add the `mcpServers` object there. However, if it's missing, use the UI method.
 
 ## 3. Verification Steps
 

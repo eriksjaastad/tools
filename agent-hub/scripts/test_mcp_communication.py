@@ -82,6 +82,33 @@ class MCPServerProcess:
             self.process.wait(timeout=5)
             self.process.kill()
 
+EXPECTED_CLAUDE_TOOLS = [
+    "claude_judge_review",
+    "request_draft_review",
+    "submit_review_verdict",
+    "claude_validate_proposal",
+    "claude_security_audit",
+    "claude_resolve_conflict",
+    "claude_health",
+    "hub_connect",
+    "hub_send_message",
+    "hub_receive_messages",
+    "hub_heartbeat",
+    "hub_send_answer",
+    "hub_get_all_messages",
+]
+
+EXPECTED_OLLAMA_TOOLS = [
+    "ollama_list_models",
+    "ollama_run",
+    "ollama_run_many",
+    "ollama_request_draft",
+    "ollama_write_draft",
+    "ollama_read_draft",
+    "ollama_submit_draft",
+    "ollama_agent_run",
+]
+
 def main():
     parser = argparse.ArgumentParser(description="MCP Communication E2E Test")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
@@ -91,27 +118,31 @@ def main():
     claude_mcp_dir = os.path.join(root_dir, "claude-mcp")
     ollama_mcp_dir = os.path.join(root_dir, "ollama-mcp")
     agent_hub_dir = os.path.join(root_dir, "agent-hub")
-    handoff_dir = os.path.join(agent_hub_dir, "_handoff")
+    handoff_dir = os.path.join(claude_mcp_dir, "_handoff")
     hub_state_path = os.path.join(handoff_dir, "hub_state.json")
 
     print("=== MCP Communication E2E Test ===")
     
     total_tests = 0
     passed_tests = 0
+    
+    claude_server = None
+    ollama_server = None
 
-    # 1. Test claude-mcp
-    claude_server = MCPServerProcess(["node", "dist/server.js"], claude_mcp_dir, args.verbose)
     try:
+        # 1. Test claude-mcp
+        claude_server = MCPServerProcess(["node", "dist/server.js"], claude_mcp_dir, args.verbose)
         claude_server.start()
         
         # Test tools/list
         def test_claude_list():
             resp = claude_server.call("tools/list")
             tools = resp.get("result", {}).get("tools", [])
-            count = len(tools)
-            if count == 13:
-                return True, "tools/list returns 13 tools"
-            return False, f"tools/list returned {count} tools instead of 13"
+            tool_names = [t["name"] for t in tools]
+            missing = [t for t in EXPECTED_CLAUDE_TOOLS if t not in tool_names]
+            if missing:
+                return False, f"Missing Claude tools: {missing}"
+            return True, f"All {len(EXPECTED_CLAUDE_TOOLS)} expected Claude tools present"
         
         total_tests += 1
         if run_test("claude-mcp", test_claude_list): passed_tests += 1
@@ -169,55 +200,57 @@ def main():
         total_tests += 1
         if run_test("claude-mcp", test_hub_state_file): passed_tests += 1
 
-    finally:
-        claude_server.stop()
-
-    # 2. Test ollama-mcp
-    ollama_server = MCPServerProcess(["node", "dist/server.js"], ollama_mcp_dir, args.verbose)
-    try:
+        # 2. Test ollama-mcp
+        ollama_server = MCPServerProcess(["node", "dist/server.js"], ollama_mcp_dir, args.verbose)
         ollama_server.start()
         
         def test_ollama_list():
             resp = ollama_server.call("tools/list")
             tools = resp.get("result", {}).get("tools", [])
-            count = len(tools)
-            if count == 8:
-                return True, "tools/list returns 8 tools"
-            return False, f"tools/list returned {count} tools instead of 8"
+            tool_names = [t["name"] for t in tools]
+            missing = [t for t in EXPECTED_OLLAMA_TOOLS if t not in tool_names]
+            if missing:
+                return False, f"Missing Ollama tools: {missing}"
+            return True, f"All {len(EXPECTED_OLLAMA_TOOLS)} expected Ollama tools present"
 
         total_tests += 1
         if run_test("ollama-mcp", test_ollama_list): passed_tests += 1
+
+        # 3. Test hook detection
+        def test_hook_trigger():
+            hook_script = os.path.join(agent_hub_dir, ".cursor", "hooks", "floor_manager_pickup.sh")
+            if not os.path.exists(hook_script):
+                return False, f"Hook script not found at {hook_script}"
+            
+            payload = json.dumps({"file_path": "_handoff/TASK_test.md"})
+            proc = subprocess.run(
+                [hook_script],
+                input=payload,
+                capture_output=True,
+                text=True,
+                cwd=agent_hub_dir
+            )
+            
+            if proc.returncode != 0:
+                return False, f"Hook script failed with code {proc.returncode}: {proc.stderr}"
+            
+            resp = json.loads(proc.stdout)
+            if "followup_message" in resp:
+                return True, "floor_manager_pickup.sh triggers on TASK file"
+            return False, f"Hook did not return followup_message: {proc.stdout}"
+
+        total_tests += 1
+        if run_test("hook", test_hook_trigger): passed_tests += 1
+
     finally:
-        ollama_server.stop()
+        if claude_server:
+            claude_server.stop()
+        if ollama_server:
+            ollama_server.stop()
+        
         # Cleanup
         if os.path.exists(hub_state_path):
             os.remove(hub_state_path)
-
-    # 3. Test hook detection
-    def test_hook_trigger():
-        hook_script = os.path.join(agent_hub_dir, ".cursor", "hooks", "floor_manager_pickup.sh")
-        if not os.path.exists(hook_script):
-            return False, f"Hook script not found at {hook_script}"
-        
-        payload = json.dumps({"file_path": "_handoff/TASK_test.md"})
-        proc = subprocess.run(
-            [hook_script],
-            input=payload,
-            capture_output=True,
-            text=True,
-            cwd=agent_hub_dir
-        )
-        
-        if proc.returncode != 0:
-            return False, f"Hook script failed with code {proc.returncode}: {proc.stderr}"
-        
-        resp = json.loads(proc.stdout)
-        if "followup_message" in resp:
-            return True, "floor_manager_pickup.sh triggers on TASK file"
-        return False, f"Hook did not return followup_message: {proc.stdout}"
-
-    total_tests += 1
-    if run_test("hook", test_hook_trigger): passed_tests += 1
 
     print(f"=== {passed_tests}/{total_tests} tests passed ===")
     

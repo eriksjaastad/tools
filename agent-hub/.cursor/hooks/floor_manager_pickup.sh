@@ -1,7 +1,10 @@
 #!/bin/bash
 # Floor Manager Task Pickup Hook for Cursor
 # Triggers when a new TASK_*.md file is created in _handoff/
-# NOTE: We use node instead of jq to extract values to avoid external dependencies.
+# NOTE: We use Node.js instead of jq to parse JSON.
+# Node.js is required anyway for the MCP servers (claude-mcp, ollama-mcp),
+# so this avoids adding jq as an additional dependency.
+# If Node.js is not in PATH, the hook will fail silently.
 
 # Read the JSON payload from Cursor
 PAYLOAD=$(cat)
