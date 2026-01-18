@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "./.cursor/hooks/floor_manager_pickup.sh"
+      }
+    ]
+  }
+}

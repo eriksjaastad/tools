@@ -1,0 +1,15 @@
+{
+  "hooks": [
+    {
+      "name": "Floor Manager Task Pickup",
+      "trigger": {
+        "type": "onFileCreate",
+        "pattern": "_handoff/TASK_*.md"
+      },
+      "action": {
+        "type": "sendMessage",
+        "message": "A new task has arrived in _handoff/. Run `python scripts/handoff_info.py` to see the task details, then execute it following Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md. Dispatch to a Worker using ollama_agent_run, route the submission to Claude for review via request_draft_review, and apply or reject based on the verdict."
+      }
+    }
+  ]
+}
