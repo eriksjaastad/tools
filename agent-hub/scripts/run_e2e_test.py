@@ -79,23 +79,26 @@ def main():
     # 3. Verify implementation
     print("[3/5] Verifying implementation...")
     import subprocess
-    result = subprocess.run(
-        [sys.executable, "-m", "src.watchdog", "--version"],
-        capture_output=True,
-        text=True,
-        timeout=10
-    )
-
-    if result.returncode != 0:
-        print(f"    Error: {result.stderr}")
-        # Try -v just in case
+    try:
         result = subprocess.run(
-            [sys.executable, "-m", "src.watchdog", "-v"],
+            [sys.executable, "-m", "src.watchdog", "--version"],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            check=True
         )
-        if result.returncode != 0:
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        # Try -v just in case
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "src.watchdog", "-v"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=True
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            print(f"    Error: {e}")
             return 1
 
     version_output = result.stdout.strip()
