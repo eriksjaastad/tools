@@ -44,6 +44,10 @@ class MCPClient:
         except Exception as e:
             raise MCPError(f"Failed to start MCP server: {e}")
 
+    def connect(self):
+        """Persistent connection - starts the server without context manager."""
+        self.start()
+
     def stop(self):
         """Terminates the MCP server subprocess."""
         if self._process is not None:
@@ -58,12 +62,20 @@ class MCPClient:
             finally:
                 self._process = None
 
+    def close(self):
+        """Persistent connection - stops the server."""
+        self.stop()
+
+    def is_connected(self) -> bool:
+        """Check if the server process is still running and responsive."""
+        return self._process is not None and self._process.poll() is None
+
     def __enter__(self):
-        self.start()
+        self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop()
+        self.close()
         
     def _read_response(self) -> str:
         """Reads a single line from stdout."""
