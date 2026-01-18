@@ -30,30 +30,29 @@ You → Contract → Implementer (local) → Local Review → Judge (cloud) → 
 
 | Document | What It Is |
 |----------|-----------|
-| **[PRD.md](PRD.md)** | ⭐ What we're building and why. Start here. |
+| **[PRD_UNIFIED_AGENT_SYSTEM.md](../PRD_UNIFIED_AGENT_SYSTEM.md)** | ⭐ Current system PRD. Start here. |
+| **[00_Index_agent-hub.md](00_Index_agent-hub.md)** | This document. |
 | **[TODO.md](TODO.md)** | Implementation checklist and next actions |
 
 ---
 
-## 📐 Design Documents
+## 📐 Design & Architecture
 
 | Document | Purpose |
 |----------|---------|
-| [Agentic Blueprint.md](Documents/Agentic%20Blueprint.md) | High-level vision: 4-phase "Implementation Factory" |
-| [Agentic Blueprint Setup V2.md](Documents/Agentic%20Blueprint%20Setup%20V2.md) | Detailed design: schema, state machine, circuit breakers |
-| [Agentic_Blueprint_Setup_index.md](Documents/Agentic_Blueprint_Setup_index.md) | Index of all blueprint documents |
-| [PRD integration.md](Documents/PRD%20integration.md) | Strategy for retroactive PRDs |
+| [AGENTS.md](AGENTS.md) | Role definitions: Super Manager, Agent Manager, Floor Manager, Worker |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Technical reference for UAS components |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Guide for environment setup and feature flags |
+| [Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md](Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md) | Operational protocol for task management |
 
 ---
 
-## 🔍 Peer Reviews
+## 🔍 Code Reviews
 
-| Review | Reviewer | Key Insights |
-|--------|----------|--------------|
-| [Claude Code Review](Documents/Reviews/Agentic%20Blueprint%20Setup%20Claude%20code%20review.md) | Claude | Race conditions, CLI flags, lock mechanism |
-| [Claude Review](Documents/Reviews/Agentic%20Blueprint%20Setup%20Claude%20review) | Claude | Role ambiguity, missing schema, circuit breakers |
-| [GPT Review](Documents/Reviews/Agentic%20Blueprint%20Setup%20gpt%20review.md) | GPT-4 | File signaling races, idempotency, branch-per-task |
-| [GPT Codex Review](Documents/Reviews/Agentic%20Blueprint%20Setup%20gpt%20codex%20review.md) | Codex | Schema versioning, checksums, retry limits |
+| Review | Date | Status |
+|--------|------|--------|
+| **[CODE_REVIEW_CLAUDE_CODE_WEB_v1.md](CODE_REVIEW_CLAUDE_CODE_WEB_v1.md)** | 2026-01-18 | **REMEDIATING** (Critical fixes in progress) |
+| [Legacy Review Archive](Documents/archive/2026-01-unified-agent-system/old-reviews/INDEX.md) | 2025/早期 2026 | Historical peer reviews |
 
 ---
 
@@ -62,26 +61,28 @@ You → Contract → Implementer (local) → Local Review → Judge (cloud) → 
 ```
 agent-hub/
 ├── 00_Index_agent-hub.md   # ← You are here
-├── PRD.md                  # Product Requirements Document
+├── AGENTS.md               # Role definitions
 ├── TODO.md                 # Implementation checklist
-├── hub.py                  # Phase 1 foundation (Swarm + LiteLLM)
-├── requirements.txt        # Python dependencies
+├── .env.example            # Template for required environment variables
 │
-├── Documents/              # Design docs & specs
-│   ├── Agentic Blueprint.md
-│   ├── Agentic Blueprint Setup V2.md
-│   └── Reviews/            # Peer review archive
+├── src/                    # Implementation
+│   ├── listener.py         # Main hub subscription loop
+│   ├── hub_client.py       # Wrapper for hub interactions
+│   ├── watchdog.py         # State machine & circuit breakers
+│   ├── litellm_bridge.py   # Multi-tier routing & fallbacks
+│   └── budget_manager.py   # Cost tracking & enforcement
 │
-├── src/                    # Implementation (coming)
-│   ├── watchdog.py         # State machine manager
-│   ├── watcher.sh          # Claude CLI loop
-│   └── validators.py       # Contract validation
+├── docs/                   # UAS Documentation
+│   ├── API_REFERENCE.md
+│   └── CONFIGURATION.md
 │
-├── templates/              # Contract & proposal templates
-│   ├── PROPOSAL_FINAL.template.md   # ← Super Manager uses this
-│   └── TASK_CONTRACT.template.json  # (coming)
+├── benchmarks/             # Performance & cost benchmarking
 │
-└── _handoff/               # Runtime directory (gitignored)
+├── Documents/
+│   ├── archive/            # Legacy planning & reviews (Jan 2026 Migration)
+│   └── FLOOR_MANAGER_STARTUP_PROTOCOL.md
+│
+└── _handoff/               # Runtime handoff directory
 ```
 
 ---

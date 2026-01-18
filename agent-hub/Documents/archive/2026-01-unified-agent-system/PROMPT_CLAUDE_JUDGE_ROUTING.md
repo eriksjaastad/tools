@@ -67,7 +67,7 @@ Worker submits draft
 
 ### Step 1: Add Review Request Tool to claude-mcp
 
-**File:** `/Users/eriksjaastad/projects/_tools/claude-mcp/src/server.ts`
+**File:** `$PROJECTS_ROOT/_tools/claude-mcp/src/server.ts`
 
 Add a new tool `request_draft_review` that:
 - Takes submission path as input
@@ -119,7 +119,7 @@ Add a tool `submit_review_verdict` that Floor Manager can call to record Claude'
 
 ### Step 3: Update Floor Manager Protocol
 
-**File:** `/Users/eriksjaastad/projects/_tools/agent-hub/Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md`
+**File:** `$PROJECTS_ROOT/_tools/agent-hub/Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md`
 
 Add section for handling submissions:
 
@@ -136,7 +136,7 @@ Add section for handling submissions:
 
 ### Step 4: Create Apply Draft Script
 
-**File:** `/Users/eriksjaastad/projects/_tools/agent-hub/scripts/apply_draft.py`
+**File:** `$PROJECTS_ROOT/_tools/agent-hub/scripts/apply_draft.py`
 
 Script that Floor Manager calls to apply an accepted draft:
 
