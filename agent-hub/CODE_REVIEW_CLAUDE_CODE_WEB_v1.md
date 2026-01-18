@@ -17,9 +17,10 @@ The agent-hub codebase demonstrates solid foundational architecture with good sa
 |----------|--------|-----------------|
 | Robot Checks (M1-M3) | **PARTIAL FAIL** | Hardcoded paths in documentation |
 | Hardening (H1-H4) | **PARTIAL FAIL** | Missing `check=True` in listener.py |
-| DNA/Portability (P1-P2) | **FAIL** | Missing .env.example |
+| Portability | **FAIL** | Missing .env.example |
 | Code Quality | **PASS** | No silent failures, proper logging |
 | Security | **PASS** | Draft gate is well-designed |
+| Documentation | **ADVISORY** | Index file recommended for agent-hub |
 
 ---
 
@@ -185,15 +186,23 @@ safe_task_id = "".join(c if c.isalnum() or c == "_" else "_" for c in task_id)
 
 ### Rule #0: Index File
 
-**Status: FAIL**
+**Status: RECOMMENDED (Not Required)**
 
-No `00_Index_agent-hub.md` file exists in the project root. This violates the mandatory index file rule.
+**Context:** This is a *tools* directory, not a projects directory. Simple tools like `pdf-converter` or `ssh_agent` don't need index files.
 
-**Action Required:** Create `00_Index_agent-hub.md` with:
-- Project purpose
-- Key entry points
-- Architecture overview
-- Setup instructions
+However, **agent-hub is complex enough to warrant one**:
+- 831-line state machine (watchdog.py)
+- 9 circuit breakers
+- MCP integration with multiple servers
+- Multi-agent coordination (Floor Manager, Implementer, Judge)
+
+**Recommendation:** Create `00_Index_agent-hub.md` with:
+- Architecture diagram (state machine, agent flow)
+- Key entry points (`listener.py`, `watchdog.py`)
+- Environment setup
+- How to run the pipeline
+
+This is a **should-have**, not a blocker.
 
 ---
 
@@ -373,12 +382,12 @@ This is the strongest part of the codebase:
 
 ### High Priority
 
-3. **Create `00_Index_agent-hub.md`** per Rule #0
-4. **Archive `Documents/Planning/Phase*_Prompts.md`** to remove hardcoded paths from active docs
-5. **Update `PROMPT_CLAUDE_JUDGE_ROUTING.md`** to use portable path references
+3. **Archive `Documents/Planning/Phase*_Prompts.md`** to remove hardcoded paths from active docs
+4. **Update `PROMPT_CLAUDE_JUDGE_ROUTING.md`** to use portable path references
 
 ### Medium Priority
 
+5. **Create `00_Index_agent-hub.md`** - Recommended for this complex tool (not required for simpler tools)
 6. Add timeout to `scripts/run_e2e_test.py:82,92`
 7. Add tests for config validation failures
 8. Document the state machine with a diagram
@@ -405,7 +414,7 @@ This is the strongest part of the codebase:
 | H4 | Path safety | Sanitization in draft_gate.py, sandbox.py | **PASS** |
 | D1 | Dependencies bounded | All deps have upper bounds | **PASS** |
 | P1 | Templates portable | N/A - no templates | **N/A** |
-| R0 | Index file exists | Missing 00_Index_agent-hub.md | **FAIL** |
+| R0 | Index file exists | Recommended for agent-hub (complex tool) | **ADVISORY** |
 
 ---
 
