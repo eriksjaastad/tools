@@ -1,0 +1,53 @@
+# Feature Flags - Unified Agent System
+# All new features start disabled, enable as ready
+
+version: "1.0"
+
+# Phase 1 features
+ollama_http_client:
+  enabled: false
+  description: "Use HTTP API instead of CLI spawn"
+  env_override: "UAS_OLLAMA_HTTP"
+
+persistent_mcp:
+  enabled: false
+  description: "Keep MCP connections alive across calls"
+  env_override: "UAS_PERSISTENT_MCP"
+
+adaptive_polling:
+  enabled: false
+  description: "Dynamic polling interval (1s-10s)"
+  env_override: "UAS_ADAPTIVE_POLL"
+
+# Phase 2 features
+litellm_routing:
+  enabled: false
+  description: "Use LiteLLM for provider abstraction"
+  env_override: "UAS_LITELLM_ROUTING"
+
+environment_adapters:
+  enabled: false
+  description: "Detect and adapt to Claude CLI / Cursor / Anti-Gravity"
+  env_override: "UAS_ENV_ADAPTERS"
+
+# Phase 3 features
+sqlite_message_bus:
+  enabled: false
+  description: "SQLite-based message queue (replaces file-based)"
+  env_override: "UAS_SQLITE_BUS"
+
+bidirectional_comms:
+  enabled: false
+  description: "Workers can ask questions via ask_parent"
+  env_override: "UAS_BIDIR_COMMS"
+
+# Phase 4 features
+budget_manager:
+  enabled: false
+  description: "Cost tracking and budget enforcement"
+  env_override: "UAS_BUDGET_MGR"
+
+preflight_checks:
+  enabled: false
+  description: "Estimate cost before execution"
+  env_override: "UAS_PREFLIGHT"

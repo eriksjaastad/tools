@@ -13,9 +13,10 @@
 
 | Project | Purpose | Status |
 |---------|---------|--------|
-| **agent-hub** | Multi-agent pipeline orchestration (Floor Manager) | Active Development |
+| **agent-hub** | Unified Agent System - message bus, model routing, budget management, circuit breakers | Active |
+| **librarian-mcp** | MCP server for knowledge graph queries (wraps project-tracker) | Active |
 | **claude-mcp** | MCP hub for agent communication | Active |
-| **ollama-mcp** | MCP server for local Ollama models | Active |
+| **ollama-mcp** | MCP server for local Ollama models (draft tools, model execution) | Active |
 | **ai_router** | Route requests to appropriate AI models | Active |
 | **integrity-warden** | Security and compliance auditing | Active |
 | **gsd** | "Get Shit Done" - task automation | Stable |

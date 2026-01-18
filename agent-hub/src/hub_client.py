@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 from .mcp_client import MCPClient
+from .utils import feature_flags
+from . import mcp_connection_pool
 
 logger = logging.getLogger(__name__)
 
@@ -12,14 +14,37 @@ class HubClient:
         "QUESTION", "ANSWER", "VERDICT_SIGNAL", "HEARTBEAT"
     }
 
-    def __init__(self, mcp_client: MCPClient):
-        self.mcp = mcp_client
+    def __init__(self, mcp_client: Any):
+        """
+        Initialize HubClient.
+        Args:
+            mcp_client: Can be an MCPClient instance (legacy) or a Path to the hub server.
+        """
+        from pathlib import Path
+        if isinstance(mcp_client, (str, Path)):
+            self.hub_path = Path(mcp_client)
+            self.mcp = None
+        else:
+            self.mcp = mcp_client
+            self.hub_path = getattr(mcp_client, "server_path", None)
+            
         self.agent_id = None
+
+    def _get_mcp(self) -> MCPClient:
+        """Get the appropriate MCP client based on feature flags."""
+        if feature_flags.use_persistent_mcp():
+            if not self.hub_path:
+                raise ValueError("Hub path unknown, cannot use persistent MCP")
+            return mcp_connection_pool.get_pool().get_client("hub", self.hub_path)
+        
+        if not self.mcp:
+            raise ValueError("No MCP client provided and persistent MCP disabled")
+        return self.mcp
 
     def connect(self, agent_id: str) -> bool:
         """Register this agent with the hub."""
         try:
-            result = self.mcp.call_tool("hub_connect", {"agent_id": agent_id})
+            result = self._get_mcp().call_tool("hub_connect", {"agent_id": agent_id})
             if result.get("success"):
                 self.agent_id = agent_id
                 return True
@@ -48,7 +73,7 @@ class HubClient:
             "timestamp": timestamp
         }
         
-        self.mcp.call_tool("hub_send_message", {"message": message})
+        self._get_mcp().call_tool("hub_send_message", {"message": message})
         return msg_id
 
     def receive_messages(self, since: str = None) -> List[dict]:
@@ -59,7 +84,7 @@ class HubClient:
         if not self.agent_id:
             raise RuntimeError("Agent not connected to hub")
             
-        result = self.mcp.call_tool("hub_receive_messages", {
+        result = self._get_mcp().call_tool("hub_receive_messages", {
             "agent_id": self.agent_id,
             "since": since
         })
@@ -74,7 +99,7 @@ class HubClient:
             return
 
         timestamp = datetime.now(timezone.utc).isoformat()
-        self.mcp.call_tool("hub_heartbeat", {
+        self._get_mcp().call_tool("hub_heartbeat", {
             "agent_id": self.agent_id,
             "timestamp": timestamp,
             "progress": progress
@@ -99,22 +124,59 @@ class HubClient:
         Answer a previous question by selecting an option index.
         Returns: message_id
         """
-        # We don't necessarily know the recipient here without looking up the question_id,
-        # but the hub might handle routing or we might need a specific 'to' for send_message.
-        # For now, we assume we send it to 'hub' or the sender of the question is implied.
-        # Actually, Prompt 7.1 says send_message(recipient, ...).
-        # We might need to know who asked. 
-        # But maybe the hub_send_answer tool handles it?
-        # Let's adjust based on common patterns: send_answer usually targets the question sender.
-        
         payload = {
             "question_id": question_id,
             "selected_option": selected_option
         }
-        # If we don't have recipient, we might need a generic hub_send_answer tool
-        # that handles the lookup.
-        self.mcp.call_tool("hub_send_answer", {
+        self._get_mcp().call_tool("hub_send_answer", {
             "from": self.agent_id,
             "payload": payload
         })
-        return str(uuid.uuid4()) # Placeholder if tool doesn't return one
+        return str(uuid.uuid4())
+
+    # ===== Subagent Protocol Methods =====
+
+    def ask_parent(self, question: str, run_id: str | None = None) -> str:
+        """
+        Worker asks a question and waits for parent response.
+        Returns message_id that can be used to check for answer.
+        """
+        from .state_adapter import get_state_adapter
+
+        effective_run_id = run_id or self.agent_id or "default"
+        adapter = get_state_adapter()
+        return adapter.ask_parent(
+            run_id=effective_run_id,
+            subagent_id=self.agent_id or "unknown",
+            question=question
+        )
+
+    def check_answer(self, message_id: str) -> str | None:
+        """
+        Check if a question has been answered.
+        Returns the answer string, or None if still pending.
+        """
+        from .state_adapter import get_state_adapter
+
+        adapter = get_state_adapter()
+        return adapter.check_answer(message_id)
+
+    def get_pending_questions(self, run_id: str | None = None) -> List[dict]:
+        """
+        Get all pending questions for this run.
+        Used by parent/manager to see what workers need.
+        """
+        from .state_adapter import get_state_adapter
+
+        adapter = get_state_adapter()
+        return adapter.get_pending_questions(run_id)
+
+    def reply_to_worker(self, message_id: str, answer: str) -> bool:
+        """
+        Parent replies to a worker's question.
+        Returns True if successful.
+        """
+        from .state_adapter import get_state_adapter
+
+        adapter = get_state_adapter()
+        return adapter.reply_to_worker(message_id, answer)

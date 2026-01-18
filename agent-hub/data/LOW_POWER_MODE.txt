@@ -1,0 +1,11 @@
+LOW POWER MODE ACTIVE
+
+Ollama is unavailable. Using cloud fallback (cloud-fast).
+
+Entered: 2026-01-18T22:22:31.572275+00:00
+Consecutive failures: 2
+
+To check status:
+  python -c "from src.degradation import get_degradation_manager; print(get_degradation_manager().get_status())"
+
+This file will be removed when Ollama recovers.

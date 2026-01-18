@@ -19,6 +19,8 @@ from .proposal_converter import convert_proposal
 from .watchdog import load_contract, save_contract, transition, log_transition
 from .draft_gate import handle_draft_submission, apply_draft, reject_draft, GateDecision
 from .config import get_config
+from . import adaptive_poller
+from .utils import feature_flags
 
 # Configure logging to console
 logging.basicConfig(
@@ -37,6 +39,7 @@ class MessageListener:
         self.last_check_timestamp = None
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
+        self.poller = adaptive_poller.create_poller(adaptive=feature_flags.use_adaptive_polling())
 
     def register_handler(self, msg_type: str, handler: Callable):
         """Register a handler for a specific message type."""
@@ -69,15 +72,18 @@ class MessageListener:
                 self._heartbeat_thread.start()
                 
                 while self.running:
+                    had_activity = False
                     try:
                         messages = hub.receive_messages(since=self.last_check_timestamp)
-                        for msg in messages:
-                            self._dispatch(msg)
-                            self.last_check_timestamp = msg.get("timestamp")
+                        if messages:
+                            had_activity = True
+                            for msg in messages:
+                                self._dispatch(msg)
+                                self.last_check_timestamp = msg.get("timestamp")
                     except Exception as e:
                         logger.error(f"Error receiving messages: {e}")
                     
-                    time.sleep(5) # Check every 5 seconds
+                    self.poller.wait(had_activity)
                     
         except MCPError as e:
             logger.error(f"MCP Hub not reachable: {e}")
