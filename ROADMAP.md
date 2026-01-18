@@ -69,6 +69,71 @@
 
 ---
 
+## Claude Code Web Review (2026-01-18)
+
+**Reviewer:** Claude Code Web (Opus 4.5)
+**Focus:** Cost savings, speed, reliability — evaluated for Erik's specific workflow, not general-purpose tooling.
+
+### What's Solid
+
+1. **The 90% local target is achievable and economically sound.** At typical dev workloads (500K-2M tokens/day), local inference is genuinely 10-50x cheaper than cloud APIs. The math works.
+
+2. **Qwen2.5-Coder-32B as your Implementer is the right call.** Current benchmarks (73.7% on Aider, competitive with GPT-4o) confirm it's the best open-source coding model. No change needed.
+
+3. **SQLite over file-based state (Phase 3) is correct.** File-based state will become a reliability bottleneck under concurrent operations. This is a necessary upgrade.
+
+4. **MCP architecture aligns with industry direction.** MCP was donated to the Linux Foundation (Dec 2025). The Tasks API added in Nov 2025 aligns with your `DRAFT_READY`/`DRAFT_ACCEPTED` pattern.
+
+### Push-Back / Concerns
+
+1. **The Router (Phase 2) — Build vs. Buy?**
+   The roadmap specifies building a custom Python router with cooldown cache, fallback chains, and context-window awareness. **LiteLLM already does all of this** and is mature, battle-tested, and free. Unless there's a specific deficiency for your workflow, wrapping LiteLLM is likely less work and more reliable than building from scratch.
+   - *Counter-argument:* If you need tight integration with your MCP message bus, a thin custom layer on top of LiteLLM might make sense. But building core routing logic yourself? Questionable ROI.
+
+2. **The "500ms Ollama call" target may be misleading.**
+   500ms is achievable for short completions with a warm model. But first token latency on a 32B model is often 1-3 seconds, and full code generation can take 10-30 seconds. Recommend redefining this metric (first token? short responses? warm model only?) to avoid chasing a number that doesn't reflect real performance.
+
+3. **DeepSeek as Local Reviewer — Consider the R1 Distill variant.**
+   DeepSeek-R1-Distill-Qwen-32B outperforms standard DeepSeek for review tasks because it produces explicit reasoning traces. This makes parsing review rationale more reliable for automated pipelines.
+
+4. **Phase 4 (Budget & Governance) feels late.**
+   Cost visibility should come earlier. If local models handle 90% of work, you need to know *which* tasks escape to cloud and *why* from the start. Consider pulling basic cost logging into Phase 1 or 2.
+
+5. **Anti-Gravity as "Best Effort" — Agree, but document the contingency.**
+   What happens if Cursor becomes unusable or paywalled? Is Anti-Gravity the fallback, or is there another plan? Worth documenting.
+
+### Missing Items
+
+1. **Model hot-swapping / A-B testing infrastructure.**
+   No mechanism to continuously evaluate new models. Qwen 3 MoE variants just dropped. You want a way to swap in a new model for 10% of traffic and compare without rebuilding.
+
+2. **Graceful degradation path.**
+   What happens when Ollama crashes, GPU overheats, or you're on battery? The roadmap assumes the happy path. For reliability, define explicit fallback behavior when local inference is unavailable.
+
+3. **Memory pressure handling.**
+   32B models on consumer hardware are memory-hungry. If you open a large project while running inference, you could OOM. Consider: auto-quantization, model unloading when idle, or hard memory limits.
+
+### The Big Question
+
+**Why is Gemini the Floor Manager?**
+
+If cost is the driver, Gemini 2.5 Flash is cheap. But you're already running capable local models. Could a local model (Qwen2.5-Coder-32B or a smaller variant) handle Floor Manager duties? That would push you closer to 95%+ local and remove another cloud dependency.
+
+If Gemini is there because it has better instruction-following or tool use than local models, that's valid — but the roadmap doesn't justify the choice.
+
+### Recommendations Summary
+
+| Priority | Recommendation |
+|----------|----------------|
+| **Immediate** | Evaluate LiteLLM as router foundation before building custom |
+| **Immediate** | Clarify 500ms latency metric definition |
+| **Short-term** | Switch Local Reviewer to DeepSeek-R1-Distill-Qwen-32B |
+| **Short-term** | Pull basic cost logging into Phase 1 |
+| **Medium-term** | Add model hot-swap infrastructure for continuous evaluation |
+| **Medium-term** | Document graceful degradation when local inference unavailable |
+
+---
+
 ## Executive Summary
 Build a **Local-First Hierarchical Agent System** that maximizes local Ollama models (90%+ of work) while enabling seamless escalation to cloud providers. The system will be environment-agnostic (Claude CLI, Cursor, Anti-Gravity) and feature bi-directional communication between agents.
 
