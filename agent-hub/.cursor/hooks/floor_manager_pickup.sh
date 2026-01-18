@@ -1,10 +1,13 @@
 #!/bin/bash
 # Floor Manager Task Pickup Hook for Cursor
 # Triggers when a new TASK_*.md file is created in _handoff/
+# NOTE: We use node instead of jq to extract values to avoid external dependencies.
 
 # Read the JSON payload from Cursor
 PAYLOAD=$(cat)
-FILE_PATH=$(echo "$PAYLOAD" | jq -r '.file_path')
+
+# Extract file_path using Node.js
+FILE_PATH=$(echo "$PAYLOAD" | node -e "try { console.log(JSON.parse(require('fs').readFileSync(0, 'utf8')).file_path || ''); } catch(e) { console.log(''); }")
 
 # Check if this is a new task file in _handoff/
 if [[ "$FILE_PATH" == *"_handoff/TASK_"*.md ]]; then
