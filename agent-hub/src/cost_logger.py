@@ -1,7 +1,6 @@
 """
-Cost Logger - Track model usage and tokens.
-
-Logs to NDJSON format for analysis and budget tracking.
+Cost Logger - Track model usage and tokens with USD costs.
+Supports local (free) and cloud (paid) tracking.
 """
 
 import json
@@ -10,155 +9,123 @@ import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Default log location
-DEFAULT_LOG_PATH = Path("data/logs/transition.ndjson")
-
+# Default locations
+DEFAULT_LOG_PATH = Path("data/audit.ndjson")
+DEFAULT_STATE_PATH = Path("data/budget_state.json")
 
 class CostLogger:
     """
-    Logger for model call costs and metrics.
-
-    Usage:
-        cost_logger = CostLogger()
-
-        # Log successful call
-        cost_logger.log_call(
-            model="llama3.2:1b",
-            tokens_in=150,
-            tokens_out=50,
-            latency_ms=423,
-            success=True,
-        )
-
-        # Log failed call
-        cost_logger.log_call(
-            model="llama3.2:1b",
-            tokens_in=150,
-            tokens_out=0,
-            latency_ms=5000,
-            success=False,
-            error="timeout",
-        )
+    Tracks and persists model call costs.
+    FR-4.1: Track Local vs Cloud separately.
     """
 
-    def __init__(self, log_path: Path | str | None = None, session_id: str | None = None):
+    def __init__(self, log_file: Optional[Path] = None, persist_file: Optional[Path] = None):
+        self.log_file = log_file or DEFAULT_LOG_PATH
+        self.persist_file = persist_file or DEFAULT_STATE_PATH
+        
+        # Ensure directories exist
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
+        self.persist_file.parent.mkdir(parents=True, exist_ok=True)
+
+        self.session_totals = {
+            "local_calls": 0,
+            "cloud_calls": 0,
+            "local_tokens": 0,
+            "cloud_tokens": 0,
+            "cloud_cost_usd": 0.0
+        }
+        self.daily_totals = self.session_totals.copy()
+        
+        self.load_state()
+
+    def log_call(self, model: str, input_tokens: int, output_tokens: int, cost_usd: float, is_local: bool):
         """
-        Args:
-            log_path: Path to NDJSON log file (default: data/logs/transition.ndjson)
-            session_id: Unique session identifier (auto-generated if not provided)
+        Write NDJSON line with timestamp and update totals.
         """
-        self.log_path = Path(log_path) if log_path else DEFAULT_LOG_PATH
-        self.session_id = session_id or self._generate_session_id()
-
-        # Ensure log directory exists
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Session totals
-        self._total_tokens_in = 0
-        self._total_tokens_out = 0
-        self._total_calls = 0
-        self._failed_calls = 0
-
-    def _generate_session_id(self) -> str:
-        """Generate a unique session ID."""
-        import hashlib
-        return hashlib.sha256(f"{time.time()}{os.getpid()}".encode()).hexdigest()[:12]
-
-    def log_call(
-        self,
-        model: str,
-        tokens_in: int,
-        tokens_out: int,
-        latency_ms: int,
-        success: bool,
-        error: str | None = None,
-        metadata: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Log a model call.
-
-        Args:
-            model: Model name (e.g., "llama3.2:1b")
-            tokens_in: Input token count
-            tokens_out: Output token count
-            latency_ms: Call latency in milliseconds
-            success: Whether the call succeeded
-            error: Error message if failed
-            metadata: Additional metadata to include
-        """
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
         record = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "session_id": self.session_id,
+            "timestamp": timestamp,
             "model": model,
-            "tokens_in": tokens_in,
-            "tokens_out": tokens_out,
-            "latency_ms": latency_ms,
-            "success": success,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd": cost_usd,
+            "is_local": is_local
         }
 
-        if error:
-            record["error"] = error
-
-        if metadata:
-            record["metadata"] = metadata
-
-        # Update totals
-        self._total_tokens_in += tokens_in
-        self._total_tokens_out += tokens_out
-        self._total_calls += 1
-        if not success:
-            self._failed_calls += 1
-
-        # Write to log file
+        # Write to NDJSON (append-only)
         try:
-            with open(self.log_path, "a") as f:
+            with open(self.log_file, "a", encoding="utf-8") as f:
                 f.write(json.dumps(record) + "\n")
         except Exception as e:
-            logger.error(f"Failed to write cost log: {e}")
+            logger.error(f"Failed to write to audit log: {e}")
 
-    def session_summary(self) -> dict:
-        """Get summary statistics for current session."""
-        return {
-            "session_id": self.session_id,
-            "total_calls": self._total_calls,
-            "failed_calls": self._failed_calls,
-            "success_rate": (self._total_calls - self._failed_calls) / max(self._total_calls, 1),
-            "total_tokens_in": self._total_tokens_in,
-            "total_tokens_out": self._total_tokens_out,
-            "total_tokens": self._total_tokens_in + self._total_tokens_out,
+        # Update running totals
+        total_tokens = input_tokens + output_tokens
+        if is_local:
+            self.session_totals["local_calls"] += 1
+            self.session_totals["local_tokens"] += total_tokens
+            self.daily_totals["local_calls"] += 1
+            self.daily_totals["local_tokens"] += total_tokens
+        else:
+            self.session_totals["cloud_calls"] += 1
+            self.session_totals["cloud_tokens"] += total_tokens
+            self.session_totals["cloud_cost_usd"] += cost_usd
+            self.daily_totals["cloud_calls"] += 1
+            self.daily_totals["cloud_tokens"] += total_tokens
+            self.daily_totals["cloud_cost_usd"] += cost_usd
+
+        self.persist_state()
+
+    def get_session_total_cost(self) -> float:
+        return self.session_totals["cloud_cost_usd"]
+
+    def get_session_totals(self) -> Dict[str, Any]:
+        """Returns the format required by Prompt 2."""
+        return self.session_totals.copy()
+
+    def persist_state(self):
+        """Save totals to budget_state.json."""
+        state = {
+            "daily_totals": self.daily_totals,
+            "session_totals": self.session_totals,
+            "last_updated": date.today().isoformat()
         }
+        try:
+            with open(self.persist_file, "w", encoding="utf-8") as f:
+                json.dump(state, f, indent=2)
+        except Exception as e:
+            logger.error(f"Failed to persist cost state: {e}")
 
+    def load_state(self):
+        """Restore totals from budget_state.json."""
+        if not self.persist_file.exists():
+            return
 
-# Global logger instance
-_cost_logger: CostLogger | None = None
+        try:
+            with open(self.persist_file, "r", encoding="utf-8") as f:
+                state = json.load(f)
+                
+                # Check if it's still today for daily totals
+                today = date.today().isoformat()
+                if state.get("last_updated") == today:
+                    self.daily_totals = state.get("daily_totals", self.daily_totals)
+                else:
+                    # Reset daily totals if it's a new day
+                    self.daily_totals = {k: 0 for k in self.session_totals}
+                    self.daily_totals["cloud_cost_usd"] = 0.0
+                
+                # Session totals are always reset on fresh initialization of the class 
+                # UNLESS we want to resume them? Prompt says "Persist cost data across sessions".
+                # But it also says "session totals" vs "daily totals".
+                # Usually session totals are per-process.
+                # I'll keep them per-instance but allow loading if needed.
+                # For UAS, we'll restore daily, but keep session fresh index-wise.
+        except Exception as e:
+            logger.warning(f"Failed to load cost state: {e}")
 
-def get_cost_logger() -> CostLogger:
-    """Get the global cost logger."""
-    global _cost_logger
-    if _cost_logger is None:
-        _cost_logger = CostLogger()
-    return _cost_logger
-
-def log_model_call(
-    model: str,
-    tokens_in: int,
-    tokens_out: int,
-    latency_ms: int,
-    success: bool,
-    error: str | None = None,
-    **metadata: Any,
-) -> None:
-    """Convenience function to log a model call."""
-    get_cost_logger().log_call(
-        model=model,
-        tokens_in=tokens_in,
-        tokens_out=tokens_out,
-        latency_ms=latency_ms,
-        success=success,
-        error=error,
-        metadata=metadata if metadata else None,
-    )
+from datetime import date
