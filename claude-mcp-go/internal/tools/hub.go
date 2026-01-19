@@ -41,9 +41,17 @@ type MessageHub struct {
 }
 
 func NewMessageHub() *MessageHub {
-	cwd, _ := os.Getwd()
+	// Check for environment variable first
+	stateDir := os.Getenv("HUB_STATE_DIR")
+	if stateDir == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "."
+		}
+		stateDir = filepath.Join(cwd, "_handoff")
+	}
 	return &MessageHub{
-		stateFile: filepath.Join(cwd, "_handoff", "hub_state.json"),
+		stateFile: filepath.Join(stateDir, "hub_state.json"),
 	}
 }
 
@@ -196,21 +204,24 @@ func RegisterHubTools(s *server.MCPServer) {
 		args, _ := request.Params.Arguments.(map[string]interface{})
 		rawMsg, _ := args["message"].(map[string]interface{})
 
+		// Use type assertions to safely extract string values
 		msg := Message{
-			ID:        fmt.Sprintf("%v", rawMsg["id"]),
-			Type:      fmt.Sprintf("%v", rawMsg["type"]),
-			From:      fmt.Sprintf("%v", rawMsg["from"]),
-			To:        fmt.Sprintf("%v", rawMsg["to"]),
-			Payload:   rawMsg["payload"],
-			Timestamp: fmt.Sprintf("%v", rawMsg["timestamp"]),
+			Payload: rawMsg["payload"],
 		}
-
-		// Clean up nil strings from map conversion
-		if msg.ID == "<nil>" {
-			msg.ID = ""
+		if v, ok := rawMsg["id"].(string); ok {
+			msg.ID = v
 		}
-		if msg.Timestamp == "<nil>" {
-			msg.Timestamp = ""
+		if v, ok := rawMsg["type"].(string); ok {
+			msg.Type = v
+		}
+		if v, ok := rawMsg["from"].(string); ok {
+			msg.From = v
+		}
+		if v, ok := rawMsg["to"].(string); ok {
+			msg.To = v
+		}
+		if v, ok := rawMsg["timestamp"].(string); ok {
+			msg.Timestamp = v
 		}
 
 		id := hub.SendMessage(msg)

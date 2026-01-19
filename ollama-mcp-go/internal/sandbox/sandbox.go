@@ -87,6 +87,12 @@ func (s *Sandbox) SafeWrite(path string, content []byte) error {
 		return err
 	}
 
+	// Sync to ensure data is flushed to disk before rename
+	if err := tmpFile.Sync(); err != nil {
+		_ = tmpFile.Close()
+		return err
+	}
+
 	if err := tmpFile.Close(); err != nil {
 		return err
 	}
