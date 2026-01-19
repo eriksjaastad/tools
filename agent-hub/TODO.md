@@ -1,11 +1,39 @@
 # Agent Hub - TODO
 
-> **What this is:** An autonomous multi-agent orchestration system with proposal-driven workflows.  
-> **Location:** `_tools/agent-hub/`  
-> **PRD:** See `PRD.md` for requirements  
-> **Design:** See `Documents/Agentic Blueprint Setup V2.md`  
-> **Created:** January 12, 2026  
-> **Updated:** January 16, 2026
+> **What this is:** An autonomous multi-agent orchestration system with proposal-driven workflows.
+> **Location:** `_tools/agent-hub/`
+> **PRD:** See `PRD_UNIFIED_AGENT_SYSTEM.md` (root of `_tools/`)
+> **Design:** See `Documents/Agentic Blueprint Setup V2.md`
+> **Created:** January 12, 2026
+> **Updated:** January 19, 2026
+
+---
+
+## 🌅 NEXT PRIORITIES (Jan 19, 2026)
+
+**Completed Jan 18:** Phases 0-5 of Unified Agent System (~13,200 lines of code in one day via Antigravity multi-agent workflow)
+
+### Morning Session
+- [x] **Documentation polish** — Update README, API docs, config examples (Jan 19)
+- [x] **Benchmarking** — All targets PASS (see BENCHMARK_RESULTS_2026-01-19.md)
+- [x] **Integration smoke test** — 201 passed, core system stable (Jan 19)
+
+### Librarian Adaptive Memory
+- [x] Implement EmbeddingService (Ollama + nomic-embed-text) (Jan 19)
+- [x] Implement MemoryStore (SQLite-Lite Vector Store) (Jan 19)
+- [x] Implement MemoryDB (SQLite tier system) (Jan 19)
+- [x] Wire into librarian-mcp query flow (Phase 2 & 3 implementation) (Jan 19)
+
+### Infrastructure
+- [x] **Expand SSH tool for Antigravity** — Make `ssh_agent` MCP-compatible (Jan 19)
+- [x] **Research Antigravity orchestration patterns** — Documented in `Documents/ANTIGRAVITY_ORCHESTRATION_PATTERNS.md` (Jan 19)
+
+### Test Debt
+- [x] Resolve 22 remaining subagent protocol test failures (Jan 19)
+
+### Then: Real Project Work
+- Flex agent-hub on actual tasks
+- Identify gaps from real usage
 
 ---
 
@@ -49,7 +77,7 @@ Implementer (Qwen) ──► Local Reviewer (DeepSeek) ──► Judge (Claude C
 - [x] **1.4** Create Worker agent (local model + tools)
 - [x] **1.5** Create Manager agent (smart model + delegation ability)
 - [x] **1.6** Basic REPL loop (input → process → output)
-- [ ] **1.7** Test: Ask manager to write a file via worker
+- [x] **1.7** Test: Ask manager to write a file via worker (Jan 19)
 
 ---
 
@@ -73,9 +101,9 @@ Implementer (Qwen) ──► Local Reviewer (DeepSeek) ──► Judge (Claude C
   - Strike 1: Diagnose, rework, retry
   - Strike 2: Escalate with `STALL_REPORT.md`
 - [x] **3.2** Add timeout detection for all phases (in `watchdog.py`)
-- [ ] **3.3** Implement circuit breakers (6/9 triggers implemented)
+- [x] **3.3** Implement circuit breakers (9/9 triggers implemented) (Jan 19)
   - See: `Documents/Planning/Phase3_Prompts.md` Prompt 3.1
-- [x] **3.4** Create `ERIK_HALT.md` generation
+- [x] **3.4** Create `HALT.md` generation
 - [x] **3.5** Test: Force a stall, verify recovery flow (in `test_e2e.py`)
 
 ---
@@ -132,7 +160,7 @@ Implementer (Qwen) ──► Local Reviewer (DeepSeek) ──► Judge (Claude C
 
 ---
 
-**Next step:** Phase 4 - Git Integration
+**Next step:** Real project work - flex agent-hub on actual tasks
 
 ## Related Documentation
 

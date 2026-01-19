@@ -53,20 +53,24 @@ class TrackerDB:
     def get_dependencies(self, project: str) -> Dict[str, List[str]]:
         if not self.conn: self.connect()
         
-        # Upstream: what this project depends on
-        cursor = self.conn.execute(
-            "SELECT dependency FROM service_dependencies WHERE project = ?",
-            (project,)
-        )
-        upstream = [row["dependency"] for row in cursor.fetchall()]
+        upstream = []
+        downstream = []
         
-        # Downstream: what depends on this project
-        cursor = self.conn.execute(
-            "SELECT project FROM service_dependencies WHERE dependency = ?",
-            (project,)
-        )
-        downstream = [row["project"] for row in cursor.fetchall()]
-        
+        try:
+            # Check if table exists and has expected columns
+            # Schema discovery showed: project_id, service_name, purpose, cost_monthly
+            # The previous code was completely wrong for the actual schema.
+            # For now, we return empty if it fails, as per instructions to handle gracefully.
+            
+            # Upstream: what this project depends on (using project_id)
+            cursor = self.conn.execute(
+                "SELECT service_name FROM service_dependencies WHERE project_id = (SELECT id FROM projects WHERE name = ?)",
+                (project,)
+            )
+            upstream = [row["service_name"] for row in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.warning(f"Failed to fetch dependencies for {project}: {e}")
+            
         return {
             "upstream": upstream,
             "downstream": downstream

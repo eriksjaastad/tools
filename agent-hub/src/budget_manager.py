@@ -1,5 +1,6 @@
 """
 Budget Manager - Enforces session and daily limits.
+Updated for UAS overhaul.
 """
 
 import yaml
@@ -24,8 +25,12 @@ class BudgetManager:
     def _load_config(self) -> Dict:
         if not self.config_path.exists():
             return {"limits": {"session_usd": 5.0, "daily_usd": 10.0}}
-        with open(self.config_path, "r") as f:
-            return yaml.safe_load(f)
+        try:
+            with open(self.config_path, "r") as f:
+                return yaml.safe_load(f) or {"limits": {"session_usd": 5.0, "daily_usd": 10.0}}
+        except Exception as e:
+            logger.warning(f"Failed to load budget config: {e}")
+            return {"limits": {"session_usd": 5.0, "daily_usd": 10.0}}
 
     def estimate_cost(self, model: str, input_tokens: int, estimated_output_tokens: int) -> float:
         """
@@ -35,7 +40,7 @@ class BudgetManager:
         - Gemini Flash: $0.0001 per 1K tokens
         - Claude Sonnet: $0.003 per 1K tokens
         """
-        is_local = "ollama" in model or "local" in model
+        is_local = "ollama" in model.lower() or "local" in model.lower()
         if is_local:
             return 0.0
             
@@ -46,10 +51,18 @@ class BudgetManager:
         total_tokens = input_tokens + estimated_output_tokens
         return (total_tokens / 1000.0) * rate
 
-    def can_afford(self, estimated_cost: float) -> Dict[str, Any]:
+    def can_afford(self, model: str, estimated_tokens_in: int, estimated_tokens_out: int) -> Tuple[bool, str]:
         """
-        Check if session/daily limits allow a call.
+        Check if budget allows a call to the specified model.
+        Returns (allowed, reason).
         """
+        # Feature flag check
+        import os
+        if os.getenv("UAS_DISABLE_BUDGET_CHECK") == "1":
+            return True, "Budget check disabled by environment"
+
+        estimated_cost = self.estimate_cost(model, estimated_tokens_in, estimated_tokens_out)
+        
         totals = self.cost_logger.get_session_totals()
         daily_totals = self.cost_logger.daily_totals
         
@@ -59,46 +72,38 @@ class BudgetManager:
         # Apply override
         effective_session_limit = session_limit + self.overrides["amount"]
         
-        current_session = totals["cloud_cost_usd"]
-        current_daily = daily_totals["cloud_cost_usd"]
+        current_session = totals.get("cloud_cost_usd", 0.0)
+        current_daily = daily_totals.get("cloud_cost_usd", 0.0)
         
         if (current_session + estimated_cost) > effective_session_limit:
-            return {
-                "allowed": False, 
-                "reason": f"Session budget exceeded (${current_session:.4f} + ${estimated_cost:.4f} > ${effective_session_limit:.2f})",
-                "remaining_budget": effective_session_limit - current_session
-            }
+            return False, f"Session budget exceeded (${current_session:.4f} + ${estimated_cost:.4f} > ${effective_session_limit:.2f})"
             
         if (current_daily + estimated_cost) > daily_limit:
-            return {
-                "allowed": False, 
-                "reason": f"Daily budget exceeded (${current_daily:.4f} + ${estimated_cost:.4f} > ${daily_limit:.2f})",
-                "remaining_budget": daily_limit - current_daily
-            }
+            return False, f"Daily budget exceeded (${current_daily:.4f} + ${estimated_cost:.4f} > ${daily_limit:.2f})"
             
-        return {
-            "allowed": True, 
-            "reason": "OK",
-            "remaining_budget": effective_session_limit - current_session
-        }
+        return True, "OK"
 
-    def record_spend(self, model: str, tokens: int, cost: float, is_local: bool):
-        # Delegate logging to cost_logger
-        # The prompt says 'record_spend' but cost_logger has 'log_call'
-        # I'll use input/output token split if possible, otherwise split 50/50 for logging
-        self.cost_logger.log_call(model, tokens // 2, tokens // 2, cost, is_local)
+    def record_cost(self, model: str, tokens_in: int, tokens_out: int, task_type: str = "default", was_fallback: bool = False):
+        """
+        Record actual cost after a successful call.
+        """
+        is_local = "ollama" in model.lower() or "local" in model.lower()
+        cost = self.estimate_cost(model, tokens_in, tokens_out)
         
-        # Check alerts
+        # Delegate logging to cost_logger
+        self.cost_logger.log_call(model, tokens_in, tokens_out, cost, is_local)
+        
+        # Log alerts
         status = self.get_status()
         if status["percent_used"] > self.config.get("alerts", {}).get("warn_at_percent", 80):
-            logger.warning(f"Budget Alert: {status['percent_used']}% of session limit used!")
+            logger.warning(f"Budget Alert: {status['percent_used']:.1f}% of session limit used!")
 
     def get_status(self) -> Dict[str, Any]:
         totals = self.cost_logger.get_session_totals()
-        session_spent = totals["cloud_cost_usd"]
-        session_limit = self.config.get("limits", {}).get("session_usd", 5.0)
+        session_spent = totals.get("cloud_cost_usd", 0.0)
+        session_limit = self.config.get("limits", {}).get("session_usd", 5.0) + self.overrides["amount"]
         
-        daily_spent = self.cost_logger.daily_totals["cloud_cost_usd"]
+        daily_spent = self.cost_logger.daily_totals.get("cloud_cost_usd", 0.0)
         daily_limit = self.config.get("limits", {}).get("daily_usd", 10.0)
         
         return {
@@ -113,3 +118,13 @@ class BudgetManager:
         self.overrides["amount"] += amount
         self.overrides["reason"] = reason
         logger.info(f"Budget override applied: ${amount} for '{reason}'")
+
+# Global singleton
+_instance: Optional[BudgetManager] = None
+
+def get_budget_manager() -> BudgetManager:
+    global _instance
+    if _instance is None:
+        from .cost_logger import get_cost_logger
+        _instance = BudgetManager(cost_logger=get_cost_logger())
+    return _instance

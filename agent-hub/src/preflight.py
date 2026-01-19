@@ -64,7 +64,7 @@ class PreFlightChecker:
         )
 
     def _create_halt_file(self, task: str, complexity: str, cost: float, remaining: float, context: str):
-        halt_path = Path("ERIK_HALT.md")
+        halt_path = Path("HALT.md")
         timestamp = datetime.now(timezone.utc).isoformat()
         
         content = f"""# Agent Halt: Budget Exceeded

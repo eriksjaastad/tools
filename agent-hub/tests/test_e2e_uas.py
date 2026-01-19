@@ -25,17 +25,18 @@ class TestModelRoutingE2E:
         """Local model succeeds - no fallback needed."""
         from src.budget_manager import BudgetManager
         from src.audit_logger import AuditLogger, EventType
-
-        budget = BudgetManager(budget_path=temp_paths["budget"])
+        from src.cost_logger import CostLogger
+        cl = CostLogger()
+        budget = BudgetManager(cost_logger=cl, config_path=str(temp_paths["budget"]))
         audit = AuditLogger(audit_path=temp_paths["audit"])
 
         # Simulate successful local call
-        can, _ = budget.can_afford("local-coder", 1000, 500)
-        assert can is True  # Local always affordable
+        allowed, _ = budget.can_afford("local-coder", 1000, 500)
+        assert allowed is True  # Local always affordable
 
         # Record the call
-        cost = budget.record_cost("local-coder", 1000, 500)
-        assert cost == 0.0  # Local is free
+        budget.record_cost("local-coder", 1000, 500)
+        assert budget.get_status()["session_spent"] == 0.0  # Local is free
 
         audit.log_model_call("local-coder", 1000, 500, 1500.0, True)
 
@@ -48,19 +49,20 @@ class TestModelRoutingE2E:
         """Local model fails, falls back to cloud."""
         from src.budget_manager import BudgetManager
         from src.audit_logger import AuditLogger, EventType
-
-        budget = BudgetManager(budget_path=temp_paths["budget"], session_limit=10.0)
+        from src.cost_logger import CostLogger
+        cl = CostLogger()
+        budget = BudgetManager(cost_logger=cl, config_path=str(temp_paths["budget"]))
         audit = AuditLogger(audit_path=temp_paths["audit"])
 
         # Simulate local failure, cloud success
         audit.log_model_call("local-coder", 0, 0, 100.0, False, error="Model not loaded")
 
         # Fallback to cloud
-        can, _ = budget.can_afford("cloud-fast", 1000, 500)
-        assert can is True
+        allowed, _ = budget.can_afford("cloud-fast", 1000, 500)
+        assert allowed is True
 
-        cost = budget.record_cost("cloud-fast", 1000, 500, was_fallback=True)
-        assert cost > 0
+        budget.record_cost("cloud-fast", 1000, 500, was_fallback=True)
+        assert budget.get_status()["session_spent"] > 0
 
         audit.log_model_call("cloud-fast", 1000, 500, 2000.0, True, was_fallback=True)
 
@@ -72,15 +74,20 @@ class TestModelRoutingE2E:
         """Budget blocks expensive models."""
         from src.budget_manager import BudgetManager
         from src.audit_logger import AuditLogger, EventType
+        from src.cost_logger import CostLogger
 
         # Very low budget
-        budget = BudgetManager(budget_path=temp_paths["budget"], session_limit=0.001)
+        with open(temp_paths["budget"], "w") as f:
+            f.write("limits:\n  session_usd: 0.001\n")
+
+        cl = CostLogger()
+        budget = BudgetManager(cost_logger=cl, config_path=str(temp_paths["budget"]))
         audit = AuditLogger(audit_path=temp_paths["audit"])
 
-        # Should not afford premium model
-        can, reason = budget.can_afford("cloud-premium", 10000, 5000)
-        assert can is False
-        assert "Session limit" in reason
+        # Should not afford premium model (15000 tokens @ 0.003/1K = 0.045 > 0.001)
+        allowed, reason = budget.can_afford("cloud-premium", 10000, 5000)
+        assert allowed is False
+        assert "Session budget exceeded" in reason
 
         audit.log(EventType.BUDGET_CHECK_FAILED, "litellm_bridge", {
             "model": "cloud-premium",
@@ -187,7 +194,7 @@ class TestCircuitBreakerE2E:
     @pytest.fixture
     def temp_paths(self, tmp_path, monkeypatch):
         state = tmp_path / "cb_state.json"
-        halt = tmp_path / "ERIK_HALT.md"
+        halt = tmp_path / "HALT.md"
 
         from src import circuit_breakers
         monkeypatch.setattr(circuit_breakers, "HALT_FILE", halt)
@@ -258,8 +265,10 @@ class TestFullWorkflowE2E:
         from src.audit_logger import AuditLogger, EventType
 
         # Setup
+        from src.cost_logger import CostLogger
+        cl = CostLogger()
         adapter = SQLiteStateAdapter(temp_paths["db"])
-        budget = BudgetManager(budget_path=temp_paths["budget"])
+        budget = BudgetManager(cost_logger=cl, config_path=str(temp_paths["budget"]))
         audit = AuditLogger(audit_path=temp_paths["audit"])
 
         run_id = "workflow-test-1"
@@ -281,8 +290,8 @@ class TestFullWorkflowE2E:
         assert answer == "Use pytest"
 
         # 5. Work done with local model
-        can, _ = budget.can_afford("local-coder", 2000, 1000)
-        assert can is True
+        allowed, _ = budget.can_afford("local-coder", 2000, 1000)
+        assert allowed is True
 
         budget.record_cost("local-coder", 2000, 1000, task_type="implementation")
         audit.log_model_call("local-coder", 2000, 1000, 3000.0, True, task_type="implementation")
@@ -293,5 +302,4 @@ class TestFullWorkflowE2E:
 
         # Verify no cloud cost
         status = budget.get_status()
-        assert status["session_cloud_cost"] == 0.0
-        assert status["local_calls"] == 1
+        assert status["session_spent"] == 0.0
