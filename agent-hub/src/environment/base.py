@@ -4,6 +4,13 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
+from enum import Enum
+
+class Environment(Enum):
+    CLAUDE_CLI = "claude_cli"
+    CURSOR = "cursor"
+    ANTIGRAVITY = "antigravity"
+    UNKNOWN = "unknown"
 
 class EnvironmentAdapter(ABC):
     """Abstract base class for environment adapters."""
@@ -58,3 +65,7 @@ def detect_environment() -> EnvironmentAdapter:
 
     # Fallback - return Claude CLI adapter as default
     return ClaudeCLIAdapter()
+
+def get_adapter() -> EnvironmentAdapter:
+    """Convenience wrapper for detect_environment."""
+    return detect_environment()

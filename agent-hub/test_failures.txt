@@ -1,0 +1,394 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- /Users/eriksjaastad/projects/_tools/agent-hub/venv/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/eriksjaastad/projects/_tools/agent-hub
+plugins: anyio-4.12.1, asyncio-1.3.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 223 items
+
+tests/test_adaptive_poller.py::test_poller_initial_interval PASSED       [  0%]
+tests/test_adaptive_poller.py::test_poller_backoff PASSED                [  0%]
+tests/test_adaptive_poller.py::test_poller_reset PASSED                  [  1%]
+tests/test_adaptive_poller.py::test_poller_max_cap PASSED                [  1%]
+tests/test_audit_logger.py::test_audit_logger_init PASSED                [  2%]
+tests/test_audit_logger.py::test_log_event PASSED                        [  2%]
+tests/test_audit_logger.py::test_log_model_call PASSED                   [  3%]
+tests/test_audit_logger.py::test_log_model_fallback PASSED               [  3%]
+tests/test_audit_logger.py::test_get_events_filter_by_type PASSED        [  4%]
+tests/test_audit_logger.py::test_get_events_filter_by_source PASSED      [  4%]
+tests/test_audit_logger.py::test_get_events_limit PASSED                 [  4%]
+tests/test_audit_logger.py::test_get_session_summary PASSED              [  5%]
+tests/test_audit_logger.py::test_set_run_id PASSED                       [  5%]
+tests/test_bidirectional.py::test_ask_reply_flow PASSED                  [  6%]
+tests/test_budget_manager.py::test_budget_estimation PASSED              [  6%]
+tests/test_budget_manager.py::test_budget_limit_enforcement PASSED       [  7%]
+tests/test_budget_override.py::test_request_override FAILED              [  7%]
+tests/test_budget_override.py::test_override_expiration FAILED           [  8%]
+tests/test_budget_override.py::test_clear_override FAILED                [  8%]
+tests/test_budget_override.py::test_env_disable FAILED                   [  8%]
+tests/test_circuit_breakers.py::test_circuit_breaker_init PASSED         [  9%]
+tests/test_circuit_breakers.py::test_router_failure_counting PASSED      [  9%]
+tests/test_circuit_breakers.py::test_router_threshold_triggers_halt PASSED [ 10%]
+tests/test_circuit_breakers.py::test_sqlite_failure_counting PASSED      [ 10%]
+tests/test_circuit_breakers.py::test_ollama_degraded_mode PASSED         [ 11%]
+tests/test_circuit_breakers.py::test_reset PASSED                        [ 11%]
+tests/test_circuit_breakers.py::test_halt_callback PASSED                [ 12%]
+tests/test_circuit_breakers.py::test_get_status PASSED                   [ 12%]
+tests/test_config_generator.py::test_claude_cli_config_generation PASSED [ 13%]
+tests/test_config_generator.py::test_cursor_config_generation PASSED     [ 13%]
+tests/test_config_generator.py::test_write_config_dry_run PASSED         [ 13%]
+tests/test_config_generator.py::test_write_config_merge PASSED           [ 14%]
+tests/test_config_validator.py::TestConfigValidator::test_valid_defaults PASSED [ 14%]
+tests/test_config_validator.py::TestConfigValidator::test_invalid_budget_value PASSED [ 15%]
+tests/test_config_validator.py::TestConfigValidator::test_budget_out_of_range PASSED [ 15%]
+tests/test_config_validator.py::TestConfigValidator::test_session_exceeds_daily_warning PASSED [ 16%]
+tests/test_config_validator.py::TestConfigValidator::test_invalid_url PASSED [ 16%]
+tests/test_config_validator.py::TestConfigValidator::test_invalid_failure_limit PASSED [ 17%]
+tests/test_config_validator.py::TestConfigValidator::test_feature_flag_warning PASSED [ 17%]
+tests/test_config_validator.py::TestConfigValidator::test_validation_result_str PASSED [ 17%]
+tests/test_config_validator.py::TestConfigValidator::test_valid_config_str PASSED [ 18%]
+tests/test_cost_logger.py::test_cost_logger_log_call PASSED              [ 18%]
+tests/test_cost_logger.py::test_cost_logger_totals PASSED                [ 19%]
+tests/test_cost_tracking.py::test_update_cost_accumulates PASSED         [ 19%]
+tests/test_cost_tracking.py::test_cost_ceiling_triggers_halt PASSED      [ 20%]
+tests/test_cost_tracking.py::test_cost_persists_across_restarts PASSED   [ 20%]
+tests/test_dashboard.py::test_format_time_ago PASSED                     [ 21%]
+tests/test_dashboard.py::test_build_agents_table PASSED                  [ 21%]
+tests/test_dashboard.py::test_build_questions_table PASSED               [ 21%]
+tests/test_dashboard.py::test_build_cost_panel PASSED                    [ 22%]
+tests/test_dashboard.py::test_build_budget_panel PASSED                  [ 22%]
+tests/test_dashboard.py::test_build_escapes_table PASSED                 [ 23%]
+tests/test_degradation.py::test_healthy_ollama PASSED                    [ 23%]
+tests/test_degradation.py::test_unhealthy_ollama_enters_degraded PASSED  [ 24%]
+tests/test_degradation.py::test_get_fallback_model PASSED                [ 24%]
+tests/test_degradation.py::test_get_best_available_healthy PASSED        [ 25%]
+tests/test_degradation.py::test_get_best_available_degraded PASSED       [ 25%]
+tests/test_degradation.py::test_recovery_clears_degraded PASSED          [ 26%]
+tests/test_degradation.py::test_notification_callback PASSED             [ 26%]
+tests/test_degradation.py::test_get_status PASSED                        [ 26%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_detects_api_key PASSED [ 27%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_detects_password PASSED [ 27%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_detects_hardcoded_path_unix PASSED [ 28%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_detects_hardcoded_path_linux PASSED [ 28%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_allows_relative_paths PASSED [ 29%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_calculates_deletion_ratio PASSED [ 29%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_flags_high_deletion PASSED [ 30%]
+tests/test_draft_gate.py::TestSafetyAnalysis::test_clean_content_passes PASSED [ 30%]
+tests/test_draft_gate.py::TestDiffGeneration::test_generates_diff PASSED [ 30%]
+tests/test_draft_gate.py::TestDiffGeneration::test_handles_identical_files PASSED [ 31%]
+tests/test_draft_gate.py::TestSecretPatterns::test_catches_secrets[api_key = "sk-abcdef1234567890abcdef"] PASSED [ 31%]
+tests/test_draft_gate.py::TestSecretPatterns::test_catches_secrets[API_KEY='sk-1234567890abcdefghij1234567890ab'] PASSED [ 32%]
+tests/test_draft_gate.py::TestSecretPatterns::test_catches_secrets[password = "my_super_secret"] PASSED [ 32%]
+tests/test_draft_gate.py::TestSecretPatterns::test_catches_secrets[secret = "dont_tell_anyone"] PASSED [ 33%]
+tests/test_draft_gate.py::TestSecretPatterns::test_catches_secrets[key = "AIzaSyABC123def456GHI789jkl012MNO345pqr"] PASSED [ 33%]
+tests/test_e2e.py::test_full_pipeline_flow PASSED                        [ 34%]
+tests/test_e2e.py::test_git_merge_conflict_halt PASSED                   [ 34%]
+tests/test_e2e.py::test_pipeline_with_mocked_mcp PASSED                  [ 34%]
+tests/test_e2e.py::test_stall_recovery PASSED                            [ 35%]
+tests/test_e2e.py::test_critical_flaw_detection PASSED                   [ 35%]
+tests/test_e2e_messages.py::test_proposal_to_review_message_flow PASSED  [ 36%]
+tests/test_e2e_messages.py::test_stop_task_interrupts_work PASSED        [ 36%]
+tests/test_e2e_messages.py::test_question_answer_negotiation PASSED      [ 37%]
+tests/test_e2e_uas.py::TestModelRoutingE2E::test_local_model_success_path FAILED [ 37%]
+tests/test_e2e_uas.py::TestModelRoutingE2E::test_fallback_to_cloud_path FAILED [ 38%]
+tests/test_e2e_uas.py::TestModelRoutingE2E::test_budget_blocks_expensive_model FAILED [ 38%]
+tests/test_e2e_uas.py::TestMessageFlowE2E::test_ask_reply_cycle PASSED   [ 39%]
+tests/test_e2e_uas.py::TestMessageFlowE2E::test_multiple_workers_isolated PASSED [ 39%]
+tests/test_e2e_uas.py::TestDegradationE2E::test_ollama_failure_triggers_degradation PASSED [ 39%]
+tests/test_e2e_uas.py::TestCircuitBreakerE2E::test_repeated_failures_trigger_halt PASSED [ 40%]
+tests/test_e2e_uas.py::TestCircuitBreakerE2E::test_success_resets_failure_count PASSED [ 40%]
+tests/test_e2e_uas.py::TestFullWorkflowE2E::test_complete_task_workflow FAILED [ 41%]
+tests/test_edge_cases.py::test_invalid_transitions PASSED                [ 41%]
+tests/test_edge_cases.py::test_hallucination_loop_circuit_breaker PASSED [ 42%]
+tests/test_edge_cases.py::test_sandbox_symlink_attack PASSED             [ 42%]
+tests/test_edge_cases.py::test_mcp_malformed_json_handling PASSED        [ 43%]
+tests/test_edge_cases.py::test_dry_run_git PASSED                        [ 43%]
+tests/test_edge_cases.py::test_dry_run_atomic_write PASSED               [ 43%]
+tests/test_environment.py::test_detect_claude_cli FAILED                 [ 44%]
+tests/test_environment.py::test_detect_cursor FAILED                     [ 44%]
+tests/test_environment.py::test_get_adapter PASSED                       [ 45%]
+tests/test_environment_adapters.py::test_detect_claude_cli PASSED        [ 45%]
+tests/test_environment_adapters.py::test_detect_cursor PASSED            [ 46%]
+tests/test_environment_adapters.py::test_detect_antigravity PASSED       [ 46%]
+tests/test_environment_adapters.py::test_claude_cli_trigger PASSED       [ 47%]
+tests/test_environment_adapters.py::test_cursor_trigger_success PASSED   [ 47%]
+tests/test_environment_adapters.py::test_antigravity_trigger PASSED      [ 47%]
+tests/test_fallback.py::test_fallback_logic PASSED                       [ 48%]
+tests/test_fallback.py::test_cooldown_mechanism PASSED                   [ 48%]
+tests/test_git_manager.py::test_create_task_branch PASSED                [ 49%]
+tests/test_git_manager.py::test_checkpoint_commit PASSED                 [ 49%]
+tests/test_git_manager.py::test_merge_success PASSED                     [ 50%]
+tests/test_git_manager.py::test_merge_conflict PASSED                    [ 50%]
+tests/test_integration.py::TestSystemIntegration::test_configuration_valid PASSED [ 51%]
+tests/test_integration.py::TestSystemIntegration::test_budget_lifecycle PASSED [ 51%]
+tests/test_integration.py::TestSystemIntegration::test_message_bus_lifecycle FAILED [ 52%]
+tests/test_integration.py::TestSystemIntegration::test_circuit_breaker_lifecycle PASSED [ 52%]
+tests/test_integration.py::TestSystemIntegration::test_audit_logging_lifecycle PASSED [ 52%]
+tests/test_integration.py::TestSystemIntegration::test_degradation_lifecycle PASSED [ 53%]
+tests/test_integration.py::TestSystemIntegration::test_full_workflow PASSED [ 53%]
+tests/test_librarian_integration.py::test_query_librarian_unavailable PASSED [ 54%]
+tests/test_librarian_integration.py::test_find_files_smart_fallback PASSED [ 54%]
+tests/test_litellm_bridge.py::test_fallback_chain_selection PASSED       [ 55%]
+tests/test_litellm_bridge.py::test_cooldown_logic PASSED                 [ 55%]
+tests/test_litellm_bridge.py::test_success_resets_failures PASSED        [ 56%]
+tests/test_litellm_bridge.py::test_chat_fallback_on_failure FAILED       [ 56%]
+tests/test_litellm_bridge.py::test_chat_all_fail FAILED                  [ 56%]
+tests/test_mcp_client.py::test_start_stop PASSED                         [ 57%]
+tests/test_mcp_client.py::test_call_tool_success PASSED                  [ 57%]
+tests/test_mcp_client.py::test_call_tool_timeout PASSED                  [ 58%]
+tests/test_mcp_client.py::test_mcp_error_response PASSED                 [ 58%]
+tests/test_mcp_client.py::test_integration_list_models FAILED            [ 59%]
+tests/test_mcp_connection_pool.py::test_pool_client_creation PASSED      [ 59%]
+tests/test_mcp_connection_pool.py::test_pool_unhealthy_client_removal PASSED [ 60%]
+tests/test_mcp_connection_pool.py::test_pool_close_idle PASSED           [ 60%]
+tests/test_mcp_connection_pool.py::test_pool_close_all PASSED            [ 60%]
+tests/test_mcp_connection_pool.py::test_global_pool PASSED               [ 61%]
+tests/test_message_bus.py::test_message_bus_send_receive PASSED          [ 61%]
+tests/test_message_bus.py::test_message_bus_read_status PASSED           [ 62%]
+tests/test_messaging.py::test_ping_pong_20_messages PASSED               [ 62%]
+tests/test_messaging.py::test_heartbeat_flood_100 PASSED                 [ 63%]
+tests/test_messaging.py::test_question_validation PASSED                 [ 63%]
+tests/test_messaging.py::test_invalid_message_type PASSED                [ 64%]
+tests/test_messaging.py::test_stall_detection PASSED                     [ 64%]
+tests/test_ollama_http_client.py::test_list_models_live PASSED           [ 65%]
+tests/test_ollama_http_client.py::test_chat_live FAILED                  [ 65%]
+tests/test_ollama_http_client.py::test_get_client_singleton PASSED       [ 65%]
+tests/test_ollama_http_client.py::test_chat_mock PASSED                  [ 66%]
+tests/test_ollama_http_client.py::test_is_model_loaded_mock PASSED       [ 66%]
+tests/test_performance.py::TestPerformanceTargets::test_message_bus_latency PASSED [ 67%]
+tests/test_performance.py::TestPerformanceTargets::test_budget_check_latency PASSED [ 67%]
+tests/test_performance.py::TestPerformanceTargets::test_circuit_breaker_latency PASSED [ 68%]
+tests/test_performance.py::TestPerformanceTargets::test_concurrent_message_handling PASSED [ 68%]
+tests/test_performance.py::TestPerformanceTargets::test_memory_bounded PASSED [ 69%]
+tests/test_preflight.py::test_preflight_approval PASSED                  [ 69%]
+tests/test_preflight.py::test_preflight_halt PASSED                      [ 69%]
+tests/test_preflight_checks.py::test_preflight_allows_local FAILED       [ 70%]
+tests/test_preflight_checks.py::test_preflight_blocks_over_budget FAILED [ 70%]
+tests/test_preflight_checks.py::test_preflight_allows_within_budget FAILED [ 71%]
+tests/test_preflight_checks.py::test_budget_recorded_on_success FAILED   [ 71%]
+tests/test_proposal_converter.py::test_parse_proposal PASSED             [ 72%]
+tests/test_proposal_converter.py::test_create_contract PASSED            [ 72%]
+tests/test_proposal_converter.py::test_convert_proposal_success PASSED   [ 73%]
+tests/test_proposal_converter.py::test_convert_proposal_rejection PASSED [ 73%]
+tests/test_proposal_converter.py::test_generate_unique_task_ids PASSED   [ 73%]
+tests/test_router.py::test_router_selection PASSED                       [ 74%]
+tests/test_router.py::test_router_complexity_routing PASSED              [ 74%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_valid_draft_path PASSED [ 75%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_valid_submission_path PASSED [ 75%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_block_outside_sandbox PASSED [ 76%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_block_parent_directory PASSED [ 76%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_block_path_traversal PASSED [ 77%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_block_invalid_extension PASSED [ 77%]
+tests/test_sandbox.py::TestSandboxWriteValidation::test_block_absolute_escape PASSED [ 78%]
+tests/test_sandbox.py::TestSourceReadValidation::test_valid_source_in_workspace PASSED [ 78%]
+tests/test_sandbox.py::TestSourceReadValidation::test_block_outside_workspace PASSED [ 78%]
+tests/test_sandbox.py::TestSourceReadValidation::test_block_nonexistent_file PASSED [ 79%]
+tests/test_sandbox.py::TestSourceReadValidation::test_block_sensitive_files PASSED [ 79%]
+tests/test_sandbox.py::TestSourceReadValidation::test_block_directory PASSED [ 80%]
+tests/test_sandbox.py::TestDraftPathGeneration::test_draft_path_format PASSED [ 80%]
+tests/test_sandbox.py::TestDraftPathGeneration::test_sanitizes_task_id PASSED [ 81%]
+tests/test_sandbox.py::TestFileHash::test_consistent_hash PASSED         [ 81%]
+tests/test_sandbox.py::TestFileHash::test_different_hash_for_different_content PASSED [ 82%]
+tests/test_state_adapter.py::test_get_state_adapter_legacy PASSED        [ 82%]
+tests/test_state_adapter.py::test_get_state_adapter_sqlite PASSED        [ 82%]
+tests/test_state_adapter.py::test_legacy_adapter_smoke PASSED            [ 83%]
+tests/test_state_adapter.py::test_sqlite_adapter_smoke PASSED            [ 83%]
+tests/test_subagent_protocol.py::test_protocol_e2e PASSED                [ 84%]
+tests/test_subagent_protocol.py::test_worker_clarification_polling PASSED [ 84%]
+tests/test_subagent_protocol.py::test_worker_clarification_timeout PASSED [ 85%]
+tests/test_subagent_protocol.py::test_status_transitions PASSED          [ 85%]
+tests/test_utils.py::test_atomic_write PASSED                            [ 86%]
+tests/test_utils.py::test_atomic_write_cleanup_on_error PASSED           [ 86%]
+tests/test_utils.py::test_atomic_write_json PASSED                       [ 86%]
+tests/test_utils.py::test_safe_read PASSED                               [ 87%]
+tests/test_utils.py::test_archive_file PASSED                            [ 87%]
+tests/test_validators.py::test_valid_contract PASSED                     [ 88%]
+tests/test_validators.py::test_missing_task_id PASSED                    [ 88%]
+tests/test_validators.py::test_invalid_status PASSED                     [ 89%]
+tests/test_validators.py::test_path_conflict PASSED                      [ 89%]
+tests/test_validators.py::test_empty_requirements PASSED                 [ 90%]
+tests/test_validators.py::test_wrong_schema_version PASSED               [ 90%]
+tests/test_validators.py::test_load_and_validate PASSED                  [ 91%]
+tests/test_validators.py::test_load_and_validate_failure PASSED          [ 91%]
+tests/test_watchdog.py::test_valid_transition PASSED                     [ 91%]
+tests/test_watchdog.py::test_invalid_transition PASSED                   [ 92%]
+tests/test_watchdog.py::test_lock_acquisition PASSED                     [ 92%]
+tests/test_watchdog.py::test_expired_lock_acquisition PASSED             [ 93%]
+tests/test_watchdog.py::test_destructive_diff_breaker PASSED             [ 93%]
+tests/test_watchdog.py::test_hallucination_loop_breaker PASSED           [ 94%]
+tests/test_watchdog.py::test_nitpicking_breaker PASSED                   [ 94%]
+tests/test_watchdog.py::test_global_timeout_breaker PASSED               [ 95%]
+tests/test_watchdog.py::test_save_and_load_contract PASSED               [ 95%]
+tests/test_watchdog.py::test_trigger_halt PASSED                         [ 95%]
+tests/test_watchdog.py::test_update_cost PASSED                          [ 96%]
+tests/test_watchdog.py::test_cleanup_task_files PASSED                   [ 96%]
+tests/test_watchdog.py::test_ndjson_rotation PASSED                      [ 97%]
+tests/test_worker_client.py::test_implement_task_success PASSED          [ 97%]
+tests/test_worker_client.py::test_implement_task_stall_empty PASSED      [ 98%]
+tests/test_worker_client.py::test_implement_task_stall_malformed PASSED  [ 98%]
+tests/test_worker_client.py::test_implement_task_timeout PASSED          [ 99%]
+tests/test_worker_client.py::test_run_local_review_critical PASSED       [ 99%]
+tests/test_worker_client.py::test_check_health PASSED                    [100%]
+
+=================================== FAILURES ===================================
+____________________________ test_request_override _____________________________
+tests/test_budget_override.py:13: in test_request_override
+    manager = BudgetManager(budget_path=temp_budget, session_limit=0.0001)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+___________________________ test_override_expiration ___________________________
+tests/test_budget_override.py:29: in test_override_expiration
+    manager = BudgetManager(budget_path=temp_budget)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_____________________________ test_clear_override ______________________________
+tests/test_budget_override.py:40: in test_clear_override
+    manager = BudgetManager(budget_path=temp_budget)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_______________________________ test_env_disable _______________________________
+tests/test_budget_override.py:49: in test_env_disable
+    manager = BudgetManager(budget_path=temp_budget, session_limit=0.0001)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+______________ TestModelRoutingE2E.test_local_model_success_path _______________
+tests/test_e2e_uas.py:29: in test_local_model_success_path
+    budget = BudgetManager(budget_path=temp_paths["budget"])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_______________ TestModelRoutingE2E.test_fallback_to_cloud_path ________________
+tests/test_e2e_uas.py:52: in test_fallback_to_cloud_path
+    budget = BudgetManager(budget_path=temp_paths["budget"], session_limit=10.0)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+____________ TestModelRoutingE2E.test_budget_blocks_expensive_model ____________
+tests/test_e2e_uas.py:77: in test_budget_blocks_expensive_model
+    budget = BudgetManager(budget_path=temp_paths["budget"], session_limit=0.001)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_______________ TestFullWorkflowE2E.test_complete_task_workflow ________________
+tests/test_e2e_uas.py:262: in test_complete_task_workflow
+    budget = BudgetManager(budget_path=temp_paths["budget"])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+____________________________ test_detect_claude_cli ____________________________
+tests/test_environment.py:7: in test_detect_claude_cli
+    assert detect_environment() == Environment.CLAUDE_CLI
+E   AssertionError: assert <src.environment.claude_cli.ClaudeCLIAdapter object at 0x1161efb60> == <Environment.CLAUDE_CLI: 'claude_cli'>
+E    +  where <src.environment.claude_cli.ClaudeCLIAdapter object at 0x1161efb60> = detect_environment()
+E    +  and   <Environment.CLAUDE_CLI: 'claude_cli'> = Environment.CLAUDE_CLI
+______________________________ test_detect_cursor ______________________________
+tests/test_environment.py:11: in test_detect_cursor
+    assert detect_environment() == Environment.CURSOR
+E   AssertionError: assert <src.environment.cursor.CursorAdapter object at 0x1161efe00> == <Environment.CURSOR: 'cursor'>
+E    +  where <src.environment.cursor.CursorAdapter object at 0x1161efe00> = detect_environment()
+E    +  and   <Environment.CURSOR: 'cursor'> = Environment.CURSOR
+_______________ TestSystemIntegration.test_message_bus_lifecycle _______________
+tests/test_integration.py:108: in test_message_bus_lifecycle
+    assert pending[0]["id"] == msg_id
+           ^^^^^^^^^^^^^^^^
+E   KeyError: 'id'
+________________________ test_chat_fallback_on_failure _________________________
+tests/test_litellm_bridge.py:54: in test_chat_fallback_on_failure
+    response = bridge.chat(messages=[{"role": "user", "content": "hi"}])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/litellm_bridge.py:189: in chat
+    can_afford, reason = budget.can_afford(
+E   TypeError: BudgetManager.can_afford() got an unexpected keyword argument 'model'
+______________________________ test_chat_all_fail ______________________________
+tests/test_litellm_bridge.py:65: in test_chat_all_fail
+    bridge.chat(messages=[{"role": "user", "content": "hi"}])
+src/litellm_bridge.py:189: in chat
+    can_afford, reason = budget.can_afford(
+E   TypeError: BudgetManager.can_afford() got an unexpected keyword argument 'model'
+_________________________ test_integration_list_models _________________________
+src/mcp_client.py:41: in start
+    self._process = subprocess.Popen(
+/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1038: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+/opt/homebrew/Cellar/python@3.14/3.14.2/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:1989: in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+E   PermissionError: [Errno 13] Permission denied: '.'
+
+During handling of the above exception, another exception occurred:
+tests/test_mcp_client.py:93: in test_integration_list_models
+    with MCPClient(SERVER_PATH) as client:
+         ^^^^^^^^^^^^^^^^^^^^^^
+src/mcp_client.py:79: in __enter__
+    self.connect()
+src/mcp_client.py:54: in connect
+    self.start()
+src/mcp_client.py:50: in start
+    raise MCPError(f"Failed to start MCP server: {e}")
+E   src.mcp_client.MCPError: Failed to start MCP server: [Errno 13] Permission denied: '.'
+
+During handling of the above exception, another exception occurred:
+tests/test_mcp_client.py:107: in test_integration_list_models
+    pytest.fail(f"Integration test failed: {e}")
+E   Failed: Integration test failed: Failed to start MCP server: [Errno 13] Permission denied: '.'
+________________________________ test_chat_live ________________________________
+tests/test_ollama_http_client.py:36: in test_chat_live
+    response = ollama_http_client.chat(model_name, messages)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/ollama_http_client.py:68: in chat
+    response.raise_for_status()
+venv/lib/python3.14/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '400 Bad Request' for url 'http://localhost:11434/api/chat'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+_________________________ test_preflight_allows_local __________________________
+src/litellm_bridge.py:213: in chat
+    cost_logger.log_model_call(
+E   TypeError: log_model_call() got an unexpected keyword argument 'task_type'
+
+During handling of the above exception, another exception occurred:
+tests/test_preflight_checks.py:24: in test_preflight_allows_local
+    res = bridge.chat(messages=[{"role": "user", "content": "hi"}], task_type="default", preferred_model="local-fast")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/litellm_bridge.py:250: in chat
+    cost_logger.log_model_call(
+E   TypeError: log_model_call() got an unexpected keyword argument 'task_type'
+------------------------------ Captured log call -------------------------------
+WARNING  src.litellm_bridge:litellm_bridge.py:245 Model local-fast failed: log_model_call() got an unexpected keyword argument 'task_type'
+______________________ test_preflight_blocks_over_budget _______________________
+tests/test_preflight_checks.py:32: in test_preflight_blocks_over_budget
+    manager = BudgetManager(budget_path=temp_budget, session_limit=0.0001)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_____________________ test_preflight_allows_within_budget ______________________
+tests/test_preflight_checks.py:47: in test_preflight_allows_within_budget
+    manager = BudgetManager(budget_path=temp_budget, session_limit=10.00)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+_______________________ test_budget_recorded_on_success ________________________
+tests/test_preflight_checks.py:65: in test_budget_recorded_on_success
+    manager = BudgetManager(budget_path=temp_budget)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: BudgetManager.__init__() got an unexpected keyword argument 'budget_path'
+=============================== warnings summary ===============================
+venv/lib/python3.14/site-packages/litellm/litellm_core_utils/logging_utils.py:273: 15 warnings
+  /Users/eriksjaastad/projects/_tools/agent-hub/venv/lib/python3.14/site-packages/litellm/litellm_core_utils/logging_utils.py:273: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_budget_override.py::test_request_override - TypeError: Budg...
+FAILED tests/test_budget_override.py::test_override_expiration - TypeError: B...
+FAILED tests/test_budget_override.py::test_clear_override - TypeError: Budget...
+FAILED tests/test_budget_override.py::test_env_disable - TypeError: BudgetMan...
+FAILED tests/test_e2e_uas.py::TestModelRoutingE2E::test_local_model_success_path
+FAILED tests/test_e2e_uas.py::TestModelRoutingE2E::test_fallback_to_cloud_path
+FAILED tests/test_e2e_uas.py::TestModelRoutingE2E::test_budget_blocks_expensive_model
+FAILED tests/test_e2e_uas.py::TestFullWorkflowE2E::test_complete_task_workflow
+FAILED tests/test_environment.py::test_detect_claude_cli - AssertionError: as...
+FAILED tests/test_environment.py::test_detect_cursor - AssertionError: assert...
+FAILED tests/test_integration.py::TestSystemIntegration::test_message_bus_lifecycle
+FAILED tests/test_litellm_bridge.py::test_chat_fallback_on_failure - TypeErro...
+FAILED tests/test_litellm_bridge.py::test_chat_all_fail - TypeError: BudgetMa...
+FAILED tests/test_mcp_client.py::test_integration_list_models - Failed: Integ...
+FAILED tests/test_ollama_http_client.py::test_chat_live - httpx.HTTPStatusErr...
+FAILED tests/test_preflight_checks.py::test_preflight_allows_local - TypeErro...
+FAILED tests/test_preflight_checks.py::test_preflight_blocks_over_budget - Ty...
+FAILED tests/test_preflight_checks.py::test_preflight_allows_within_budget - ...
+FAILED tests/test_preflight_checks.py::test_budget_recorded_on_success - Type...
+================= 19 failed, 204 passed, 15 warnings in 21.29s =================

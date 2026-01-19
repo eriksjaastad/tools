@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -128,4 +128,29 @@ class CostLogger:
         except Exception as e:
             logger.warning(f"Failed to load cost state: {e}")
 
-from datetime import date
+# Global instance for easy access
+_instance: Optional[CostLogger] = None
+
+def get_cost_logger() -> CostLogger:
+    global _instance
+    if _instance is None:
+        _instance = CostLogger()
+    return _instance
+
+def log_model_call(model: str, tokens_in: int, tokens_out: int, latency_ms: float, success: bool, error: str = None, task_type: str = "default"):
+    """Bridge for ollama_http_client and others expecting this function."""
+    logger = get_cost_logger()
+    is_local = "ollama" in model.lower() or "local" in model.lower()
+    
+    # Estimate cost if cloud
+    cost = 0.0
+    if not is_local:
+        # Simple estimation matching BudgetManager
+        rate = 0.003
+        if "gemini" in model.lower() and "flash" in model.lower():
+            rate = 0.0001
+        cost = ((tokens_in + tokens_out) / 1000.0) * rate
+
+    logger.log_call(model, tokens_in, tokens_out, cost, is_local)
+
+# End of file

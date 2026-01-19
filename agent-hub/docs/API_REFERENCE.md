@@ -384,7 +384,7 @@ python -m src.dashboard
 | `UAS_ROUTER_FAILURE_LIMIT` | `5` | Router failures before halt |
 | `UAS_SQLITE_FAILURE_LIMIT` | `3` | SQLite failures before halt |
 | `UAS_OLLAMA_FAILURE_LIMIT` | `3` | Ollama failures before degraded |
-| `UAS_HALT_FILE` | `ERIK_HALT.md` | Halt file location |
+| `UAS_HALT_FILE` | `HALT.md` | Halt file location |
 | **Ollama** | | |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
 | `UAS_HEALTH_CHECK_TIMEOUT` | `5.0` | Health check timeout (seconds) |
@@ -422,7 +422,7 @@ print(get_degradation_manager().get_status())
 
 ### Circuit Breaker Triggered
 
-**Symptom:** `ERIK_HALT.md` file created
+**Symptom:** `HALT.md` file created
 
 **Solutions:**
 1. Read halt file for context

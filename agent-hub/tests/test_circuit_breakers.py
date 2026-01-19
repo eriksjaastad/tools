@@ -9,7 +9,7 @@ def temp_state(tmp_path):
 
 @pytest.fixture
 def temp_halt(tmp_path, monkeypatch):
-    halt_file = tmp_path / "ERIK_HALT.md"
+    halt_file = tmp_path / "HALT.md"
     monkeypatch.setattr("src.circuit_breakers.HALT_FILE", halt_file)
     return halt_file
 
@@ -93,3 +93,100 @@ def test_get_status(temp_state):
     status = cb.get_status()
     assert status["router_failures"] == 1
     assert "thresholds" in status
+
+# --- Watchdog Task-Level Circuit Breakers ---
+from src.watchdog import check_circuit_breakers
+from datetime import datetime, timezone
+
+def test_watchdog_rebuttal_limit():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "breaker": {"rebuttal_count": 5},
+        "limits": {"max_rebuttals": 2}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 1" in reason
+
+def test_watchdog_destructive_diff(tmp_path):
+    now = datetime.now(timezone.utc).isoformat()
+    target_file = tmp_path / "target.py"
+    target_file.write_text("line1\nline2\n") # 2 lines
+    
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "specification": {"target_file": str(target_file)},
+        "handoff_data": {"diff_stats": {"lines_deleted": 10}}, # 10/(2+10) = 0.83 > 0.5
+        "breaker": {},
+        "limits": {}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 2" in reason
+
+def test_watchdog_logical_paradox():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "handoff_data": {"local_review_passed": False, "judge_verdict": "PASS"},
+        "breaker": {},
+        "limits": {}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 3" in reason
+
+def test_watchdog_hallucination_loop():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "handoff_data": {"current_file_hash": "deadbeef"},
+        "history": [{"file_hash": "deadbeef", "verdict": "FAIL"}],
+        "breaker": {},
+        "limits": {}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 4" in reason
+
+def test_watchdog_budget_exceeded():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "breaker": {"cost_usd": 1.0},
+        "limits": {"cost_ceiling_usd": 0.5}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 7" in reason
+
+def test_watchdog_scope_creep():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "handoff_data": {"changed_files": ["file"] * 21},
+        "breaker": {},
+        "limits": {}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 8" in reason
+
+def test_watchdog_review_cycle_limit():
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        "breaker": {"review_cycle_count": 6},
+        "limits": {"max_review_cycles": 5}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is True
+    assert "Trigger 9" in reason

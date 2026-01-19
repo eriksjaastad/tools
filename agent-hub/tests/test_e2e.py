@@ -169,8 +169,8 @@ def test_git_merge_conflict_halt(handoff_dir, project_dir):
         trigger_halt(contract, f"Merge error: {e}", "git_conflict", contract_path)
         
     assert (handoff_dir / "TASK_CONTRACT.json.lock").exists()
-    assert (handoff_dir / "ERIK_HALT.md").exists()
-    halt_content = (handoff_dir / "ERIK_HALT.md").read_text()
+    assert (handoff_dir / "HALT.md").exists()
+    halt_content = (handoff_dir / "HALT.md").read_text()
     assert "CONFLICT-TASK" in halt_content
     assert "git_conflict" in halt_content
 
@@ -449,6 +449,6 @@ def test_critical_flaw_detection(handoff_dir, project_dir, monkeypatch):
              
     # Check artifacts
     assert (handoff_dir / "TASK_CONTRACT.json.lock").exists()
-    assert (handoff_dir / "ERIK_HALT.md").exists()
-    assert "Found API_KEY" in (handoff_dir / "ERIK_HALT.md").read_text()
+    assert (handoff_dir / "HALT.md").exists()
+    assert "Found API_KEY" in (handoff_dir / "HALT.md").read_text()
 

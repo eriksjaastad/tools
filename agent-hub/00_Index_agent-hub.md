@@ -1,9 +1,9 @@
 # 00_Index: Agent Hub
 
-> **Type:** Tool / Infrastructure  
-> **Status:** Active Development  
-> **Created:** January 12, 2026  
-> **Updated:** January 16, 2026
+> **Type:** Tool / Infrastructure
+> **Status:** ✅ Core Complete (Phase 0-6)
+> **Created:** January 12, 2026
+> **Updated:** January 19, 2026
 
 ---
 
@@ -51,7 +51,7 @@ You → Contract → Implementer (local) → Local Review → Judge (cloud) → 
 
 | Review | Date | Status |
 |--------|------|--------|
-| **[CODE_REVIEW_CLAUDE_CODE_WEB_v1.md](CODE_REVIEW_CLAUDE_CODE_WEB_v1.md)** | 2026-01-18 | **REMEDIATING** (Critical fixes in progress) |
+| **[CODE_REVIEW_CLAUDE_CODE_WEB_v1.md](CODE_REVIEW_CLAUDE_CODE_WEB_v1.md)** | 2026-01-18 | ✅ Remediated |
 | [Legacy Review Archive](Documents/archive/2026-01-unified-agent-system/old-reviews/INDEX.md) | 2025/早期 2026 | Historical peer reviews |
 
 ---

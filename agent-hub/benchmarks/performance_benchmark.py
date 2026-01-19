@@ -188,13 +188,15 @@ def benchmark_memory_usage(func: Callable, iterations: int = 100) -> dict:
 def benchmark_budget_checks(samples: int = 1000) -> BenchmarkResult:
     """Benchmark budget check performance."""
     from src.budget_manager import BudgetManager
+    from src.cost_logger import CostLogger
     import tempfile
 
     with tempfile.TemporaryDirectory() as tmp:
-        budget = BudgetManager(budget_path=Path(tmp) / "budget.json")
+        cl = CostLogger(log_file=Path(tmp) / "audit.ndjson")
+        budget = BudgetManager(cost_logger=cl, config_path=str(Path(tmp) / "budget.yaml"))
 
         def check():
-            budget.can_afford("cloud-fast", 1000, 500)
+            budget.can_afford("local-fast", 100, 100)
 
         return run_benchmark(
             name="Budget Check",

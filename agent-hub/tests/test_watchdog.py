@@ -133,7 +133,7 @@ def test_trigger_halt(tmp_path, base_contract):
     
     assert not contract_path.exists()
     assert (tmp_path / "TASK_CONTRACT.json.lock").exists()
-    assert (tmp_path / "ERIK_HALT.md").exists()
+    assert (tmp_path / "HALT.md").exists()
 
 def test_update_cost(base_contract):
     from src.watchdog import update_cost
