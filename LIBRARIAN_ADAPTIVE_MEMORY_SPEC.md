@@ -448,16 +448,40 @@ def feedback(query: str, helpful: bool) -> dict:
 
 ## 12. Open Questions
 
-1. **Staleness:** How do we invalidate cached answers when the underlying knowledge changes?
-   - Option A: TTL-based expiration
-   - Option B: Dependency tracking (answer depends on file X, invalidate when X changes)
-   - Option C: Manual invalidation
+### 1. Staleness
+How do we invalidate cached answers when the underlying knowledge changes?
 
-2. **Multi-query patterns:** Should we cache intermediate results for complex queries?
+| Option | Pros | Cons | Recommendation |
+|--------|------|------|----------------|
+| A: TTL-based expiration | Simple, predictable | May serve stale data, may evict still-valid data | Good default (24h TTL) |
+| B: Dependency tracking | Precise invalidation | Complex to implement, requires file watchers | Phase 2 enhancement |
+| C: Manual invalidation | Full control | Requires human intervention | Always available as escape hatch |
 
-3. **Judgment model:** Is an LLM-based quality evaluator worth the overhead?
+**Suggested approach:** Start with TTL (Option A), add dependency tracking later if staleness becomes a problem.
 
-4. **Cold start:** How do we pre-warm the cache with likely questions?
+### 2. Multi-query patterns
+Should we cache intermediate results for complex queries?
+
+**Analysis:** Complex queries often decompose into sub-queries (e.g., "find all auth files and summarize" = find + summarize). Caching the "find" result could speed up variations. However, this adds complexity and storage overhead.
+
+**Suggested approach:** Defer. Cache final answers only for v1. Revisit if profiling shows repeated expensive sub-queries.
+
+### 3. Judgment model
+Is an LLM-based quality evaluator worth the overhead?
+
+**Analysis:** A small local model (qwen2.5:0.5b) could evaluate "is this answer complete and accurate?" before caching. Adds ~200ms latency but prevents caching bad answers.
+
+**Suggested approach:** Make it optional via feature flag. Off by default. Enable for high-stakes use cases.
+
+### 4. Cold start
+How do we pre-warm the cache with likely questions?
+
+**Options:**
+- Mine existing chat logs for common questions
+- Seed with documentation structure ("what is X?" for each project)
+- Let it warm naturally from usage
+
+**Suggested approach:** Natural warming + optional seeding script. Don't over-engineer cold start - the cache will warm quickly with real usage.
 
 ---
 
