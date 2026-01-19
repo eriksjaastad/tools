@@ -1,307 +1,132 @@
 """
-SQLite Message Bus for bi-directional agent communication.
-
-Replaces file-based hub_state.json with reliable SQLite storage.
+SQLite Message Bus - Persistent, concurrent-safe message storage.
 """
 
 import sqlite3
-import uuid
-import logging
 import json
-from datetime import datetime, timezone, timedelta
+import logging
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
-from contextlib import contextmanager
-from enum import Enum
+from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Default database location
 DEFAULT_DB_PATH = Path("data/hub.db")
-
-
-class MessageStatus(Enum):
-    PENDING = "PENDING"
-    ANSWERED = "ANSWERED"
-    RETRIEVED = "RETRIEVED"
-    EXPIRED = "EXPIRED"
-
 
 class MessageBus:
     """
-    SQLite-backed message bus for agent communication.
-
-    Usage:
-        bus = MessageBus()
-
-        # Worker asks a question
-        msg_id = bus.ask_parent(run_id="task-123", subagent_id="worker-1", question="How should I handle errors?")
-
-        # Parent checks for pending questions
-        pending = bus.get_pending_questions(run_id="task-123")
-
-        # Parent replies
-        bus.reply_to_worker(message_id=msg_id, answer="Use try/except with logging")
-
-        # Worker retrieves answer
-        answer = bus.check_answer(message_id=msg_id)
+    FR-3.2: SQLite-backed message bus.
     """
 
-    SCHEMA = """
-    CREATE TABLE IF NOT EXISTS subagent_messages (
-        message_id TEXT PRIMARY KEY,
-        run_id TEXT NOT NULL,
-        subagent_id TEXT NOT NULL,
-        question TEXT NOT NULL,
-        answer TEXT,
-        status TEXT DEFAULT 'PENDING',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_run_id ON subagent_messages(run_id);
-    CREATE INDEX IF NOT EXISTS idx_status ON subagent_messages(status);
-    CREATE INDEX IF NOT EXISTS idx_subagent_id ON subagent_messages(subagent_id);
-
-    CREATE TABLE IF NOT EXISTS hub_messages (
-        id TEXT PRIMARY KEY,
-        sender TEXT NOT NULL,
-        recipient TEXT NOT NULL,
-        msg_type TEXT NOT NULL,
-        payload TEXT NOT NULL,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        read INTEGER DEFAULT 0
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_recipient ON hub_messages(recipient, read);
-
-    CREATE TABLE IF NOT EXISTS agent_heartbeats (
-        agent_id TEXT PRIMARY KEY,
-        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        progress TEXT
-    );
-    """
-
-    def __init__(self, db_path: Path | str | None = None):
-        self.db_path = Path(db_path) if db_path else DEFAULT_DB_PATH
+    def __init__(self, db_path: Optional[Path] = None):
+        self.db_path = db_path or DEFAULT_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
+        self._migrate_if_needed()
 
-    def _init_db(self) -> None:
-        """Initialize database schema."""
-        with self._get_connection() as conn:
-            conn.executescript(self.SCHEMA)
-
-    @contextmanager
-    def _get_connection(self):
-        """Get a database connection with proper settings."""
-        conn = sqlite3.connect(
-            self.db_path,
-            timeout=30.0,
-            isolation_level="IMMEDIATE"  # Prevents write conflicts
-        )
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
+    def _init_db(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("PRAGMA journal_mode=WAL;")
+            
+            # messages table
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+              id TEXT PRIMARY KEY,
+              type TEXT NOT NULL,
+              from_agent TEXT NOT NULL,
+              to_agent TEXT NOT NULL,
+              payload TEXT,  -- JSON
+              timestamp TEXT NOT NULL,
+              read INTEGER DEFAULT 0
+            );
+            """)
+            
+            # heartbeats table
+            conn.execute("""
+            CREATE TABLE IF NOT EXISTS heartbeats (
+              agent_id TEXT PRIMARY KEY,
+              progress TEXT,
+              timestamp TEXT NOT NULL
+            );
+            """)
+            
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_to ON messages(to_agent);")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON messages(timestamp);")
             conn.commit()
-        except Exception:
-            conn.rollback()
-            raise
-        finally:
-            conn.close()
 
-    # ===== Subagent Protocol Methods =====
-
-    def ask_parent(self, run_id: str, subagent_id: str, question: str) -> str:
+    def _migrate_if_needed(self):
         """
-        Worker asks a question. Returns message_id.
-        Creates a PENDING message that the parent can answer.
+        Migrate from file-based hub_state.json if it exists and DB is empty.
         """
-        message_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
+        state_file = Path("hub_state.json")
+        if not state_file.exists():
+            return
 
-        with self._get_connection() as conn:
-            conn.execute(
-                """INSERT INTO subagent_messages
-                   (message_id, run_id, subagent_id, question, status, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, 'PENDING', ?, ?)""",
-                (message_id, run_id, subagent_id, question, now, now)
-            )
+        with sqlite3.connect(self.db_path) as conn:
+            count = conn.execute("SELECT COUNT(*) FROM messages").fetchone()[0]
+            if count > 0:
+                return
 
-        logger.info(f"Worker {subagent_id} asked: {question[:50]}...")
-        return message_id
+            logger.info("Migrating from hub_state.json to SQLite...")
+            try:
+                with open(state_file, "r") as f:
+                    state = json.load(f)
+                    messages = state.get("messages", [])
+                    for msg in messages:
+                        conn.execute(
+                            "INSERT OR IGNORE INTO messages (id, type, from_agent, to_agent, payload, timestamp, read) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                            (msg.get("id"), msg.get("type"), msg.get("from"), msg.get("to"), json.dumps(msg.get("payload")), msg.get("timestamp"), 1)
+                        )
+                logger.info(f"Migrated {len(messages)} messages.")
+            except Exception as e:
+                logger.error(f"Migration failed: {e}")
 
-    def reply_to_worker(self, message_id: str, answer: str) -> bool:
-        """
-        Parent provides an answer to a pending question.
-        Returns True if successful.
-        """
-        now = datetime.now(timezone.utc).isoformat()
-
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                """UPDATE subagent_messages
-                   SET answer = ?, status = 'ANSWERED', updated_at = ?
-                   WHERE message_id = ? AND status = 'PENDING'""",
-                (answer, now, message_id)
-            )
-            success = cursor.rowcount > 0
-
-        if success:
-            logger.info(f"Replied to message {message_id}")
-        else:
-            logger.warning(f"No pending message found with id {message_id}")
-
-        return success
-
-    def check_answer(self, message_id: str) -> str | None:
-        """
-        Worker checks if their question has been answered.
-        Returns the answer if available, None if still pending.
-        Moves status to RETRIEVED on successful retrieval.
-        """
-        now = datetime.now(timezone.utc).isoformat()
-
-        with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT answer, status FROM subagent_messages WHERE message_id = ?",
-                (message_id,)
-            ).fetchone()
-
-            if not row:
-                return None
-
-            if row["status"] == "ANSWERED":
-                conn.execute(
-                    """UPDATE subagent_messages
-                       SET status = 'RETRIEVED', updated_at = ?
-                       WHERE message_id = ?""",
-                    (now, message_id)
-                )
-                return row["answer"]
-
-            return None
-
-    def get_pending_questions(self, run_id: str | None = None) -> list[dict]:
-        """
-        Get all pending questions, optionally filtered by run_id.
-        """
-        with self._get_connection() as conn:
-            if run_id:
-                rows = conn.execute(
-                    """SELECT message_id, run_id, subagent_id, question, created_at
-                       FROM subagent_messages
-                       WHERE status = 'PENDING' AND run_id = ?
-                       ORDER BY created_at ASC""",
-                    (run_id,)
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """SELECT message_id, run_id, subagent_id, question, created_at
-                       FROM subagent_messages
-                       WHERE status = 'PENDING'
-                       ORDER BY created_at ASC"""
-                ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    # ===== Hub Message Methods (existing functionality) =====
-
-    def send_hub_message(self, sender: str, recipient: str, msg_type: str, payload: dict) -> str:
-        """Send a message through the hub."""
+    def send_message(self, msg_type: str, from_agent: str, to_agent: str, payload: Dict) -> str:
+        import uuid
         msg_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
-
-        with self._get_connection() as conn:
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                """INSERT INTO hub_messages (id, sender, recipient, msg_type, payload, timestamp)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (msg_id, sender, recipient, msg_type, json.dumps(payload), now)
+                "INSERT INTO messages (id, type, from_agent, to_agent, payload, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
+                (msg_id, msg_type, from_agent, to_agent, json.dumps(payload), timestamp)
             )
-
         return msg_id
 
-    def receive_hub_messages(self, agent_id: str, since: str | None = None) -> list[dict]:
-        """Receive messages for an agent."""
-        with self._get_connection() as conn:
-            if since:
-                rows = conn.execute(
-                    """SELECT id, sender, recipient, msg_type, payload, timestamp
-                       FROM hub_messages
-                       WHERE recipient = ? AND read = 0 AND timestamp > ?
-                       ORDER BY timestamp ASC""",
-                    (agent_id, since)
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    """SELECT id, sender, recipient, msg_type, payload, timestamp
-                       FROM hub_messages
-                       WHERE recipient = ? AND read = 0
-                       ORDER BY timestamp ASC""",
-                    (agent_id,)
-                ).fetchall()
+    def get_messages(self, to_agent: str, since: Optional[str] = None) -> List[Dict]:
+        query = "SELECT * FROM messages WHERE to_agent = ? AND read = 0"
+        params = [to_agent]
+        if since:
+            query += " AND timestamp > ?"
+            params.append(since)
+        
+        results = []
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(query, params)
+            for row in cursor:
+                msg = dict(row)
+                msg["payload"] = json.loads(msg["payload"])
+                results.append(msg)
+        return results
 
-            # Mark as read
-            msg_ids = [row["id"] for row in rows]
-            if msg_ids:
-                placeholders = ",".join("?" * len(msg_ids))
-                conn.execute(
-                    f"UPDATE hub_messages SET read = 1 WHERE id IN ({placeholders})",
-                    msg_ids
-                )
+    def mark_read(self, message_id: str):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("UPDATE messages SET read = 1 WHERE id = ?", (message_id,))
 
-        return [
-            {
-                "id": row["id"],
-                "from": row["sender"],
-                "to": row["recipient"],
-                "type": row["msg_type"],
-                "payload": json.loads(row["payload"]),
-                "timestamp": row["timestamp"]
-            }
-            for row in rows
-        ]
-
-    def record_heartbeat(self, agent_id: str, progress: str | None = None) -> None:
-        """Record an agent heartbeat."""
-        now = datetime.now(timezone.utc).isoformat()
-
-        with self._get_connection() as conn:
+    def update_heartbeat(self, agent_id: str, progress: str):
+        timestamp = datetime.now(timezone.utc).isoformat()
+        with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                """INSERT OR REPLACE INTO agent_heartbeats (agent_id, last_seen, progress)
-                   VALUES (?, ?, ?)""",
-                (agent_id, now, progress)
+                "INSERT OR REPLACE INTO heartbeats (agent_id, progress, timestamp) VALUES (?, ?, ?)",
+                (agent_id, progress, timestamp)
             )
 
-    def get_agent_status(self) -> list[dict]:
-        """Get status of all known agents."""
-        with self._get_connection() as conn:
-            rows = conn.execute(
-                "SELECT agent_id, last_seen, progress FROM agent_heartbeats ORDER BY last_seen DESC"
-            ).fetchall()
-
-        return [dict(row) for row in rows]
-
-    def expire_old_messages(self, max_age_hours: int = 24) -> int:
-        """Mark old PENDING messages as EXPIRED. Returns count."""
-        cutoff = (datetime.now(timezone.utc) - timedelta(hours=max_age_hours)).isoformat()
-
-        with self._get_connection() as conn:
-            cursor = conn.execute(
-                """UPDATE subagent_messages
-                   SET status = 'EXPIRED'
-                   WHERE status = 'PENDING' AND created_at < ?""",
-                (cutoff,)
-            )
-            return cursor.rowcount
-
-
-# Global instance
-_message_bus: MessageBus | None = None
-
-def get_message_bus(db_path: Path | str | None = None) -> MessageBus:
-    """Get the global message bus instance."""
-    global _message_bus
-    if _message_bus is None:
-        _message_bus = MessageBus(db_path)
-    return _message_bus
+    def get_heartbeats(self) -> Dict[str, Dict]:
+        results = {}
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM heartbeats")
+            for row in cursor:
+                results[row["agent_id"]] = dict(row)
+        return results

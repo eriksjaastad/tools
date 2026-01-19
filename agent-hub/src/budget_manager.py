@@ -1,348 +1,115 @@
 """
-Budget Manager - Track and enforce cost limits.
-
-Separates local compute costs from cloud API costs.
-Provides pre-flight checks and real-time budget status.
+Budget Manager - Enforces session and daily limits.
 """
 
-import os
-import json
+import yaml
 import logging
-from datetime import datetime, timezone, date
 from pathlib import Path
-from typing import Any
-from dataclasses import dataclass, field, asdict
+from typing import Dict, Any, Optional, Tuple
+from .cost_logger import CostLogger
 
 logger = logging.getLogger(__name__)
 
-# Default budget file location
-DEFAULT_BUDGET_PATH = Path("data/budget_state.json")
-
-# Cost per 1M tokens (from ROADMAP.md)
-MODEL_COSTS = {
-    # Tier 1: Free (local)
-    "ollama/llama3.2:1b": {"input": 0.0, "output": 0.0, "tier": "local"},
-    "ollama/qwen2.5-coder:14b": {"input": 0.0, "output": 0.0, "tier": "local"},
-    "ollama/deepseek-r1-distill-qwen:32b": {"input": 0.0, "output": 0.0, "tier": "local"},
-    "local-fast": {"input": 0.0, "output": 0.0, "tier": "local"},
-    "local-coder": {"input": 0.0, "output": 0.0, "tier": "local"},
-    "local-reasoning": {"input": 0.0, "output": 0.0, "tier": "local"},
-
-    # Tier 2: Cheap (cloud)
-    "gemini/gemini-2.0-flash": {"input": 0.075, "output": 0.30, "tier": "cloud"},
-    "cloud-fast": {"input": 0.075, "output": 0.30, "tier": "cloud"},
-
-    # Tier 3: Premium (cloud)
-    "claude-3-5-sonnet-20241022": {"input": 3.00, "output": 15.00, "tier": "cloud"},
-    "cloud-premium": {"input": 3.00, "output": 15.00, "tier": "cloud"},
-}
-
-# Default limits
-DEFAULT_SESSION_LIMIT = float(os.getenv("UAS_SESSION_BUDGET", "1.00"))  # $1.00
-DEFAULT_DAILY_LIMIT = float(os.getenv("UAS_DAILY_BUDGET", "5.00"))  # $5.00
-
-
-@dataclass
-class BudgetState:
-    """Current budget state."""
-    session_id: str
-    session_start: str
-
-    # Cloud costs (actual dollars)
-    session_cloud_cost: float = 0.0
-    daily_cloud_cost: float = 0.0
-
-    # Local compute (tracked separately, not dollars)
-    session_local_calls: int = 0
-    session_local_tokens: int = 0
-
-    # Limits
-    session_limit: float = DEFAULT_SESSION_LIMIT
-    daily_limit: float = DEFAULT_DAILY_LIMIT
-
-    # Tracking
-    last_updated: str = ""
-    current_date: str = ""
-
-    # Escape tracking (tasks that went to cloud)
-    cloud_escapes: list = field(default_factory=list)
-
-    # Override support
-    override_active: bool = False
-    override_reason: str = ""
-    override_expires: str = ""  # ISO timestamp
-
-
-
 class BudgetManager:
     """
-    Manages cost budgets for agent operations.
-
-    Usage:
-        budget = BudgetManager()
-
-        # Check if we can afford a call
-        if budget.can_afford(model="cloud-fast", estimated_tokens=1000):
-            # Make the call
-            result = make_api_call(...)
-            budget.record_cost(model="cloud-fast", tokens_in=500, tokens_out=200)
-
-        # Get current status
-        status = budget.get_status()
-        print(f"Session: ${status['session_cloud_cost']:.4f} / ${status['session_limit']:.2f}")
+    FR-4.2, 4.3: Budget tracking and enforcement.
     """
 
-    def __init__(
-        self,
-        budget_path: Path | str | None = None,
-        session_id: str | None = None,
-        session_limit: float | None = None,
-        daily_limit: float | None = None,
-    ):
-        self.budget_path = Path(budget_path) if budget_path else DEFAULT_BUDGET_PATH
-        self.budget_path.parent.mkdir(parents=True, exist_ok=True)
+    def __init__(self, cost_logger: CostLogger, config_path: str = "config/budget.yaml"):
+        self.cost_logger = cost_logger
+        self.config_path = Path(config_path)
+        self.config = self._load_config()
+        self.overrides = {"amount": 0.0, "reason": ""}
 
-        # Load or create state
-        self._state = self._load_or_create_state(
-            session_id=session_id,
-            session_limit=session_limit,
-            daily_limit=daily_limit,
-        )
+    def _load_config(self) -> Dict:
+        if not self.config_path.exists():
+            return {"limits": {"session_usd": 5.0, "daily_usd": 10.0}}
+        with open(self.config_path, "r") as f:
+            return yaml.safe_load(f)
 
-    def _load_or_create_state(
-        self,
-        session_id: str | None,
-        session_limit: float | None,
-        daily_limit: float | None,
-    ) -> BudgetState:
-        """Load existing state or create new one."""
-        today = date.today().isoformat()
-
-        if self.budget_path.exists():
-            try:
-                data = json.loads(self.budget_path.read_text())
-                state = BudgetState(**data)
-
-                # Reset daily costs if new day
-                if state.current_date != today:
-                    state.daily_cloud_cost = 0.0
-                    state.current_date = today
-                    state.cloud_escapes = []
-
-                # Apply any overrides
-                if session_limit is not None:
-                    state.session_limit = session_limit
-                if daily_limit is not None:
-                    state.daily_limit = daily_limit
-
-                return state
-            except Exception as e:
-                logger.warning(f"Failed to load budget state: {e}, creating new")
-
-        # Create new state
-        import hashlib
-        import time
-        sid = session_id or hashlib.sha256(f"{time.time()}{os.getpid()}".encode()).hexdigest()[:12]
-
-        return BudgetState(
-            session_id=sid,
-            session_start=datetime.now(timezone.utc).isoformat(),
-            session_limit=session_limit or DEFAULT_SESSION_LIMIT,
-            daily_limit=daily_limit or DEFAULT_DAILY_LIMIT,
-            current_date=today,
-            last_updated=datetime.now(timezone.utc).isoformat(),
-        )
-
-    def _save_state(self) -> None:
-        """Persist state to disk."""
-        self._state.last_updated = datetime.now(timezone.utc).isoformat()
-        self.budget_path.write_text(json.dumps(asdict(self._state), indent=2))
-
-    def _get_model_cost(self, model: str) -> dict:
-        """Get cost info for a model, with fallback."""
-        if model in MODEL_COSTS:
-            return MODEL_COSTS[model]
-
-        # Try to match by prefix
-        for key, cost in MODEL_COSTS.items():
-            if model.startswith(key.split("/")[0]) or key in model:
-                return cost
-
-        # Default to cloud-fast pricing as conservative estimate
-        logger.warning(f"Unknown model {model}, assuming cloud pricing")
-        return {"input": 0.10, "output": 0.40, "tier": "cloud"}
-
-    def estimate_cost(self, model: str, tokens_in: int, tokens_out: int) -> float:
-        """Estimate cost for a call in dollars."""
-        cost_info = self._get_model_cost(model)
-
-        if cost_info["tier"] == "local":
+    def estimate_cost(self, model: str, input_tokens: int, estimated_output_tokens: int) -> float:
+        """
+        Estimate USD cost for a model call.
+        Prices from PRD:
+        - Local: $0
+        - Gemini Flash: $0.0001 per 1K tokens
+        - Claude Sonnet: $0.003 per 1K tokens
+        """
+        is_local = "ollama" in model or "local" in model
+        if is_local:
             return 0.0
+            
+        rate = 0.003  # Default to premium
+        if "gemini" in model.lower() and "flash" in model.lower():
+            rate = 0.0001
+        
+        total_tokens = input_tokens + estimated_output_tokens
+        return (total_tokens / 1000.0) * rate
 
-        input_cost = (tokens_in / 1_000_000) * cost_info["input"]
-        output_cost = (tokens_out / 1_000_000) * cost_info["output"]
-        return input_cost + output_cost
-
-    def can_afford(
-        self,
-        model: str,
-        estimated_tokens_in: int = 1000,
-        estimated_tokens_out: int = 500,
-    ) -> tuple[bool, str]:
+    def can_afford(self, estimated_cost: float) -> Dict[str, Any]:
         """
-        Check if we can afford a model call.
-
-        Returns:
-            (can_afford, reason)
+        Check if session/daily limits allow a call.
         """
-        # Check for global disable
-        if os.getenv("UAS_DISABLE_BUDGET_CHECK", "").lower() in ("1", "true", "yes"):
-            return True, "Budget checks disabled via UAS_DISABLE_BUDGET_CHECK"
-
-        # Check for active override
-        if self.is_override_active():
-            return True, f"Override active: {self._state.override_reason}"
-
-        cost_info = self._get_model_cost(model)
-
-
-        # Local models always allowed
-        if cost_info["tier"] == "local":
-            return True, "Local model - no cost"
-
-        estimated_cost = self.estimate_cost(model, estimated_tokens_in, estimated_tokens_out)
-
-        # Check session limit
-        if self._state.session_cloud_cost + estimated_cost > self._state.session_limit:
-            return False, f"Session limit exceeded (${self._state.session_cloud_cost:.4f} + ${estimated_cost:.4f} > ${self._state.session_limit:.2f})"
-
-        # Check daily limit
-        if self._state.daily_cloud_cost + estimated_cost > self._state.daily_limit:
-            return False, f"Daily limit exceeded (${self._state.daily_cloud_cost:.4f} + ${estimated_cost:.4f} > ${self._state.daily_limit:.2f})"
-
-        return True, f"Within budget (estimated: ${estimated_cost:.4f})"
-
-    def record_cost(
-        self,
-        model: str,
-        tokens_in: int,
-        tokens_out: int,
-        task_type: str | None = None,
-        was_fallback: bool = False,
-    ) -> float:
-        """
-        Record actual cost of a completed call.
-
-        Returns actual cost in dollars.
-        """
-        cost_info = self._get_model_cost(model)
-        actual_cost = self.estimate_cost(model, tokens_in, tokens_out)
-
-        if cost_info["tier"] == "local":
-            self._state.session_local_calls += 1
-            self._state.session_local_tokens += tokens_in + tokens_out
-        else:
-            self._state.session_cloud_cost += actual_cost
-            self._state.daily_cloud_cost += actual_cost
-
-            # Track cloud escapes
-            if was_fallback:
-                self._state.cloud_escapes.append({
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "model": model,
-                    "task_type": task_type,
-                    "cost": actual_cost,
-                    "tokens": tokens_in + tokens_out,
-                })
-
-        self._save_state()
-        return actual_cost
-
-    def get_status(self) -> dict:
-        """Get current budget status."""
+        totals = self.cost_logger.get_session_totals()
+        daily_totals = self.cost_logger.daily_totals
+        
+        session_limit = self.config.get("limits", {}).get("session_usd", 5.0)
+        daily_limit = self.config.get("limits", {}).get("daily_usd", 10.0)
+        
+        # Apply override
+        effective_session_limit = session_limit + self.overrides["amount"]
+        
+        current_session = totals["cloud_cost_usd"]
+        current_daily = daily_totals["cloud_cost_usd"]
+        
+        if (current_session + estimated_cost) > effective_session_limit:
+            return {
+                "allowed": False, 
+                "reason": f"Session budget exceeded (${current_session:.4f} + ${estimated_cost:.4f} > ${effective_session_limit:.2f})",
+                "remaining_budget": effective_session_limit - current_session
+            }
+            
+        if (current_daily + estimated_cost) > daily_limit:
+            return {
+                "allowed": False, 
+                "reason": f"Daily budget exceeded (${current_daily:.4f} + ${estimated_cost:.4f} > ${daily_limit:.2f})",
+                "remaining_budget": daily_limit - current_daily
+            }
+            
         return {
-            "session_id": self._state.session_id,
-            "session_cloud_cost": self._state.session_cloud_cost,
-            "session_limit": self._state.session_limit,
-            "session_remaining": self._state.session_limit - self._state.session_cloud_cost,
-            "session_percent_used": (self._state.session_cloud_cost / self._state.session_limit * 100) if self._state.session_limit > 0 else 0,
-            "daily_cloud_cost": self._state.daily_cloud_cost,
-            "daily_limit": self._state.daily_limit,
-            "daily_remaining": self._state.daily_limit - self._state.daily_cloud_cost,
-            "local_calls": self._state.session_local_calls,
-            "local_tokens": self._state.session_local_tokens,
-            "cloud_escapes": len(self._state.cloud_escapes),
-            "last_updated": self._state.last_updated,
+            "allowed": True, 
+            "reason": "OK",
+            "remaining_budget": effective_session_limit - current_session
         }
 
-    def get_cloud_escapes(self) -> list[dict]:
-        """Get list of tasks that escaped to cloud."""
-        return self._state.cloud_escapes.copy()
+    def record_spend(self, model: str, tokens: int, cost: float, is_local: bool):
+        # Delegate logging to cost_logger
+        # The prompt says 'record_spend' but cost_logger has 'log_call'
+        # I'll use input/output token split if possible, otherwise split 50/50 for logging
+        self.cost_logger.log_call(model, tokens // 2, tokens // 2, cost, is_local)
+        
+        # Check alerts
+        status = self.get_status()
+        if status["percent_used"] > self.config.get("alerts", {}).get("warn_at_percent", 80):
+            logger.warning(f"Budget Alert: {status['percent_used']}% of session limit used!")
 
-    def reset_session(self) -> None:
-        """Reset session costs (keeps daily)."""
-        self._state.session_cloud_cost = 0.0
-        self._state.session_local_calls = 0
-        self._state.session_local_tokens = 0
-        self._state.cloud_escapes = []
-        self._save_state()
+    def get_status(self) -> Dict[str, Any]:
+        totals = self.cost_logger.get_session_totals()
+        session_spent = totals["cloud_cost_usd"]
+        session_limit = self.config.get("limits", {}).get("session_usd", 5.0)
+        
+        daily_spent = self.cost_logger.daily_totals["cloud_cost_usd"]
+        daily_limit = self.config.get("limits", {}).get("daily_usd", 10.0)
+        
+        return {
+            "session_spent": session_spent,
+            "session_limit": session_limit,
+            "daily_spent": daily_spent,
+            "daily_limit": daily_limit,
+            "percent_used": (session_spent / session_limit * 100) if session_limit > 0 else 0
+        }
 
-    def request_override(
-        self,
-        reason: str,
-        duration_minutes: int = 60,
-    ) -> None:
-        """
-        Request a temporary budget override.
-
-        Args:
-            reason: Why the override is needed
-            duration_minutes: How long the override lasts
-        """
-        from datetime import timedelta
-
-        expires = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
-
-        self._state.override_active = True
-        self._state.override_reason = reason
-        self._state.override_expires = expires.isoformat()
-
-        logger.warning(f"Budget override activated: {reason} (expires: {expires})")
-        self._save_state()
-
-    def clear_override(self) -> None:
-        """Clear any active override."""
-        self._state.override_active = False
-        self._state.override_reason = ""
-        self._state.override_expires = ""
-        self._save_state()
-
-    def is_override_active(self) -> bool:
-        """Check if override is currently active."""
-        if not self._state.override_active:
-            return False
-
-        # Check expiration
-        if self._state.override_expires:
-            try:
-                expires = datetime.fromisoformat(self._state.override_expires.replace("Z", "+00:00"))
-                if datetime.now(timezone.utc) > expires:
-                    self.clear_override()
-                    return False
-            except Exception:
-                self.clear_override()
-                return False
-
-        return True
-
-
-
-# Global instance
-_budget_manager: BudgetManager | None = None
-
-def get_budget_manager() -> BudgetManager:
-    """Get the global budget manager instance."""
-    global _budget_manager
-    if _budget_manager is None:
-        _budget_manager = BudgetManager()
-    return _budget_manager
+    def override_budget(self, amount: float, reason: str):
+        self.overrides["amount"] += amount
+        self.overrides["reason"] = reason
+        logger.info(f"Budget override applied: ${amount} for '{reason}'")

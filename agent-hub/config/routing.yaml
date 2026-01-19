@@ -1,0 +1,45 @@
+model_tiers:
+  local:
+    models:
+      - ollama/qwen2.5-coder:14b
+      - ollama/deepseek-r1-distill:32b
+      - ollama/llama3.2:1b
+    cost_per_1k_tokens: 0.0
+    max_retries: 2
+    timeout_ms: 120000
+
+  cheap:
+    models:
+      - gemini/gemini-2.0-flash
+    cost_per_1k_tokens: 0.0001
+    max_retries: 1
+    timeout_ms: 60000
+
+  premium:
+    models:
+      - anthropic/claude-3-5-sonnet-20241022
+      - gemini/gemini-2.0-pro-exp-02-05
+    cost_per_1k_tokens: 0.003
+    max_retries: 1
+    timeout_ms: 120000
+
+task_routing:
+  triage:
+    simple: local
+    medium: local
+    complex: local
+  implementation:
+    simple: local
+    medium: local
+    complex: cheap
+  review:
+    simple: local
+    medium: cheap
+    complex: premium
+  judge:
+    simple: cheap
+    medium: premium
+    complex: premium
+
+fallback_enabled: true
+cooldown_seconds: 300

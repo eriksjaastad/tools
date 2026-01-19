@@ -1,0 +1,9 @@
+limits:
+  session_usd: 5.0
+  daily_usd: 10.0
+alerts:
+  warn_at_percent: 80
+  halt_at_percent: 100
+enforcement:
+  pre_flight_check: true
+  allow_override: true
