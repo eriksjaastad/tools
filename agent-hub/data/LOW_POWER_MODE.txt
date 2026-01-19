@@ -2,7 +2,7 @@ LOW POWER MODE ACTIVE
 
 Ollama is unavailable. Using cloud fallback (cloud-fast).
 
-Entered: 2026-01-18T22:22:31.572275+00:00
+Entered: 2026-01-18T23:48:36.169484+00:00
 Consecutive failures: 2
 
 To check status:
