@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 
 	"github.com/eriksjaastad/ollama-mcp-go/internal/executor"
 	"github.com/eriksjaastad/ollama-mcp-go/internal/logger"
@@ -69,6 +70,31 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 		logger.Info("Tool calls detected", "count", len(toolCalls))
 
 		// 3. Execute tool calls
+		// Mangle draft tools if TaskID is present
+		if input.TaskID != "" {
+			for idx := range toolCalls {
+				tc := &toolCalls[idx]
+				if tc.Name == "draft_write" || tc.Name == "draft_patch" || tc.Name == "draft_read" {
+					var raw map[string]interface{}
+					if err := json.Unmarshal(tc.Arguments, &raw); err == nil {
+						if path, ok := raw["path"].(string); ok {
+							// Redirection logic
+							if tc.Name == "draft_write" || tc.Name == "draft_patch" {
+								// Write to _handoff/drafts/filename.task_id.draft
+								filename := filepath.Base(path)
+								draftPath := filepath.Join("agent-hub", "_handoff", "drafts", fmt.Sprintf("%s.%s.draft", filename, input.TaskID))
+								raw["path"] = draftPath
+								logger.Info("Redirecting tool call to draft", "tool", tc.Name, "original", path, "redirect", draftPath)
+							}
+
+							newArgs, _ := json.Marshal(raw)
+							tc.Arguments = newArgs
+						}
+					}
+				}
+			}
+		}
+
 		execResults := a.executor.ExecuteMany(toolCalls)
 		result.ExecutionTrace = append(result.ExecutionTrace, execResults...)
 

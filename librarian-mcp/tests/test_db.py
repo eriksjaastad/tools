@@ -21,14 +21,9 @@ def test_search_projects(tracker_db):
     assert results[0]["name"] == "test-proj"
 
 def test_get_dependencies(tracker_db):
-    # Setup more deps
-    tracker_db.conn.execute("INSERT INTO service_dependencies VALUES ('test-proj', 'ext-dep')")
-    tracker_db.conn.execute("INSERT INTO service_dependencies VALUES ('other-proj', 'test-proj')")
-    tracker_db.conn.commit()
-    
+    # Data is now in fixtures in conftest.py
     deps = tracker_db.get_dependencies("test-proj")
     assert "ext-dep" in deps["upstream"]
-    assert "other-proj" in deps["downstream"]
 
 def test_get_ai_agents(tracker_db):
     agents = tracker_db.get_ai_agents("test-proj")

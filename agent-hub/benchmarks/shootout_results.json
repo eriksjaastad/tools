@@ -1,0 +1,137 @@
+{
+  "llama3.2:latest": {
+    "passed": 4,
+    "failed": 0,
+    "total_latency": 5349,
+    "tests": [
+      {
+        "model": "llama3.2:latest",
+        "task": "task_parsing",
+        "success": true,
+        "latency_ms": 2848,
+        "tokens_in": 86,
+        "tokens_out": 86,
+        "error": null
+      },
+      {
+        "model": "llama3.2:latest",
+        "task": "routing_decision",
+        "success": true,
+        "latency_ms": 289,
+        "tokens_in": 115,
+        "tokens_out": 3,
+        "error": null
+      },
+      {
+        "model": "llama3.2:latest",
+        "task": "judgment_call",
+        "success": true,
+        "latency_ms": 758,
+        "tokens_in": 83,
+        "tokens_out": 25,
+        "error": null
+      },
+      {
+        "model": "llama3.2:latest",
+        "task": "synthesis",
+        "success": true,
+        "latency_ms": 1454,
+        "tokens_in": 95,
+        "tokens_out": 58,
+        "error": null
+      }
+    ],
+    "success_rate": 1.0,
+    "avg_latency_ms": 1337.25
+  },
+  "qwen2.5-coder:14b": {
+    "passed": 4,
+    "failed": 0,
+    "total_latency": 17058,
+    "tests": [
+      {
+        "model": "qwen2.5-coder:14b",
+        "task": "task_parsing",
+        "success": true,
+        "latency_ms": 9175,
+        "tokens_in": 90,
+        "tokens_out": 56,
+        "error": null
+      },
+      {
+        "model": "qwen2.5-coder:14b",
+        "task": "routing_decision",
+        "success": true,
+        "latency_ms": 1073,
+        "tokens_in": 120,
+        "tokens_out": 3,
+        "error": null
+      },
+      {
+        "model": "qwen2.5-coder:14b",
+        "task": "judgment_call",
+        "success": true,
+        "latency_ms": 2221,
+        "tokens_in": 87,
+        "tokens_out": 22,
+        "error": null
+      },
+      {
+        "model": "qwen2.5-coder:14b",
+        "task": "synthesis",
+        "success": true,
+        "latency_ms": 4589,
+        "tokens_in": 99,
+        "tokens_out": 30,
+        "error": null
+      }
+    ],
+    "success_rate": 1.0,
+    "avg_latency_ms": 4264.5
+  },
+  "deepseek-r1:7b": {
+    "passed": 4,
+    "failed": 0,
+    "total_latency": 79142,
+    "tests": [
+      {
+        "model": "deepseek-r1:7b",
+        "task": "task_parsing",
+        "success": true,
+        "latency_ms": 25570,
+        "tokens_in": 64,
+        "tokens_out": 505,
+        "error": null
+      },
+      {
+        "model": "deepseek-r1:7b",
+        "task": "routing_decision",
+        "success": true,
+        "latency_ms": 14920,
+        "tokens_in": 94,
+        "tokens_out": 286,
+        "error": null
+      },
+      {
+        "model": "deepseek-r1:7b",
+        "task": "judgment_call",
+        "success": true,
+        "latency_ms": 22305,
+        "tokens_in": 61,
+        "tokens_out": 416,
+        "error": null
+      },
+      {
+        "model": "deepseek-r1:7b",
+        "task": "synthesis",
+        "success": true,
+        "latency_ms": 16347,
+        "tokens_in": 73,
+        "tokens_out": 300,
+        "error": null
+      }
+    ],
+    "success_rate": 1.0,
+    "avg_latency_ms": 19785.5
+  }
+}

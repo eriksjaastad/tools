@@ -58,23 +58,31 @@
 ### 🔴 CRITICAL - Must Do First
 
 #### Task Group 1: Cost Safeguards & Budget Protector
-- [ ] **Hard Ceiling on Expensive Models:** Implement a default block on high-cost models (Sonnet, Opus). These should require an explicit "unlocked" flag or be reserved for manual Cursor use only.
-- [ ] **Global Budget Protector:** Add a daily/monthly cost ceiling to `AIRouter` that stops cloud calls if a threshold is hit.
-- [ ] **Tier Restriction:** Ensure `auto` routing never hits "ultra-expensive" models without manual intervention.
+- [x] **Hard Ceiling on Expensive Models:** Implement a default block on high-cost models (Sonnet, Opus). (Done)
+- [x] **Global Budget Protector:** Add a daily/monthly cost ceiling to `AIRouter` that stops cloud calls if a threshold is hit. (Done)
+- [x] **Tier Restriction:** Ensure `auto` routing never hits "ultra-expensive" models without manual intervention. (Done)
 
 #### Task Group 2: Project Tracker Integration
-- [ ] Surface "Escalation Rate" in Dashboard.
-- [ ] Show model usage breakdown per project.
-- [ ] Display performance alerts (slow models, errors).
+- [x] Surface "Escalation Rate" in Dashboard. (Done via `get_escalation_summary`)
+- [x] Show model usage breakdown per project. (Done via `get_project_usage`)
+- [x] Display performance alerts (slow models, errors). (Done via `get_performance_summary`)
+
+---
+
+### 🟢 COMPLETED - Jan 19, 2026
+- [x] Implement a "Judge Model" for smarter escalation (small model evaluating response quality).
+- [x] Add support for Anthropic models.
+- [x] Replace keyword-based routing with task-type classification.
 
 ---
 
 ### 🟡 HIGH PRIORITY - Important
 
-#### Task Group 2: Routing Enhancements
-- [ ] Implement a "Judge Model" for smarter escalation (small model evaluating response quality).
-- [ ] Add support for Anthropic models.
-- [ ] Replace keyword-based routing with task-type classification (see notes below).
+### Phase 3: Advanced Intelligence (Jan 19, 2026)
+- [x] Implement a "Judge Model" for smarter escalation.
+- [x] Full support for Anthropic and Gemini models.
+- [x] Task-type classification routing (Extractive vs Generative).
+- [x] Budget protection and cost safeguards.
 
 ---
 

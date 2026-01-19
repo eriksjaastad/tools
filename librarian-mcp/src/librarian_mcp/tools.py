@@ -94,5 +94,37 @@ TOOLS: List[Dict] = [
             },
             "required": ["question"]
         }
+    },
+    {
+        "name": "librarian_remember",
+        "description": "Force the librarian to memorize a specific question-answer pair.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "question": {"type": "string", "description": "The question to remember"},
+                "answer": {"type": "string", "description": "The answer to cache"},
+                "tier": {"type": "string", "enum": ["cold", "warm", "hot"], "default": "warm"}
+            },
+            "required": ["question", "answer"]
+        }
+    },
+    {
+        "name": "librarian_forget",
+        "description": "Clear the librarian's memory for a specific query or topic.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Exact query to forget"},
+                "topic": {"type": "string", "description": "Topic keyword - forgets all related memories"}
+            }
+        }
+    },
+    {
+        "name": "librarian_memory_stats",
+        "description": "Get statistics about the librarian's memory usage.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {}
+        }
     }
 ]

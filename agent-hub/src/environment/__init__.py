@@ -1,4 +1,4 @@
-from .base import EnvironmentAdapter, detect_environment
+from .base import EnvironmentAdapter, detect_environment, Environment, get_adapter
 from .claude_cli import ClaudeCLIAdapter
 from .cursor import CursorAdapter
 from .antigravity import AntigravityAdapter
@@ -9,4 +9,6 @@ __all__ = [
     "ClaudeCLIAdapter",
     "CursorAdapter",
     "AntigravityAdapter",
+    "Environment",
+    "get_adapter",
 ]

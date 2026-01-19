@@ -9,6 +9,8 @@ description = "MCP server for project knowledge queries"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.0.0",
+    "numpy>=1.26.0",
+    "requests>=2.31.0",
 ]
 
 [project.optional-dependencies]

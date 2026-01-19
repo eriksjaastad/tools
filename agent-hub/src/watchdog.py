@@ -319,7 +319,7 @@ def trigger_halt(contract: Dict[str, Any], reason: str, triggered_by: str, contr
     write_halt_file(contract, reason, contract_path.parent)
 
 def write_halt_file(contract: Dict[str, Any], reason: str, handoff_dir: Path) -> None:
-    """Writes ERIK_HALT.md."""
+    """Writes HALT.md."""
     content = f"""# 🛑 AUTOMATION HALTED
 
 **Task:** {contract['task_id']}
@@ -332,7 +332,7 @@ def write_halt_file(contract: Dict[str, Any], reason: str, handoff_dir: Path) ->
 ## Action Required
 Review the task state and resolve the conflict.
 """
-    (handoff_dir / "ERIK_HALT.md").write_text(content, encoding="utf-8")
+    (handoff_dir / "HALT.md").write_text(content, encoding="utf-8")
 
 def write_stall_report(contract: Dict[str, Any], reason: str, handoff_dir: Path) -> None:
     """Writes STALL_REPORT.md for Strike 2 failures."""
@@ -420,8 +420,8 @@ def cleanup_task_files(task_id: str, handoff_dir: Path) -> None:
             if f.is_file():
                 os.replace(f, archive_dir / f.name)
     
-    # Remove ERIK_HALT.md if it exists (resolved)
-    halt_file = handoff_dir / "ERIK_HALT.md"
+    # Remove HALT.md if it exists (resolved)
+    halt_file = handoff_dir / "HALT.md"
     if halt_file.exists():
         halt_file.unlink()
 
@@ -483,6 +483,14 @@ def main(argv):
                 sys.exit(1)
             
             contract = load_contract(contract_path)
+            
+            # Check circuit breakers before transition
+            halt, reason = check_circuit_breakers(contract)
+            if halt:
+                trigger_halt(contract, reason, "circuit_breaker", contract_path)
+                print(f"HALT: {reason}")
+                sys.exit(1)
+
             old_status = contract["status"]
             
             # Initialize GitManager
@@ -563,6 +571,13 @@ def main(argv):
             
             contract = load_contract(contract_path)
             
+            # Check circuit breakers before transition
+            halt, reason = check_circuit_breakers(contract)
+            if halt:
+                trigger_halt(contract, reason, "circuit_breaker", contract_path)
+                print(f"HALT: {reason}")
+                sys.exit(1)
+
             if contract["status"] != "pending_implementer":
                 print(f"Error: Status is {contract['status']}, expected pending_implementer")
                 sys.exit(1)
@@ -691,6 +706,13 @@ def main(argv):
             
             contract = load_contract(contract_path)
             
+            # Check circuit breakers before transition
+            halt, reason = check_circuit_breakers(contract)
+            if halt:
+                trigger_halt(contract, reason, "circuit_breaker", contract_path)
+                print(f"HALT: {reason}")
+                sys.exit(1)
+
             if contract["status"] != "pending_local_review":
                 print(f"Error: Status is {contract['status']}, expected pending_local_review")
                 sys.exit(1)
@@ -778,6 +800,14 @@ def main(argv):
                 sys.exit(1)
             
             contract = load_contract(contract_path)
+            
+            # Check circuit breakers
+            halt, reason = check_circuit_breakers(contract)
+            if halt:
+                trigger_halt(contract, reason, "circuit_breaker", contract_path)
+                print(f"HALT: {reason}")
+                sys.exit(1)
+
             report_path = Path(contract["handoff_data"].get("judge_report_json", "_handoff/JUDGE_REPORT.json"))
             
             if report_path.exists():

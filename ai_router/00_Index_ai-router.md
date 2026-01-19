@@ -9,11 +9,12 @@ tags:
   - api/openai
   - arch/pipeline
 created: 2026-01-05
+updated: 2026-01-19
 ---
 
 # AI Router
 
-Smart routing between local and cloud AI models based on complexity heuristics, context window size, and cost optimization. It automatically escalates from free local models (Ollama) to cheap cloud models (gpt-4o-mini) and finally to expensive models (gpt-4o) when needed.
+Smart routing between local and cloud AI models based on task type classification, token budget estimation, and cost optimization. Features a budget protector, hard ceiling on expensive models, judge model for quality evaluation, and multi-provider support (OpenAI, Anthropic, Google).
 
 ## Key Components
 
@@ -39,12 +40,20 @@ Smart routing between local and cloud AI models based on complexity heuristics, 
 
 ## Status
 
-**Tags:** #map/project #p/ai-router  
+**Tags:** #map/project #p/ai-router
 **Type:** #type/infrastructure
-**Status:** #status/active  
-**Last Major Update:** January 2026  
+**Status:** ✅ Core Complete (Critical/High items done)
+**Last Major Update:** January 19, 2026
 **Priority:** #mission-critical
-**Infrastructure:** #api/openai #local-first
+**Infrastructure:** #api/openai #api/anthropic #api/google #local-first
+
+### Recent Completions (Jan 19, 2026)
+- ✅ Budget Protector (daily limits, spend tracking)
+- ✅ Hard Ceiling on expensive models (requires `unlocked=True`)
+- ✅ Task Classification (extractive vs generative routing)
+- ✅ Judge Model (local quality evaluation before escalation)
+- ✅ Multi-Provider Support (Anthropic, Google Gemini)
+- ✅ Dashboard Methods (escalation rate, project usage, performance alerts)
 
 ---
 

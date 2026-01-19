@@ -57,6 +57,24 @@ MODEL_CONFIG = {
     "gemini-1.5-flash": ModelInfo("gemini-1.5-flash", 1000000, "google", "Fast large context model"),
 }
 
+# Cost per 1M tokens in USD
+MODEL_COSTS = {
+    "gpt-4o": {"input": 2.50, "output": 10.00},
+    "gpt-4o-mini": {"input": 0.15, "output": 0.60},
+    "o1-mini": {"input": 3.00, "output": 12.00},
+    "claude-3-5-sonnet-20241022": {"input": 3.00, "output": 15.00},
+    "claude-3-5-haiku-20241022": {"input": 0.25, "output": 1.25},
+    "claude-3-opus-20240229": {"input": 15.00, "output": 75.00},
+    "gemini-1.5-flash": {"input": 0.075, "output": 0.30},
+    "gemini-2.0-flash-exp": {"input": 0.0, "output": 0.0},
+}
+
+EXPENSIVE_MODELS = {
+    "claude-3-opus-20240229",
+    "claude-3-5-sonnet-20241022",
+    "gpt-4o"
+}
+
 
 class AIRouterError(Exception):
     """Base exception for AI Router failures"""
@@ -80,6 +98,7 @@ class AIResult:
     duration_ms: int
     timed_out: bool = False
     error: Optional[str] = None
+    status_note: str = ""
 
 
 class TelemetryLogger:
@@ -89,11 +108,12 @@ class TelemetryLogger:
         self.log_path = os.path.join(log_dir, "telemetry.jsonl")
         os.makedirs(log_dir, exist_ok=True)
 
-    def log(self, result: AIResult, prompt_len: int):
+    def log(self, result: AIResult, prompt_len: int, project: str = "default"):
         """Log a result to a JSONL file with file locking for concurrent safety"""
         entry = asdict(result)
         entry["timestamp"] = datetime.utcnow().isoformat() + "Z"
         entry["prompt_len"] = prompt_len
+        entry["project"] = project
 
         # Performance ceiling detection
         entry["performance_warning"] = (
@@ -115,6 +135,54 @@ class TelemetryLogger:
             # Log to stderr instead of silently swallowing
             import sys
             print(f"[AIRouter] Telemetry write failed: {e}", file=sys.stderr)
+
+
+class BudgetProtector:
+    """Tracks and enforces model spend limits"""
+    
+    def __init__(self, log_dir: str = "logs", daily_limit: float = 5.0):
+        self.budget_path = os.path.join(log_dir, "budget.json")
+        self.daily_limit = daily_limit
+        self._ensure_log_dir(log_dir)
+
+    def _ensure_log_dir(self, log_dir: str):
+        os.makedirs(log_dir, exist_ok=True)
+        if not os.path.exists(self.budget_path):
+            with open(self.budget_path, "w") as f:
+                json.dump({"date": datetime.utcnow().date().isoformat(), "spent": 0.0}, f)
+
+    def _get_budget(self) -> Dict[str, Any]:
+        try:
+            with open(self.budget_path, "r") as f:
+                data = json.load(f)
+                today = datetime.utcnow().date().isoformat()
+                if data.get("date") != today:
+                    return {"date": today, "spent": 0.0}
+                return data
+        except Exception:
+            return {"date": datetime.utcnow().date().isoformat(), "spent": 0.0}
+
+    def _save_budget(self, data: Dict[str, Any]):
+        with open(self.budget_path, "w") as f:
+            # File locking for concurrent budget updates
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            try:
+                json.dump(data, f)
+            finally:
+                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+    def can_afford(self, estimated_cost: float) -> bool:
+        budget = self._get_budget()
+        return (budget["spent"] + estimated_cost) <= self.daily_limit
+
+    def record_spend(self, cost: float):
+        budget = self._get_budget()
+        budget["spent"] += cost
+        self._save_budget(budget)
+
+    def get_remaining(self) -> float:
+        budget = self._get_budget()
+        return max(0.0, self.daily_limit - budget["spent"])
 
 
 class AIRouter:
@@ -205,60 +273,83 @@ class AIRouter:
         self.cheap_model = cheap_model
         self.expensive_model = expensive_model
         self.telemetry = TelemetryLogger()
+        self.budget = BudgetProtector()
 
     def route(self, messages: list[dict[str, str]]) -> Tier:
         """
-        Determine routing tier based on message complexity and length.
+        Determine routing tier based on message complexity, length, and task type.
         
-        Args:
-            messages: Chat messages to analyze
-            
-        Returns:
-            Recommended tier: "local", "cheap", or "expensive"
+        Logic:
+        - Extractive + short -> local
+        - Extractive + long -> cheap
+        - Generative + short -> cheap
+        - Generative + long -> expensive
         """
         content = "\n".join(m.get("content", "") for m in messages)
-        n = len(content)
         
-        # Token estimation heuristics:
-        # - English prose: ~4 chars/token
-        # - Code with symbols: ~3 chars/token
-        # - Mixed content: use 3.5 as compromise
-        # For safety, use conservative estimate (fewer chars per token = more tokens)
-        has_code = "```" in content or "def " in content or "function " in content
-        chars_per_token = 3 if has_code else 4
-        est_tokens = n // chars_per_token
-
-        # Obvious "heavy" signals - need expensive models
-        heavy_signals = [
-            "architecture", "refactor", "design doc", "threat model",
-            "optimize", "benchmark", "edge cases", "security", "performance"
-        ]
+        # 1. Classify task type
+        task_type = self._classify_task(content)
         
-        # If it's a massive context (> 100k tokens), we prefer cloud models 
-        # that handle large windows gracefully unless we know the local model can handle it.
-        if est_tokens > 100000:
-            return "expensive"
-
+        # 2. Estimate total token budget
+        input_tokens = len(content) // 4
+        expected_output = self._estimate_output_length(content)
+        total_budget = input_tokens + expected_output
+        
+        # 3. Handle obvious "heavy" signals manually for now as backup
+        heavy_signals = ["architecture", "threat model", "security audit"]
         if any(s in content.lower() for s in heavy_signals):
             return "expensive"
-        
-        # Code blocks suggest complexity
-        if "```" in content:
-            # If it's a lot of code, go expensive
-            if n > 2000:
+
+        # 4. Routing rule implementation
+        if task_type == "extractive":
+            if total_budget < 1000:
+                return "local"
+            elif total_budget < 8000:
+                return "cheap"
+            else:
                 return "expensive"
-            return "cheap"
+        else:  # generative
+            if total_budget < 500:
+                return "cheap"  # Never local for generative
+            else:
+                return "expensive"
+
+    def _classify_task(self, content: str) -> Literal["extractive", "generative"]:
+        """Classify if task is expansion (generative) or compression (extractive)"""
+        content_lower = content.lower()
         
-        # Long prompts need better models
-        if n > 8000:
-            return "expensive"
+        # Extractive signals
+        extractive_keywords = [
+            "classify", "spam", "yes or no", "extract", "email address",
+            "summarize", "tl;dr", "tldr", "fix this bug", "check this code",
+            "convert", "json to yaml", "is there any", "match", "find"
+        ]
+        
+        # Generative signals
+        generative_keywords = [
+            "write", "draft", "create", "design", "explain", "brainstorm",
+            "ideas for", "implementation", "plan", "scaffold", "describe"
+        ]
+        
+        # Check counts
+        e_score = sum(1 for kw in extractive_keywords if kw in content_lower)
+        g_score = sum(1 for kw in generative_keywords if kw in content_lower)
+        
+        if e_score > g_score:
+            return "extractive"
+        return "generative"
 
-        # Medium length or questions
-        if n > 2000 or "?" in content:
-            return "cheap"
-
-        # Short, simple tasks
-        return "local"
+    def _estimate_output_length(self, content: str) -> int:
+        """Estimate expected output tokens based on prompt clues"""
+        content_lower = content.lower()
+        
+        if any(kw in content_lower for kw in ["short", "brief", "one sentence", "yes or no", "classify"]):
+            return 50
+        if any(kw in content_lower for kw in ["comprehensive", "in detail", "full code", "blog post", "essay"]):
+            return 1000
+        if "write a" in content_lower or "implement" in content_lower:
+            return 500
+        return 200
 
     def chat(
         self,
@@ -268,9 +359,11 @@ class AIRouter:
         model_override: Optional[str] = None,
         escalate: bool = True,
         strict: bool = False,
+        project: str = "default",
+        unlocked: bool = False,
     ) -> AIResult:
         """
-        Send a chat request with smart routing.
+        Send a chat request with smart routing and cost safeguards.
         
         Args:
             messages: OpenAI-format chat messages
@@ -278,6 +371,8 @@ class AIRouter:
             model_override: Force a specific model (bypasses routing)
             escalate: If True, escalate to better models on failures
             strict: If True, raise AIModelError if final result is poor/error
+            project: Current project name for tracking
+            unlocked: If True, allow expensive models even if auto-routing hits them
             
         Returns:
             AIResult with response text and metadata
@@ -290,8 +385,13 @@ class AIRouter:
         prompt_len = sum(len(m.get("content", "")) for m in messages)
         
         def finalize(result: AIResult) -> AIResult:
-            """Log and optionally raise on failure"""
-            self.telemetry.log(result, prompt_len)
+            """Log, record spend, and optionally raise on failure"""
+            self.telemetry.log(result, prompt_len, project=project)
+            
+            # Record cost
+            cost = self._estimate_call_cost(result, prompt_len)
+            self.budget.record_spend(cost)
+            
             if strict and (result.error or self._should_escalate(result)):
                 raise AIModelError(
                     f"AI Router failed to get a valid response from {result.model}: "
@@ -300,8 +400,22 @@ class AIRouter:
                 )
             return result
 
+        # Check daily budget before even starting
+        if not self.budget.can_afford(0.01): # check if we have at least 1 cent left
+             return AIResult(
+                text="", provider="local", model="N/A", tier="auto", duration_ms=0,
+                error=f"Budget exceeded. Remaining: ${self.budget.get_remaining():.4f}"
+            )
+
         # Handle model override
         if model_override:
+            # Check if override model is restricted
+            if model_override in EXPENSIVE_MODELS and not unlocked:
+                return AIResult(
+                    text="", provider="local", model=model_override, tier="expensive", duration_ms=0,
+                    error=f"Model '{model_override}' is restricted. Set unlocked=True to use."
+                )
+
             # Determine provider based on model name or config
             config = self.model_config.get(model_override)
             provider = config.provider if config else None
@@ -319,6 +433,11 @@ class AIRouter:
 
         # Auto-route based on complexity
         chosen = self.route(messages) if tier == "auto" else tier
+        
+        # Cost safeguard: Downshift expensive to cheap if not unlocked
+        if chosen == "expensive" and not unlocked:
+             chosen = "cheap"
+             print("[AIRouter] Downshifting 'expensive' to 'cheap' (set unlocked=True to bypass)")
 
         # Try local first, escalate if needed
         if chosen == "local":
@@ -337,55 +456,90 @@ class AIRouter:
                     ))
             else:
                 res = self._call_local(messages, self.local_model, tier="local")
-                if not escalate or not self._should_escalate(res):
+                res.status_note = status_note
+                if not escalate or not self._should_escalate(res, messages):
                     return finalize(res)
 
                 # Escalate: local -> cheap
                 res2 = self._call_openai(messages, self.cheap_model, tier="cheap")
-                if not self._should_escalate(res2):
+                res2.status_note = status_note + " (escalated from local)"
+                if not self._should_escalate(res2, messages):
                     return finalize(res2)
 
-                # Escalate: cheap -> expensive
                 res3 = self._call_openai(messages, self.expensive_model, tier="expensive")
+                res3.status_note = status_note + " (escalated from local/cheap)"
                 return finalize(res3)
 
         # Try cheap, escalate to expensive if needed
         if chosen == "cheap":
             res = self._call_openai(messages, self.cheap_model, tier="cheap")
+            res.status_note = status_note
             if not escalate or not self._should_escalate(res):
                 return finalize(res)
             res2 = self._call_openai(messages, self.expensive_model, tier="expensive")
+            res2.status_note = status_note + " (escalated from cheap)"
             return finalize(res2)
 
         # Go straight to expensive
         res = self._call_openai(messages, self.expensive_model, tier="expensive")
+        res.status_note = status_note
         return finalize(res)
 
-    def _should_escalate(self, res: AIResult) -> bool:
+    def _should_escalate(self, res: AIResult, original_messages: list[dict[str, str]]) -> bool:
         """
         Decide if a response is bad enough to escalate to a better model.
-        
-        Args:
-            res: Result from previous model call
-            
-        Returns:
-            True if should escalate to better model
         """
         # Always escalate errors and timeouts
         if res.error or res.timed_out:
             return True
         
-        # Lightweight "bad answer" detection
-        # TODO: Replace with a judge model for better detection
-        too_short = len(res.text.strip()) < 40
-        
-        # Common refusal patterns
+        # 1. Check for obvious refusals
         refusal_like = (
             "i can't" in res.text.lower() and 
-            "here's" not in res.text.lower()
+            "here's" not in res.text.lower() and
+            len(res.text) < 100
         )
+        if refusal_like:
+            return True
+
+        # 2. Heuristic check for length
+        if len(res.text.strip()) < 20:
+            return True
+
+        # 3. Judge Model Check (only for auto-routing, don't judge if model was overridden)
+        if "auto" in res.status_note or res.tier == "local":
+            prompt_summary = "\n".join(m.get("content", "")[:500] for m in original_messages)
+            if not self._judge_response(prompt_summary, res.text):
+                print(f"[AIRouter] Judge rejected response from {res.model}. Escalating...")
+                return True
         
-        return too_short or refusal_like
+        return False
+
+    def _judge_response(self, prompt_summary: str, response: str) -> bool:
+        """Use a small model to judge if the response quality is acceptable"""
+        if not self._is_ollama_available():
+            return True # Assume OK if can't judge
+            
+        judge_prompt = f"""Evaluate the Following AI Response:
+Task Summary: {prompt_summary}
+Response: {response}
+
+Is the response helpful and relevant to the task? 
+Answer only 'YES' or 'NO'. 
+Failure to answer in this format is unacceptable.
+"""
+        # Call local model without escalation or project tracking to avoid overhead/recursion
+        t0 = time.time()
+        try:
+            completion = self.local_client.chat.completions.create(
+                model=self.local_model,
+                messages=[{"role": "user", "content": judge_prompt}],
+                max_tokens=10
+            )
+            judge_text = completion.choices[0].message.content or "NO"
+            return "YES" in judge_text.upper()
+        except Exception:
+            return True # Default to pass on error
 
     def _call_local(
         self,
@@ -706,7 +860,39 @@ class AIRouter:
             summary.append("\nPerformance Ceilings Hit:")
             summary.extend(warnings[-5:]) # show last 5
             
+        summary.append(f"\nEscalation Rate: {self.get_escalation_summary()}")
+        summary.append(f"Budget Remaining: ${self.budget.get_remaining():.4f}")
+            
         return "\n".join(summary)
+
+    def get_project_usage(self) -> str:
+        """Break down model usage by project"""
+        if not os.path.exists(self.telemetry.log_path):
+            return "No usage data."
+            
+        projects = {}
+        
+        try:
+            with open(self.telemetry.log_path, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    project = entry.get("project", "default")
+                    if project not in projects:
+                        projects[project] = {"calls": 0, "models": {}}
+                    
+                    projects[project]["calls"] += 1
+                    model = entry["model"]
+                    projects[project]["models"][model] = projects[project]["models"].get(model, 0) + 1
+        except Exception as e:
+            return f"Error: {e}"
+            
+        lines = ["--- Project Usage Breakdown ---"]
+        for p, data in projects.items():
+            lines.append(f"\nProject: {p} ({data['calls']} calls)")
+            for model, count in sorted(data["models"].items(), key=lambda x: x[1], reverse=True):
+                lines.append(f"  - {model}: {count}")
+        
+        return "\n".join(lines)
 
     def get_local_models(self) -> list[str]:
         """List models available in the local Ollama instance"""
@@ -730,3 +916,46 @@ class AIRouter:
         except Exception:
             return False
 
+    def _estimate_call_cost(self, result: AIResult, input_chars: int) -> float:
+        """Estimate the cost of a model call in USD"""
+        if result.provider == "local" or result.error:
+            return 0.0
+            
+        costs = MODEL_COSTS.get(result.model)
+        if not costs:
+            return 0.0
+            
+        input_tokens = input_chars // 4
+        output_tokens = len(result.text) // 4
+        
+        # Always use at least 1 token if response was non-empty
+        if output_tokens == 0 and result.text:
+            output_tokens = 1
+            
+        return (input_tokens * costs["input"] + output_tokens * costs["output"]) / 1000000
+
+    def get_escalation_summary(self) -> str:
+        """Calculate the rate of model escalations"""
+        if not os.path.exists(self.telemetry.log_path):
+            return "No escalation data."
+            
+        total_calls = 0
+        escalations = 0
+        
+        try:
+            with open(self.telemetry.log_path, "r") as f:
+                for line in f:
+                    entry = json.loads(line)
+                    total_calls += 1
+                    # A call is an escalation if it's the result of a retry flow
+                    # In our telemetry, we could track this, but for now we'll 
+                    # approximate by looking for local/cheap models that took long
+                    # or cloud calls where auto-routing was used.
+                    if entry["tier"] != "local" and "auto" in entry.get("status_note", ""):
+                        escalations += 1
+        except Exception:
+            pass
+            
+        if total_calls == 0: return "0%"
+        rate = (escalations / total_calls) * 100
+        return f"{rate:.1f}% ({escalations}/{total_calls})"

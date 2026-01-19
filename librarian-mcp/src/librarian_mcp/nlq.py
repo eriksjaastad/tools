@@ -14,17 +14,25 @@ async def process_question(question: str, context: Optional[str], db: TrackerDB,
         if any(word in q for word in ["what is", "tell me about", "info on"]):
             # Extract potential project name (simplistic)
             for word in q.split():
-                project = db.get_project(word.strip("?.,"))
-                if project:
-                    deps = db.get_dependencies(project["name"])
-                    return f"Project: {project['name']}\nDescription: {project['description']}\nStatus: {project['status']}\nDepends on: {', '.join(deps['upstream']) or 'Nothing'}"
+                try:
+                    project = db.get_project(word.strip("?.,"))
+                    if project:
+                        deps = db.get_dependencies(project["name"])
+                        return f"Project: {project['name']}\nDescription: {project['description']}\nStatus: {project['status']}\nDepends on: {', '.join(deps['upstream']) or 'Nothing'}"
+                except Exception as e:
+                    logger.warning(f"Project lookup failed for {word}: {e}")
+                    continue
 
         # Intent: Get dependencies / "what depends on X"
         if any(word in q for word in ["depends on", "dependency", "upstream", "downstream"]):
             for word in q.split():
-                deps = db.get_dependencies(word.strip("?.,"))
-                if deps["upstream"] or deps["downstream"]:
-                    return f"Dependencies for {word}:\nUpstream: {', '.join(deps['upstream'])}\nDownstream: {', '.join(deps['downstream'])}"
+                try:
+                    deps = db.get_dependencies(word.strip("?.,"))
+                    if deps["upstream"] or deps["downstream"]:
+                        return f"Dependencies for {word}:\nUpstream: {', '.join(deps['upstream'])}\nDownstream: {', '.join(deps['downstream'])}"
+                except Exception as e:
+                    logger.warning(f"Dependency lookup failed for {word}: {e}")
+                    continue
 
         # Intent: Find connection / "how does X relate to Y"
         if "relate" in q or "connect" in q or "link" in q:

@@ -31,10 +31,15 @@ class MCPClient:
             return
 
         try:
-            # Spawn Node.js server
-            # We use 'node' command, assuming it is in PATH
+            # Detect server type based on extension
+            if str(self.server_path).endswith(".js"):
+                cmd = ["node", str(self.server_path)]
+            else:
+                # Assume it's a binary
+                cmd = [str(self.server_path)]
+
             self._process = subprocess.Popen(
-                ["node", str(self.server_path)],
+                cmd,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=sys.stderr, # Forward stderr for debugging
@@ -72,6 +77,34 @@ class MCPClient:
 
     def __enter__(self):
         self.connect()
+        if self._process.poll() is None:
+            # Send initialize request
+            init_req = {
+                "jsonrpc": "2.0",
+                "id": 0,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {},
+                    "clientInfo": {"name": "agent-hub-client", "version": "1.0.0"}
+                }
+            }
+            try:
+                self._process.stdin.write(json.dumps(init_req) + "\n")
+                self._process.stdin.flush()
+                # Read response (discard for now)
+                self._process.stdout.readline()
+                
+                # Send initialized notification
+                init_notif = {
+                    "jsonrpc": "2.0",
+                    "method": "notifications/initialized"
+                }
+                self._process.stdin.write(json.dumps(init_notif) + "\n")
+                self._process.stdin.flush()
+            except Exception as e:
+                logger.error(f"Failed to initialize MCP: {e}")
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

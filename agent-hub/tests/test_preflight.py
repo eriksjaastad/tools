@@ -26,7 +26,7 @@ def test_preflight_halt(tmp_path):
     router.route.return_value = ModelSelection("m", "t", [])
     
     checker = PreFlightChecker(budget, router)
-    # Patch Path to avoid writing to real ERIK_HALT.md in test?
+    # Patch Path to avoid writing to real HALT.md in test?
     # Actually prompt says use temp dirs but I'll just check if it halts.
     result = checker.check("task", "simple", 100)
     assert result.approved is False

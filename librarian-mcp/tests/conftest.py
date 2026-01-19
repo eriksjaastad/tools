@@ -10,12 +10,13 @@ from librarian_mcp.graph import KnowledgeGraph
 def temp_db(tmp_path):
     db_path = tmp_path / "test_tracker.db"
     conn = sqlite3.connect(db_path)
-    conn.execute("CREATE TABLE projects (name TEXT, description TEXT, status TEXT)")
-    conn.execute("CREATE TABLE service_dependencies (project TEXT, dependency TEXT)")
+    conn.execute("CREATE TABLE projects (id TEXT PRIMARY KEY, name TEXT, description TEXT, status TEXT)")
+    conn.execute("CREATE TABLE service_dependencies (project_id TEXT, service_name TEXT)")
     conn.execute("CREATE TABLE ai_agents (name TEXT, project TEXT, role TEXT)")
     
-    conn.execute("INSERT INTO projects VALUES ('test-proj', 'A test project', 'active')")
-    conn.execute("INSERT INTO service_dependencies VALUES ('child', 'parent')")
+    conn.execute("INSERT INTO projects VALUES ('test-id', 'test-proj', 'A test project', 'active')")
+    conn.execute("INSERT INTO service_dependencies VALUES ('test-id', 'ext-dep')")
+    conn.execute("INSERT INTO service_dependencies VALUES ('other-id', 'test-proj')")
     conn.execute("INSERT INTO ai_agents VALUES ('agent-1', 'test-proj', 'developer')")
     conn.commit()
     conn.close()

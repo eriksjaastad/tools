@@ -19,7 +19,7 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 # Halt file location
-HALT_FILE = Path(os.getenv("UAS_HALT_FILE", "ERIK_HALT.md"))
+HALT_FILE = Path(os.getenv("UAS_HALT_FILE", "HALT.md"))
 
 
 class HaltReason(Enum):
@@ -154,7 +154,7 @@ class CircuitBreaker:
         return self._state.is_halted
 
     def trigger_halt(self, reason: HaltReason, context: str) -> None:
-        """Trigger a halt and create ERIK_HALT.md."""
+        """Trigger a halt and create HALT.md."""
         self._state.is_halted = True
         self._state.halt_reason = reason.value
         self._save_state()

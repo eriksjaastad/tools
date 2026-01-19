@@ -558,10 +558,10 @@ Implementation:
 
 4. Integrate with agent loop:
    - Before each model call, run pre-flight
-   - If not approved, create ERIK_HALT.md with context
+   - If not approved, create HALT.md with context
    - Halt execution
 
-5. ERIK_HALT.md format:
+5. HALT.md format:
    ```markdown
    # Agent Halt: Budget Exceeded
    
@@ -585,7 +585,7 @@ Do NOT run tests - that will be done during code review.
 ### Definition of Done
 - [ ] PreFlightChecker implemented
 - [ ] Integrates with budget and router
-- [ ] ERIK_HALT.md created on budget halt
+- [ ] HALT.md created on budget halt
 - [ ] Override flow works
 - [ ] Code compiles/runs without errors
 

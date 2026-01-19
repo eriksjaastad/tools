@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "ollama": {
-      "command": "node",
-      "args": ["/Users/eriksjaastad/projects/_tools/ollama-mcp/dist/server.js"]
-    }
-  }
-}
-
