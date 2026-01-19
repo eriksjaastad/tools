@@ -95,12 +95,7 @@ func (s *Sandbox) SafeWrite(path string, content []byte) error {
 }
 ```
 
-**Note:** Missing `fsync` before rename. On most filesystems this is fine, but for guaranteed durability add:
-```go
-if err := tmpFile.Sync(); err != nil { return err }
-```
-
-This is a **minor** issue, not a blocker.
+**Update:** Added `tmpFile.Sync()` before rename for guaranteed durability. **FIXED.**
 
 #### HTTP Client Configuration
 
@@ -312,61 +307,37 @@ Tests exist for all major components:
 
 ### Issues Found
 
-#### 1. Nil String Handling is Hacky
+#### 1. Nil String Handling ~~is Hacky~~ **FIXED**
 
-`internal/tools/hub.go:209-214`:
-```go
-// Clean up nil strings from map conversion
-if msg.ID == "<nil>" {
-    msg.ID = ""
-}
-if msg.Timestamp == "<nil>" {
-    msg.Timestamp = ""
-}
-```
-
-This is a smell. The root cause is using `fmt.Sprintf("%v", rawMsg["id"])` which converts `nil` to `"<nil>"`.
-
-**Fix:** Check for nil before conversion:
+Now uses proper type assertions instead of `fmt.Sprintf`:
 ```go
 if v, ok := rawMsg["id"].(string); ok {
     msg.ID = v
 }
 ```
 
-**Severity:** Low. Works but ugly.
+**Status:** Resolved.
 
-#### 2. State File Path is Hardcoded to CWD
+#### 2. State File Path ~~is Hardcoded to CWD~~ **FIXED**
 
-`internal/tools/hub.go:44-47`:
+Now properly handles `os.Getwd()` error and supports `HUB_STATE_DIR` environment variable:
 ```go
 func NewMessageHub() *MessageHub {
-    cwd, _ := os.Getwd()
+    stateDir := os.Getenv("HUB_STATE_DIR")
+    if stateDir == "" {
+        cwd, err := os.Getwd()
+        if err != nil {
+            cwd = "."
+        }
+        stateDir = filepath.Join(cwd, "_handoff")
+    }
     return &MessageHub{
-        stateFile: filepath.Join(cwd, "_handoff", "hub_state.json"),
+        stateFile: filepath.Join(stateDir, "hub_state.json"),
     }
 }
 ```
 
-**Issue:** Ignores error from `os.Getwd()`.
-
-**Fix:**
-```go
-cwd, err := os.Getwd()
-if err != nil {
-    cwd = "."  // or return error
-}
-```
-
-**Severity:** Low. `os.Getwd()` rarely fails.
-
-#### 3. No Environment Variable for State Path
-
-Unlike ollama-mcp-go which reads `SANDBOX_ROOT`, claude-mcp-go hardcodes `_handoff/hub_state.json`.
-
-**Suggestion:** Add `HUB_STATE_DIR` environment variable for configurability.
-
-**Severity:** Low. Can be addressed later.
+**Status:** Resolved. Both error handling and configurability addressed.
 
 ---
 
@@ -428,19 +399,17 @@ Both servers return errors with context and use proper JSON-RPC error codes.
 
 ## Required Actions
 
-### None (No Blockers)
+### All Issues Resolved
 
-Both servers are production-ready.
+| Priority | Server | Issue | Status |
+|----------|--------|-------|--------|
+| Low | ollama-mcp-go | Missing `fsync` in atomic write | **FIXED** - Added `tmpFile.Sync()` before rename |
+| Low | claude-mcp-go | Hacky nil string handling | **FIXED** - Now uses type assertions |
+| Low | claude-mcp-go | `os.Getwd()` error ignored | **FIXED** - Error now handled |
+| Low | claude-mcp-go | Hardcoded state path | **FIXED** - Added `HUB_STATE_DIR` env var |
+| Low | ollama-mcp-go | Missing `prompts/list` | Deferred - not blocking |
 
-### Suggested Improvements (Optional)
-
-| Priority | Server | Issue | Fix |
-|----------|--------|-------|-----|
-| Low | ollama-mcp-go | Missing `fsync` in atomic write | Add `tmpFile.Sync()` before rename |
-| Low | claude-mcp-go | Hacky nil string handling | Use type assertion instead of Sprintf |
-| Low | claude-mcp-go | `os.Getwd()` error ignored | Handle error |
-| Low | claude-mcp-go | Hardcoded state path | Add `HUB_STATE_DIR` env var |
-| Low | ollama-mcp-go | Missing `prompts/list` | Add for feature parity |
+Both servers are now production-ready with all identified issues addressed.
 
 ---
 
