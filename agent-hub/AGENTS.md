@@ -63,14 +63,14 @@ Workers write to a sandbox. The Floor Manager reviews the diff and decides wheth
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Draft Tools (ollama-mcp)
+### Draft Tools (ollama-mcp-go)
 
 | Tool | Purpose |
 |------|---------|
-| `ollama_request_draft` | Copy source file to sandbox for editing |
-| `ollama_write_draft` | Write/update draft content in sandbox |
-| `ollama_read_draft` | Read current draft content |
-| `ollama_submit_draft` | Submit draft for Floor Manager review |
+| `draft_read` | Read file from sandbox |
+| `draft_write` | Write/update file in sandbox |
+| `draft_patch` | Apply line-based patches to file |
+| `draft_list` | List files in sandbox |
 
 ### Draft Gate (agent-hub)
 

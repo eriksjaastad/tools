@@ -13,8 +13,8 @@ Before configuring Cursor MCP, ensure you have:
 
 2. **MCP servers built** - Run in the `_tools` directory:
    ```bash
-   cd claude-mcp && npm install && npm run build
-   cd ../ollama-mcp && npm install && npm run build
+   cd claude-mcp-go && go build -o bin/claude-mcp-go ./cmd/server
+   cd ../ollama-mcp-go && go build -o bin/server ./cmd/server
    ```
 
 3. **Ollama running** (for ollama-mcp):
@@ -34,12 +34,13 @@ Copy the JSON below and follow the instructions in the next section to apply it.
 {
   "mcpServers": {
     "claude-hub": {
-      "command": "node",
-      "args": ["<ABSOLUTE_PATH>/claude-mcp/dist/server.js"]
+      "command": "<ABSOLUTE_PATH>/claude-mcp-go/bin/claude-mcp-go",
+      "args": []
     },
     "ollama": {
-      "command": "node", 
-      "args": ["<ABSOLUTE_PATH>/ollama-mcp/dist/server.js"]
+      "command": "<ABSOLUTE_PATH>/ollama-mcp-go/bin/server", 
+      "args": [],
+      "env": {"SANDBOX_ROOT": "<ABSOLUTE_PATH>"}
     }
   }
 }
@@ -53,11 +54,12 @@ Copy the JSON below and follow the instructions in the next section to apply it.
    - **claude-hub**:
      - Name: `claude-hub`
      - Type: `command`
-     - Command: `node <ABSOLUTE_PATH>/claude-mcp/dist/server.js`
+     - Command: `<ABSOLUTE_PATH>/claude-mcp-go/bin/claude-mcp-go`
    - **ollama**:
      - Name: `ollama`
      - Type: `command`
-     - Command: `node <ABSOLUTE_PATH>/ollama-mcp/dist/server.js`
+     - Command: `<ABSOLUTE_PATH>/ollama-mcp-go/bin/server`
+     - Environment: `SANDBOX_ROOT=<ABSOLUTE_PATH>`
 
 Currently, the most reliable way to configure MCP is through the Cursor UI as described above. 
 
@@ -82,8 +84,8 @@ Once added, verify the connection:
 ## 4. Troubleshooting
 
 - **Server Status "Disconnected"**: 
-  - Ensure you have built the servers: `npm run build` in both `claude-mcp/` and `ollama-mcp/`.
-  - Check that the absolute path in the `args` is correct.
+  - Ensure you have built the servers: `go build` in both `claude-mcp-go/` and `ollama-mcp-go/`.
+  - Check that the absolute path in the command is correct.
   - Check the Cursor "Output" panel (select "MCP" from the dropdown) for specific error messages.
 - **Node Not Found**: If the `node` command fails, provide the absolute path to your node executable (e.g., `/usr/local/bin/node`).
 - **Tool List Missing**: If tools are not appearing, try clicking the "Refresh" icon next to the MCP server in Cursor settings.
