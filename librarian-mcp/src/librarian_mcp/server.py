@@ -209,6 +209,7 @@ async def handle_call_tool(
                 if embedding:
                     memory_store.add_search_result(question, answer, embedding, {"tier": tier})
                 logger.info(f"Cached new answer for query: {question[:50]}")
+                memory_db.evict_if_needed()
             
             return [types.TextContent(type="text", text=answer)]
 
@@ -252,6 +253,25 @@ async def handle_call_tool(
             res += f"Cache Hit Rate: {stats['cache_hit_rate']:.2%}\n"
             res += f"Avg Compute Time: {stats['avg_compute_time_ms']:.1f}ms"
             return [types.TextContent(type="text", text=res)]
+
+        elif name == "librarian_feedback":
+            query = arguments["query"]
+            helpful = arguments["helpful"]
+            q_hash = get_query_hash(query)
+
+            stats = memory_db.get_query_stats(q_hash)
+            if not stats:
+                return [types.TextContent(type="text", text="Query not found in memory.")]
+
+            current_conf = stats.get("confidence") or 0.5
+            delta = 0.1 if helpful else -0.1
+            new_conf = max(0.0, min(1.0, current_conf + delta))
+
+            with memory_db._get_conn() as conn:
+                conn.execute("UPDATE query_memory SET confidence = ? WHERE query_hash = ?", (new_conf, q_hash))
+                conn.commit()
+
+            return [types.TextContent(type="text", text=f"Feedback recorded. Confidence: {new_conf:.2f}")]
 
         else:
             raise ValueError(f"Unknown tool: {name}")

@@ -92,8 +92,8 @@ cp config/feature_flags.yaml.example config/feature_flags.yaml
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `HUB_SERVER_PATH` | Yes | Path to claude-mcp server.js |
-| `MCP_SERVER_PATH` | Yes | Path to ollama-mcp server.js |
+| `HUB_SERVER_PATH` | Yes | Path to claude-mcp-go binary |
+| `MCP_SERVER_PATH` | Yes | Path to ollama-mcp-go binary |
 | `HANDOFF_DIR` | No | Contract/artifact directory (default: `_handoff`) |
 | `PROJECTS_ROOT` | No | Base path for portable prompts |
 | `AGENT_HUB_DRY_RUN` | No | Set to `1` for dry-run mode |
@@ -224,5 +224,5 @@ All transitions and messages logged to `_handoff/transition.ndjson`.
 
 ## Related Projects
 
-- [claude-mcp](../claude-mcp) - MCP hub for agent communication
-- [ollama-mcp](../ollama-mcp) - MCP server for local Ollama models
+- [claude-mcp-go](../claude-mcp-go) - MCP hub for agent communication (Go)
+- [ollama-mcp-go](../ollama-mcp-go) - MCP server for local Ollama models (Go)

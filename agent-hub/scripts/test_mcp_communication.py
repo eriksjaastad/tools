@@ -99,14 +99,14 @@ EXPECTED_CLAUDE_TOOLS = [
 ]
 
 EXPECTED_OLLAMA_TOOLS = [
-    "ollama_list_models",
     "ollama_run",
     "ollama_run_many",
-    "ollama_request_draft",
-    "ollama_write_draft",
-    "ollama_read_draft",
-    "ollama_submit_draft",
-    "ollama_agent_run",
+    "ollama_list_models",
+    "draft_read",
+    "draft_write",
+    "draft_patch",
+    "draft_list",
+    "agent_loop",
 ]
 
 def main():
@@ -115,10 +115,10 @@ def main():
     args = parser.parse_args()
 
     root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-    claude_mcp_dir = os.path.join(root_dir, "claude-mcp")
-    ollama_mcp_dir = os.path.join(root_dir, "ollama-mcp")
+    claude_mcp_bin = os.path.join(root_dir, "claude-mcp-go", "bin", "claude-mcp-go")
+    ollama_mcp_bin = os.path.join(root_dir, "ollama-mcp-go", "bin", "server")
     agent_hub_dir = os.path.join(root_dir, "agent-hub")
-    handoff_dir = os.path.join(claude_mcp_dir, "_handoff")
+    handoff_dir = os.path.join(agent_hub_dir, "_handoff")
     hub_state_path = os.path.join(handoff_dir, "hub_state.json")
 
     print("=== MCP Communication E2E Test ===")
@@ -131,7 +131,7 @@ def main():
 
     try:
         # 1. Test claude-mcp
-        claude_server = MCPServerProcess(["node", "dist/server.js"], claude_mcp_dir, args.verbose)
+        claude_server = MCPServerProcess([claude_mcp_bin], root_dir, args.verbose)
         claude_server.start()
         
         # Test tools/list
@@ -201,7 +201,7 @@ def main():
         if run_test("claude-mcp", test_hub_state_file): passed_tests += 1
 
         # 2. Test ollama-mcp
-        ollama_server = MCPServerProcess(["node", "dist/server.js"], ollama_mcp_dir, args.verbose)
+        ollama_server = MCPServerProcess([ollama_mcp_bin], root_dir, args.verbose)
         ollama_server.start()
         
         def test_ollama_list():

@@ -55,6 +55,18 @@ type GenerateResponse struct {
 	TotalDuration int64  `json:"total_duration"`
 }
 
+// Model represents a local Ollama model.
+type Model struct {
+	Name       string `json:"name"`
+	ModifiedAt string `json:"modified_at"`
+	Size       int64  `json:"size"`
+}
+
+// ListModelsResponse from /api/tags
+type ListModelsResponse struct {
+	Models []Model `json:"models"`
+}
+
 // ChatRequest represents the payload for /api/chat.
 type ChatRequest struct {
 	Model    string          `json:"model"`
@@ -180,4 +192,31 @@ func (c *Client) RunMany(ctx context.Context, requests []GenerateRequest, concur
 	}
 
 	return results, nil
+}
+
+// ListModels returns all locally available models.
+func (c *Client) ListModels(ctx context.Context) (*ListModelsResponse, error) {
+	url := fmt.Sprintf("%s/api/tags", c.BaseURL)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ollama error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var listResp ListModelsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&listResp); err != nil {
+		return nil, err
+	}
+
+	return &listResp, nil
 }

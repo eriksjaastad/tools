@@ -56,6 +56,7 @@ func main() {
 	// 4. Register Tools in Executor
 	toolExecutor.Register("ollama_run", runHandler.Run)
 	toolExecutor.Register("ollama_run_many", runHandler.RunMany)
+	toolExecutor.Register("ollama_list_models", runHandler.ListModels)
 	toolExecutor.Register("draft_read", draftHandler.Read)
 	toolExecutor.Register("draft_write", draftHandler.Write)
 	toolExecutor.Register("draft_patch", draftHandler.Patch)
@@ -106,6 +107,17 @@ func main() {
 			"required": ["requests"]
 		}`),
 		Handler: runHandler.RunMany,
+	})
+
+	mcpHandler.RegisterTool(mcp.Tool{
+		Name:        "ollama_list_models",
+		Description: "List all locally available Ollama models",
+		InputSchema: json.RawMessage(`{
+			"type": "object",
+			"properties": {},
+			"required": []
+		}`),
+		Handler: runHandler.ListModels,
 	})
 
 	mcpHandler.RegisterTool(mcp.Tool{
