@@ -126,5 +126,17 @@ TOOLS: List[Dict] = [
             "type": "object",
             "properties": {}
         }
+    },
+    {
+        "name": "librarian_feedback",
+        "description": "Provide feedback on answer quality to adjust confidence.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "The question that was answered"},
+                "helpful": {"type": "boolean", "description": "Was the answer helpful?"}
+            },
+            "required": ["query", "helpful"]
+        }
     }
 ]

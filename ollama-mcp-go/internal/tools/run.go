@@ -99,3 +99,16 @@ func (h *RunHandler) RunMany(params json.RawMessage) (any, error) {
 		"responses": results,
 	}, nil
 }
+
+// ListModels returns available Ollama models.
+func (h *RunHandler) ListModels(params json.RawMessage) (any, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	resp, err := h.client.ListModels(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list models: %w", err)
+	}
+
+	return resp.Models, nil
+}

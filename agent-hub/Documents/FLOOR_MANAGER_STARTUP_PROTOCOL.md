@@ -75,9 +75,10 @@ ollama_run(model, prompt)
 ```
 
 For V4 tasks, Worker will use:
-- `ollama_request_draft` - Get file to sandbox
-- `ollama_write_draft` - Edit in sandbox
-- `ollama_submit_draft` - Submit for your review
+- `draft_read` - Read file from sandbox
+- `draft_write` - Write file to sandbox
+- `draft_patch` - Apply line-based patches
+- `draft_list` - List sandbox files
 
 ### 4. Gate the Draft
 When you receive `DRAFT_READY`:

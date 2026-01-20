@@ -7,6 +7,8 @@ from pathlib import Path
 
 logger = logging.getLogger("librarian-mcp")
 
+MAX_CACHED = int(os.environ.get("LIBRARIAN_MAX_CACHED", "10000"))
+
 class MemoryDB:
     def __init__(self, db_path: Optional[str] = None):
         if db_path is None:
@@ -174,3 +176,20 @@ class MemoryDB:
             pattern = f"%{topic}%"
             conn.execute("UPDATE query_memory SET answer = NULL, cached_at = NULL, tier = 'cold' WHERE query_text LIKE ?", (pattern,))
             conn.commit()
+
+    def evict_if_needed(self):
+        """Evict oldest warm/cold entries if over limit."""
+        with self._get_conn() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM query_memory WHERE answer IS NOT NULL").fetchone()[0]
+            if count > MAX_CACHED:
+                to_evict = count - MAX_CACHED + 100
+                conn.execute("""
+                    DELETE FROM query_memory WHERE id IN (
+                        SELECT id FROM query_memory
+                        WHERE answer IS NOT NULL AND tier IN ('cold', 'warm')
+                        ORDER BY last_asked ASC
+                        LIMIT ?
+                    )
+                """, (to_evict,))
+                conn.commit()
+                logger.info(f"Evicted {to_evict} stale memories")

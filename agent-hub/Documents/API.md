@@ -83,8 +83,8 @@ if errors:
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `agent_id` | str | `"floor_manager"` | Agent identifier |
-| `hub_path` | Path | None | Path to claude-mcp server |
-| `mcp_server_path` | Path | None | Path to ollama-mcp server |
+| `hub_path` | Path | None | Path to claude-mcp-go binary |
+| `mcp_server_path` | Path | None | Path to ollama-mcp-go binary |
 | `handoff_dir` | Path | `_handoff` | Contract directory |
 | `heartbeat_interval` | int | 30 | Seconds between heartbeats |
 | `message_poll_interval` | int | 5 | Seconds between message checks |

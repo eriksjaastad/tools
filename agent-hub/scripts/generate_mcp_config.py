@@ -16,21 +16,26 @@ from typing import Any
 
 # Base MCP server definitions (source of truth)
 MCP_SERVERS = {
-    "agent-hub": {
-        "command": "node",
-        "args": [str(Path(__file__).parent.parent / "mcp" / "hub_server.js")],
-        "description": "Agent Hub - orchestration and messaging",
-    },
     "ollama-mcp": {
-        "command": "node",
-        "args": [str(Path.home() / "projects" / "_tools" / "ollama-mcp" / "dist" / "index.js")],
-        "description": "Ollama MCP - local model inference",
+        "command": str(Path.home() / "projects" / "_tools" / "ollama-mcp-go" / "bin" / "server"),
+        "args": [],
+        "env": {"SANDBOX_ROOT": str(Path.home() / "projects")},
+        "description": "Ollama MCP - local model inference via Go server",
+    },
+    "claude-mcp": {
+        "command": str(Path.home() / "projects" / "_tools" / "claude-mcp-go" / "bin" / "claude-mcp-go"),
+        "args": [],
+        "description": "Claude MCP - hub messaging and review tools",
     },
     "librarian-mcp": {
-        "command": "python",
-        "args": ["-m", "librarian_mcp"],
-        "description": "Librarian MCP - knowledge graph queries (Phase 7)",
-        "enabled": False,  # Not yet implemented
+        "command": str(Path.home() / "projects" / "_tools" / "librarian-mcp" / "venv" / "bin" / "python3"),
+        "args": ["-m", "librarian_mcp.server"],
+        "cwd": str(Path.home() / "projects" / "_tools" / "librarian-mcp" / "src"),
+        "env": {
+            "LIBRARIAN_PROJECTS_ROOT": str(Path.home() / "projects"),
+        },
+        "description": "Librarian MCP - knowledge graph queries for project discovery",
+        "enabled": True,
     },
 }
 
@@ -40,10 +45,15 @@ def generate_claude_cli_config() -> dict:
     servers = {}
     for name, config in MCP_SERVERS.items():
         if config.get("enabled", True):
-            servers[name] = {
+            server_config = {
                 "command": config["command"],
                 "args": config["args"],
             }
+            if "env" in config:
+                server_config["env"] = config["env"]
+            if "cwd" in config:
+                server_config["cwd"] = config["cwd"]
+            servers[name] = server_config
     return {"mcpServers": servers}
 
 
@@ -52,10 +62,15 @@ def generate_cursor_config() -> dict:
     servers = {}
     for name, config in MCP_SERVERS.items():
         if config.get("enabled", True):
-            servers[name] = {
+            server_config = {
                 "command": config["command"],
                 "args": config["args"],
             }
+            if "env" in config:
+                server_config["env"] = config["env"]
+            if "cwd" in config:
+                server_config["cwd"] = config["cwd"]
+            servers[name] = server_config
     return {"mcpServers": servers}
 
 
@@ -65,12 +80,17 @@ def generate_antigravity_config() -> dict:
     servers = []
     for name, config in MCP_SERVERS.items():
         if config.get("enabled", True):
-            servers.append({
+            server_config = {
                 "name": name,
                 "command": config["command"],
                 "args": config["args"],
                 "description": config.get("description", ""),
-            })
+            }
+            if "env" in config:
+                server_config["env"] = config["env"]
+            if "cwd" in config:
+                server_config["cwd"] = config["cwd"]
+            servers.append(server_config)
     return {"servers": servers}
 
 
