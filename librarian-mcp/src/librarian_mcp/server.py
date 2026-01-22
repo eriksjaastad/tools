@@ -108,7 +108,7 @@ async def handle_call_tool(
             res = f"Project: {info['name']}\nDescription: {info.get('description')}\nStatus: {info.get('status')}\n"
             res += f"Upstream Dependencies: {', '.join(deps['upstream']) or 'None'}\n"
             res += f"Downstream Dependencies: {', '.join(deps['downstream']) or 'None'}\n"
-            res += f"AI Agents: {', '.join(a['name'] for a in agents) or 'None'}"
+            res += f"AI Agents: {', '.join(a['agent_name'] for a in agents) or 'None'}"
             return [types.TextContent(type="text", text=res)]
 
         elif name == "find_related_docs":

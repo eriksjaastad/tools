@@ -79,7 +79,11 @@ class TrackerDB:
     def get_ai_agents(self, project: Optional[str] = None) -> List[Dict]:
         if not self.conn: self.connect()
         if project:
-            cursor = self.conn.execute("SELECT * FROM ai_agents WHERE project = ?", (project,))
+            # Join with projects table to filter by project name (not ID)
+            cursor = self.conn.execute(
+                "SELECT ai_agents.* FROM ai_agents JOIN projects ON ai_agents.project_id = projects.id WHERE projects.name = ?",
+                (project,)
+            )
         else:
             cursor = self.conn.execute("SELECT * FROM ai_agents")
         return [dict(row) for row in cursor.fetchall()]
