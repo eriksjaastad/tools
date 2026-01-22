@@ -1,29 +1,21 @@
-# _tools - Master TODO (Updated 2026-01-20)
+# _tools - Master TODO (Updated 2026-01-22)
 
-> **Status:** MCP Migration Complete. Librarian Adaptive Memory Implemented.
-> **Assignee:** Floor Manager
+> **Status:** MCP Migration Complete. Librarian Adaptive Memory Implemented. All core tasks finished.
 
 ---
 
-## Completed Tasks
+## Pending Tasks (Backlog)
 
-- [x] **Task 1: Fix generate_mcp_config.py** - Paths updated to Go binaries, added Librarian MCP.
-- [x] **Task 2: Fix test_mcp_communication.py** - Binary paths and tool names updated.
-- [x] **Task 3: Fix .env.example** - Updated with Go binary paths.
-- [x] **Task 4: Update watchdog.py MCP paths** - Integrated with central config.
-- [x] **Task 5: Update dispatch_task.py** - Path to Go binary verified.
-- [x] **Task 6: Update documentation** - Paths and tool names synced across docs.
-- [x] **Task 7: Delete HALT.md** - Budget unblocked.
-- [x] **Task 8: Create .env from example** - Done and verified.
-- [x] **Task 9: Write E2E pipeline test** - `tests/test_e2e_mcp_pipeline.py` created and passing.
-- [x] **Task 10: Verify Ollama integration** - Verified with `ollama_run` and `ollama_list_models`.
-- [x] **Task 11: Add `ollama_list_models` tool to Go server** - Implemented and tested.
-- [x] **Phase 1-3: Librarian Adaptive Memory** - Core implementation, feedback tools, and eviction logic finished.
-- [x] **Phase 4: Librarian Validation & Polish** - Benchmarks, threshold tuning (0.25), and documentation complete.
+### AI Router Optimizations
+- [ ] **Flat Root Transition** - Move contents of `ai_router/Documents/core/` to `ai_router/Documents/` root and delete the core directory.
+- [ ] **Response Caching** - Implement response caching for identical prompts in AI Router.
+- [ ] **Streaming Support** - Add streaming support for local and cloud models in AI Router.
+
+---
+
+## Completed Tasks (Recent)
+
+- [x] **Librarian Polish Phase** - Benchmarks, threshold tuning (0.25), and documentation complete.
 - [x] **Maintenance** - Transition monitoring, eviction logic audit, and skill.json sync complete.
-
----
-
-## Remaining / Next Steps
-
-*All current tasks complete. System is in Polish/Maintenance mode.*
+- [x] **MCP Migration** - All tools migrated to Go/Python MCP architecture.
+- [x] **Ollama Integration** - Local model routing and tool support verified.
