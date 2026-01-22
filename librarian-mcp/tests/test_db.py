@@ -28,4 +28,4 @@ def test_get_dependencies(tracker_db):
 def test_get_ai_agents(tracker_db):
     agents = tracker_db.get_ai_agents("test-proj")
     assert len(agents) == 1
-    assert agents[0]["name"] == "agent-1"
+    assert agents[0]["agent_name"] == "agent-1"
