@@ -14,8 +14,6 @@ status: #status/active
 | File | Description |
 | :--- | :--- |
 | [[CLAUDE.md]] | > **Purpose:** Instructions for AI reviewers working with Erik's tools ecosystem |
-| [[CODE_REVIEW_LIBRARIAN_PHASE_2_3.md]] | Code Review: Librarian Adaptive Memory (Phase 2 & 3) |
-| [[CODE_REVIEW_NOTES.md]] | Code Review Notes |
 | [[Documents/ANTIGRAVITY_ORCHESTRATION_PATTERNS.md]] | Antigravity Multi-Agent Orchestration Patterns |
 | [[Documents/CODE_QUALITY_STANDARDS.md]] | Code Quality Standards |
 | [[Documents/FEATURE_FLAG_POLICY.md]] | Feature Flag Policy: Unified Agent System |
@@ -24,36 +22,39 @@ status: #status/active
 | [[LIBRARIAN_ADAPTIVE_MEMORY_VISION.md]] | Librarian Adaptive Memory - Vision & Analysis |
 | [[LICENSE]] | No description available. |
 | [[PRD_UNIFIED_AGENT_SYSTEM.md]] | PRD: Unified Agent System |
-| [[PROMPT_EXPAND_SSH_TOOL_ANTIGRAVITY.md]] | Prompt: Expand SSH Tool for Antigravity |
-| [[PROMPT_RESEARCH_ANTIGRAVITY_PATTERNS.md]] | Prompt: Research Antigravity Multi-Agent Orchestration Patterns |
 | [[README.md]] | Developer Tools (_tools) |
+| [[TODO.md]] | > **Status:** MCP Migration Complete. Librarian Adaptive Memory Implemented. |
 | [[UAS_BUILD_LOG.md]] | UAS Build Log - High-Throughput Execution |
 | [[UAS_IMPLEMENTATION_PROMPTS.md]] | Unified Agent System Implementation Prompts |
+| [[agent-hub/00_Index_agent-hub.md]] | 00_Index: Agent Hub |
 | [[agent-hub/AGENTS.md]] | > **Read the ecosystem constitution first:** `project-scaffolding/AGENTS.md` |
 | [[agent-hub/BENCHMARK_RESULTS_2026-01-19.md]] | Benchmark Results - January 19, 2026 |
 | [[agent-hub/Documents/API.md]] | > Quick reference for key classes and functions. For architecture details, see `AGENTS.md`. |
 | [[agent-hub/Documents/CURSOR_MCP_SETUP.md]] | Cursor MCP Configuration Guide |
 | [[agent-hub/Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md]] | Floor Manager Startup Protocol |
-| [[agent-hub/HALT.md]] | **Time:** 2026-01-19T18:08:20.209156+00:00 |
 | [[agent-hub/README.md]] | Agent Hub - Unified Agent System |
-| [[agent-hub/TODO.md]] | > **What this is:** An autonomous multi-agent orchestration system with proposal-driven workflows. |
-| [[agent-hub/_handoff/TASK_ADD_DISPATCHER_VERSION.md]] | Task: Add Version Comment to Agent Loop |
-| [[agent-hub/_handoff/TASK_AGENT_LOOP_DISPATCHER.md]] | Task: Build Agent Loop Dispatcher (V4 Phase 15) |
-| [[agent-hub/_handoff/TASK_LIBRARIAN_ADAPTIVE_MEMORY_P1.md]] | TASK: Librarian Adaptive Memory - Phase 1 Foundation |
-| [[agent-hub/_handoff/TASK_PHASE_0_P1_LITELLM_REFS.md]] | Task: Create References Directory and Extract LiteLLM Patterns |
-| [[agent-hub/_handoff/TASK_PIN_DEPENDENCIES.md]] | Task: Pin Dependencies in national-cattle-brands |
-| [[agent-hub/_handoff/TASK_VERSION_HEADER_001.md]] | Task: Add Version Comment to Agent Loop |
-| [[agent-hub/_handoff/V4_TEST_PROPOSAL.md]] | V4 Test Proposal: Add Timestamp Utility |
 | [[agent-hub/_handoff/archive/AGENTHUB-0117170249-ADD-VERSION-FLAG-TO-/JUDGE_REPORT.json]] | No description available. |
 | [[agent-hub/_handoff/archive/AGENTHUB-0117170249-ADD-VERSION-FLAG-TO-/TASK_CONTRACT.json]] | No description available. |
 | [[agent-hub/_handoff/archive/AGENTHUB-0117170249-ADD-VERSION-FLAG-TO-/TASK_CONTRACT.json.lock]] | No description available. |
+| [[agent-hub/_handoff/archive/PROPOSAL_FINAL_PROSPECTOR-0119224743-SET-UP-PROSPECTOR-PR.md]] | Proposal: Set Up Prospector Project Structure and Core Data Models |
+| [[agent-hub/_handoff/archive/PROSPECTOR_BUILD_COMPLETE.md]] | PROSPECTOR BUILD COMPLETE |
 | [[agent-hub/_handoff/archive/STALL_REPORT_version_flag.md]] | 🛑 STALL REPORT (Strike 2) |
+| [[agent-hub/_handoff/archive/TASK_ADD_DISPATCHER_VERSION.md]] | Task: Add Version Comment to Agent Loop |
+| [[agent-hub/_handoff/archive/TASK_AGENT_LOOP_DISPATCHER.md]] | Task: Build Agent Loop Dispatcher (V4 Phase 15) |
+| [[agent-hub/_handoff/archive/TASK_CONTRACT.json]] | No description available. |
 | [[agent-hub/_handoff/archive/TASK_FIX_BENCHMARK_ERRORS.md]] | TASK: Fix MessageBus and Benchmark AttributeErrors |
+| [[agent-hub/_handoff/archive/TASK_LIBRARIAN_ADAPTIVE_MEMORY_P1.md]] | TASK: Librarian Adaptive Memory - Phase 1 Foundation |
+| [[agent-hub/_handoff/archive/TASK_PHASE_0_P1_LITELLM_REFS.md]] | Task: Create References Directory and Extract LiteLLM Patterns |
+| [[agent-hub/_handoff/archive/TASK_PIN_DEPENDENCIES.md]] | Task: Pin Dependencies in national-cattle-brands |
+| [[agent-hub/_handoff/archive/TASK_PROSPECTOR_FULL_BUILD.md]] | TASK: Prospector Full Build - All 17 Tasks |
+| [[agent-hub/_handoff/archive/TASK_PROSPECTOR_MODELS_P1.md]] | TASK: Prospector Data Models - Phase 1 Foundation |
+| [[agent-hub/_handoff/archive/TASK_VERSION_HEADER_001.md]] | Task: Add Version Comment to Agent Loop |
 | [[agent-hub/_handoff/archive/TEST_PROPOSAL_AGENTHUB-0117165107-ADD-VERSION-FLAG-TO-.md]] | Proposal: Add Version Flag to Floor Manager CLI |
 | [[agent-hub/_handoff/archive/TEST_PROPOSAL_AGENTHUB-0117165342-ADD-VERSION-FLAG-TO-.md]] | Proposal: Add Version Flag to Floor Manager CLI |
 | [[agent-hub/_handoff/archive/TEST_PROPOSAL_AGENTHUB-0117165744-ADD-VERSION-FLAG-TO-.md]] | Proposal: Add Version Flag to Floor Manager CLI |
 | [[agent-hub/_handoff/archive/TEST_PROPOSAL_AGENTHUB-0117170203-ADD-VERSION-FLAG-TO-.md]] | Proposal: Add Version Flag to Floor Manager CLI |
 | [[agent-hub/_handoff/archive/TEST_PROPOSAL_AGENTHUB-0117170249-ADD-VERSION-FLAG-TO-.md]] | Proposal: Add Version Flag to Floor Manager CLI |
+| [[agent-hub/_handoff/archive/V4_TEST_PROPOSAL.md]] | V4 Test Proposal: Add Timestamp Utility |
 | [[agent-hub/_handoff/archive/e2e_test_20260117_124358/transition.ndjson]] | No description available. |
 | [[agent-hub/_handoff/drafts/COOLDOWN_PATTERNS.md.PHASE_0_P1_LITELLM_REFS.draft]] | No description available. |
 | [[agent-hub/_handoff/drafts/JUDGE_REPORT_pin_dependencies_task.json]] | No description available. |
@@ -69,6 +70,7 @@ status: #status/active
 | [[agent-hub/_handoff/transition.ndjson]] | No description available. |
 | [[agent-hub/agent_hooks.json]] | No description available. |
 | [[agent-hub/benchmarks/README.md]] | Model Shootout Benchmarks |
+| [[agent-hub/benchmarks/__init__.py]] | Empty file. |
 | [[agent-hub/benchmarks/model_shootout.py]] | Model Shootout - Benchmark local models for Floor Manager capability. |
 | [[agent-hub/benchmarks/performance_benchmark.py]] | Performance Benchmarks for UAS. |
 | [[agent-hub/benchmarks/shootout_results.json]] | No description available. |
@@ -101,6 +103,7 @@ status: #status/active
 | [[agent-hub/scripts/test_mcp_communication.py]] | No description available. |
 | [[agent-hub/scripts/test_sandbox_infra.py]] | No description available. |
 | [[agent-hub/skill.json]] | No description available. |
+| [[agent-hub/src/__init__.py]] | No description available. |
 | [[agent-hub/src/adaptive_poller.py]] | Adaptive Polling - Dynamic interval based on activity. |
 | [[agent-hub/src/audit_logger.py]] | Audit Logger - Comprehensive event logging for UAS. |
 | [[agent-hub/src/bidirectional.py]] | Bidirectional Messaging - Ask/Reply protocol for agent communication. |
@@ -113,6 +116,7 @@ status: #status/active
 | [[agent-hub/src/dashboard.py]] | No description available. |
 | [[agent-hub/src/degradation.py]] | Graceful Degradation - Handle Ollama unavailability. |
 | [[agent-hub/src/draft_gate.py]] | No description available. |
+| [[agent-hub/src/environment/__init__.py]] | No description available. |
 | [[agent-hub/src/environment/antigravity.py]] | Anti-Gravity IDE environment adapter. |
 | [[agent-hub/src/environment/base.py]] | Base class for environment adapters. |
 | [[agent-hub/src/environment/claude_cli.py]] | Claude CLI environment adapter. |
@@ -135,6 +139,7 @@ status: #status/active
 | [[agent-hub/src/router.py]] | Model Router - Intelligent tier selection and fallback execution. |
 | [[agent-hub/src/sandbox.py]] | No description available. |
 | [[agent-hub/src/state_adapter.py]] | State Adapter - Abstract interface for hub state management. |
+| [[agent-hub/src/utils/__init__.py]] | No description available. |
 | [[agent-hub/src/utils/feature_flags.py]] | Feature flag utilities for safe rollout. |
 | [[agent-hub/src/utils/timing.py]] | Timing utilities for latency measurement. |
 | [[agent-hub/src/utils.py]] | No description available. |
@@ -158,6 +163,7 @@ status: #status/active
 | [[agent-hub/tests/test_degradation.py]] | No description available. |
 | [[agent-hub/tests/test_draft_gate.py]] | No description available. |
 | [[agent-hub/tests/test_e2e.py]] | No description available. |
+| [[agent-hub/tests/test_e2e_mcp_pipeline.py]] | E2E test: Verify MCP servers can communicate. |
 | [[agent-hub/tests/test_e2e_messages.py]] | No description available. |
 | [[agent-hub/tests/test_e2e_uas.py]] | End-to-End tests for Unified Agent System. |
 | [[agent-hub/tests/test_edge_cases.py]] | No description available. |
@@ -185,11 +191,13 @@ status: #status/active
 | [[agent-hub/tests/test_validators.py]] | No description available. |
 | [[agent-hub/tests/test_watchdog.py]] | No description available. |
 | [[agent-hub/tests/test_worker_client.py]] | No description available. |
+| [[ai_router/00_Index_ai-router.md]] | AI Router |
 | [[ai_router/AGENTS.md]] | 🎯 Project Overview |
 | [[ai_router/CLAUDE.md]] | > **Purpose:** Project-specific instructions for AI assistants (Claude, ChatGPT, etc.) |
 | [[ai_router/Documents/README.md]] | Documentation |
 | [[ai_router/README.md]] | AI Router |
 | [[ai_router/TODO.md]] | **Last Updated:** January 5, 2026 (Routing Philosophy added) |
+| [[ai_router/__init__.py]] | AI Router - Cost-optimized routing between local Ollama and cloud AI models |
 | [[ai_router/requirements.txt]] | No description available. |
 | [[ai_router/router.py]] | AI Router - Smart routing between local and cloud AI models |
 | [[ai_router/scripts/agent_skills_audit.py]] | No description available. |
@@ -302,6 +310,7 @@ status: #status/active
 | [[gsd/test-output/animal-facts.md]] | Animal Facts |
 | [[gsd/test-output/dad-jokes.md]] | Dad Jokes |
 | [[gsd/test-output/random-numbers.md]] | Random Numbers |
+| [[integrity-warden/00_Index_integrity-warden.md]] | Integrity Warden |
 | [[integrity-warden/README.md]] | Integrity Warden |
 | [[integrity-warden/deep_cleanup.py]] | No description available. |
 | [[integrity-warden/fix-prompt-dependencies.md]] | Fix Dependencies Prompt |
@@ -312,6 +321,7 @@ status: #status/active
 | [[librarian-mcp/mcp_config.json]] | No description available. |
 | [[librarian-mcp/pyproject.toml]] | No description available. |
 | [[librarian-mcp/smoke_test_adaptive.py]] | No description available. |
+| [[librarian-mcp/src/librarian_mcp/__init__.py]] | Empty file. |
 | [[librarian-mcp/src/librarian_mcp/config.py]] | No description available. |
 | [[librarian-mcp/src/librarian_mcp/db.py]] | No description available. |
 | [[librarian-mcp/src/librarian_mcp/embedding.py]] | No description available. |
@@ -353,6 +363,7 @@ status: #status/active
 | [[references/subagent/INTEGRATION_NOTES.md]] | Subagent Integration Notes |
 | [[references/subagent/PROTOCOL.md]] | This document defines the tool schemas and state transitions for the subagent bi-directional communi... |
 | [[references/subagent/README.md]] | Subagent Bi-Directional Protocol |
+| [[ssh_agent/00_Index_ssh-agent.md]] | SSH Agent |
 | [[ssh_agent/README.md]] | SSH Agent for Claude |
 | [[ssh_agent/agent.py]] | No description available. |
 | [[ssh_agent/agent_log.txt]] | No description available. |
