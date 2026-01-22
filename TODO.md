@@ -7,7 +7,6 @@
 ## Pending Tasks (Backlog)
 
 ### AI Router Optimizations
-- [ ] **Flat Root Transition** - Move contents of `ai_router/Documents/core/` to `ai_router/Documents/` root and delete the core directory.
 - [ ] **Response Caching** - Implement response caching for identical prompts in AI Router.
 - [ ] **Streaming Support** - Add streaming support for local and cloud models in AI Router.
 
