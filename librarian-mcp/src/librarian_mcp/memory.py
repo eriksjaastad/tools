@@ -60,10 +60,10 @@ class MemoryStore:
             conn.commit()
         logger.debug(f"Stored semantic cache for query: {query[:50]}...")
 
-    def search_similar(self, embedding: List[float], threshold: float = 0.15) -> Optional[Dict[str, Any]]:
+    def search_similar(self, embedding: List[float], threshold: float = 0.25) -> Optional[Dict[str, Any]]:
         """
         Search for similar queries using cosine distance in SQLite + Numpy.
-        threshold: 0.15 (85% similarity)
+        threshold: 0.25 (75% similarity)
         """
         target_emb = np.array(embedding, dtype=np.float32)
         

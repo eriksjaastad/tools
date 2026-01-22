@@ -180,17 +180,18 @@ async def handle_call_tool(
             # L2: Semantic Match
             embedding = embedding_service.get_single_embedding(question)
             if embedding:
-                similar = memory_store.search_similar(embedding, threshold=0.15)
+                similar = memory_store.search_similar(embedding, threshold=0.25)
                 if similar:
                     res_hash = get_query_hash(similar['query'])
                     stats = memory_db.get_query_stats(res_hash)
                     if stats and not memory_db.is_stale(stats):
                         memory_db.record_hit(res_hash)
-                        logger.info(f"L2 Semantic Hit for query: {question[:50]}")
+                        logger.info(f"L2 Semantic Hit for query: {question[:50]} (matched {similar['query'][:50]})")
                         return [types.TextContent(type="text", text=similar['answer'])]
                     else:
-                        # Stale semantic hit
-                        memory_db.clear_cache(res_hash)
+                        # Stale semantic hit or no stats (e.g. only in memory_store but not memory_db)
+                        if stats:
+                            memory_db.clear_cache(res_hash)
                         memory_store.delete_by_query(similar['query'])
 
             # L3: Compute
