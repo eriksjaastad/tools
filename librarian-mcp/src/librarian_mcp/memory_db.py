@@ -182,7 +182,9 @@ class MemoryDB:
         with self._get_conn() as conn:
             count = conn.execute("SELECT COUNT(*) FROM query_memory WHERE answer IS NOT NULL").fetchone()[0]
             if count > MAX_CACHED:
-                to_evict = count - MAX_CACHED + 100
+                # Evict enough to get back under limit plus a small buffer (10% of MAX_CACHED)
+                buffer = max(1, MAX_CACHED // 10)
+                to_evict = count - MAX_CACHED + buffer
                 conn.execute("""
                     DELETE FROM query_memory WHERE id IN (
                         SELECT id FROM query_memory

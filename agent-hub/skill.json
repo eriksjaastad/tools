@@ -23,6 +23,11 @@
                 "name": "ollama-mcp",
                 "path": "${OLLAMA_MCP_PATH}",
                 "required": true
+            },
+            {
+                "name": "librarian-mcp",
+                "path": "${LIBRARIAN_MCP_PATH}",
+                "required": true
             }
         ]
     },
