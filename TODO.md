@@ -4,6 +4,13 @@
 
 ---
 
+## Needs Review
+
+- [ ] **Collaboration Docs Added (Jan 22)** - Moved from `_collaboration/` to `agent-hub/Documents/collaboration/`. Contains AI handoff patterns and templates. Review for relevance to current agent-hub architecture.
+
+
+---
+
 ## Pending Tasks (Backlog)
 
 ### AI Router Optimizations
