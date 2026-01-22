@@ -19,18 +19,11 @@
 - [x] **Task 10: Verify Ollama integration** - Verified with `ollama_run` and `ollama_list_models`.
 - [x] **Task 11: Add `ollama_list_models` tool to Go server** - Implemented and tested.
 - [x] **Phase 1-3: Librarian Adaptive Memory** - Core implementation, feedback tools, and eviction logic finished.
+- [x] **Phase 4: Librarian Validation & Polish** - Benchmarks, threshold tuning (0.25), and documentation complete.
+- [x] **Maintenance** - Transition monitoring, eviction logic audit, and skill.json sync complete.
 
 ---
 
 ## Remaining / Next Steps
 
-### Phase 4: Librarian Validation & Polish
-- [ ] **Benchmark performance** - Compare cached vs. computed query latency.
-- [ ] **Tune thresholds** - Adjust similarity threshold (currently 0.15) based on real-world recall.
-- [ ] **Documentation** - Add usage examples for `librarian_feedback` to `API.md`.
-- [ ] **Code review** - Final audit of the `librarian-mcp/venv` setup and dependency management.
-
-### Maintenance
-- [ ] **Monitor transition.ndjson** - Ensure state transitions remain valid under load.
-- [ ] **Audit memory growth** - Verify eviction logic triggers correctly at `MAX_CACHED` limit.
-- [ ] **Sync skill.json** - Ensure version numbers and configurations are consistent with the latest builds.
+*All current tasks complete. System is in Polish/Maintenance mode.*
