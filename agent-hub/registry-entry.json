@@ -13,7 +13,8 @@
         "description": "Autonomous Floor Manager that orchestrates task pipelines with Implementer, Local Reviewer, and Judge agents.",
         "requires": [
             "claude-mcp",
-            "ollama-mcp"
+            "ollama-mcp",
+            "librarian-mcp"
         ],
         "compatible_with": [
             "claude-code",

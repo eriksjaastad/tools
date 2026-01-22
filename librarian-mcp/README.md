@@ -28,6 +28,67 @@ graph TD
 ### Natural Language
 - `ask_librarian`: Ask questions in plain English (e.g., "What depends on agent-hub?").
 
+## Adaptive Memory Usage
+
+The librarian learns from your feedback and usage patterns to provide faster, more accurate answers.
+
+### Providing Feedback
+
+The librarian learns from your feedback. After using `ask_librarian`:
+
+**Mark helpful answers:**
+```json
+{
+  "name": "librarian_feedback",
+  "arguments": {
+    "query": "How does agent hub work?",
+    "helpful": true
+  }
+}
+```
+
+**Mark unhelpful answers:**
+```json
+{
+  "name": "librarian_feedback",
+  "arguments": {
+    "query": "Where is X implemented?",
+    "helpful": false
+  }
+}
+```
+
+**Effects:**
+- Helpful answers: Confidence increases.
+- Unhelpful answers: Confidence decreases, may be evicted from cache.
+
+### Memory Management
+
+**View memory stats:**
+```json
+{"name": "librarian_memory_stats"}
+```
+
+**Force caching (for frequently asked questions):**
+```json
+{
+  "name": "librarian_remember",
+  "arguments": {
+    "question": "What is the Agent Hub?",
+    "answer": "The Agent Hub is...",
+    "tier": "hot"
+  }
+}
+```
+
+**Clear bad cache entries:**
+```json
+{
+  "name": "librarian_forget",
+  "arguments": {"query": "outdated question"}
+}
+```
+
 ## Configuration
 
 The server can be configured via environment variables:
