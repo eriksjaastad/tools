@@ -77,16 +77,28 @@ class CircuitBreaker:
             try:
                 import json
                 data = json.loads(self.state_path.read_text())
-                return CircuitBreakerState(**data)
+                return CircuitBreakerState(**data)  # type: ignore[arg-type]
+            except json.JSONDecodeError as e:
+                # Corrupted file - backup and reset
+                backup_path = self.state_path.with_suffix(".json.corrupted")
+                self.state_path.rename(backup_path)
+                logger.error(f"Circuit breaker state file corrupted, backed up to {backup_path}: {e}")
+                return CircuitBreakerState()
+            except (TypeError, KeyError) as e:
+                # Schema mismatch - log and attempt to continue with defaults
+                logger.error(f"Circuit breaker state schema mismatch (may need migration): {e}")
+                return CircuitBreakerState()
             except Exception as e:
-                logger.warning(f"Failed to load circuit breaker state: {e}")
+                # Unexpected error - re-raise to avoid silent failures
+                logger.critical(f"Unexpected error loading circuit breaker state: {e}")
+                raise
         return CircuitBreakerState()
 
     def _save_state(self) -> None:
         """Persist state to disk."""
         import json
         from dataclasses import asdict
-        self.state_path.write_text(json.dumps(asdict(self._state), indent=2))
+        self.state_path.write_text(json.dumps(asdict(self._state), indent=2))  # type: ignore[arg-type]
 
     def register_halt_callback(self, callback: Callable) -> None:
         """Register callback to be called on halt."""
@@ -156,7 +168,7 @@ class CircuitBreaker:
     def trigger_halt(self, reason: HaltReason, context: str) -> None:
         """Trigger a halt and create HALT.md."""
         self._state.is_halted = True
-        self._state.halt_reason = reason.value
+        self._state.halt_reason = reason.value  # type: ignore[assignment]
         self._save_state()
 
         # Create halt file

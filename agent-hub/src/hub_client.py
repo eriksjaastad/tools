@@ -57,6 +57,7 @@ class HubClient:
         """
         Send a message to another agent.
         Returns: message_id
+        Raises: RuntimeError if send fails
         """
         if msg_type not in self.VALID_MSG_TYPES:
             raise ValueError(f"Invalid message type: {msg_type}")
@@ -73,7 +74,12 @@ class HubClient:
             "timestamp": timestamp
         }
         
-        self._get_mcp().call_tool("hub_send_message", {"message": message})
+        result = self._get_mcp().call_tool("hub_send_message", {"message": message})
+        # Check if the send was successful
+        if not result or not result.get("success", True):
+            error_msg = result.get("error", "Unknown error") if result else "No response from hub"
+            raise RuntimeError(f"Failed to send message: {error_msg}")
+        
         return msg_id
 
     def receive_messages(self, since: str = None) -> List[dict]:

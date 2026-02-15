@@ -42,7 +42,10 @@ class CursorAdapter(EnvironmentAdapter):
     def trigger_agent(self, prompt: str):
         import subprocess
         logger.info(f"Triggering cursor-agent with prompt: {prompt[:50]}...")
-        subprocess.run(["cursor-agent", "chat", prompt], check=False)
+        try:
+            subprocess.run(["cursor-agent", "chat", prompt], check=False, timeout=30)
+        except subprocess.TimeoutExpired:
+            logger.warning("cursor-agent timed out after 30 seconds")
     
     def get_mcp_config_path(self) -> Path:
         return Path("~/.cursor/mcp.json").expanduser()
