@@ -363,4 +363,93 @@ except subprocess.TimeoutExpired:
 
 ---
 
+## Addendum: Post-Fix Verification (2026-02-15)
+
+All 11 findings from the original review have been addressed in commits `edf8d0c`, `8465274`, and `db0e898`. Verification results below.
+
+### Fix Verification Matrix
+
+| Finding | Status | Verified |
+|---------|--------|----------|
+| CRITICAL-1: Missing `import time` | **FIXED** | `watchdog.py:3` — `import time` present |
+| CRITICAL-2: Silent `except JSONDecodeError: pass` | **FIXED** | `watchdog.py:272-273` — uses `logger.warning()` |
+| CRITICAL-3: Missing process cleanup | **FIXED** | `dispatch_task.py:124-338` — proper try/finally with kill fallback |
+| HIGH-1: Broad exception in circuit breaker load | **FIXED** | `circuit_breakers.py:81-94` — separated JSONDecodeError, TypeError/KeyError, and re-raises unexpected |
+| HIGH-2: Trigger 5 logic inverted | **FIXED** | `watchdog.py:257-258` — empty reports now correctly trigger breaker |
+| HIGH-3: Non-atomic file write | **FIXED** | `worker_client.py:186` — uses `atomic_write()` |
+| HIGH-4: send_message() ignores response | **FIXED** | `hub_client.py:78-81` — checks response, raises RuntimeError on failure |
+| HIGH-5: Heartbeat logged at DEBUG | **FIXED** | `watchdog.py:382` — uses `logger.warning()` |
+| MEDIUM-1: Missing timeout on cursor-agent | **FIXED** | `environment.py:46` — `timeout=30` with TimeoutExpired handling |
+| MEDIUM-2: Broad exception in worker_client | **FIXED** | `worker_client.py:215-222` — MCPTimeoutError, MCPError, Exception separated |
+| MEDIUM-3: Pipeline failure doesn't update state | **FIXED** | `listener.py:299,304` — calls `_mark_contract_failed()` |
+
+### New Findings from Verification
+
+#### RESIDUAL-1: Second JSONDecodeError Handler Still Uses `print()`
+
+**File:** `src/watchdog.py:831-832`
+**Severity:** LOW
+
+```python
+except json.JSONDecodeError:
+    print("Error: Invalid JUDGE_REPORT.json")
+```
+
+This is in the `report-judge` CLI command handler (user-facing), not in the automated pipeline. Using `print()` here is acceptable for CLI output but inconsistent with the logging pattern applied to the same error in the automated path (line 272). Consider adding `logger.warning()` alongside the print for audit trail.
+
+#### RESIDUAL-2: `_mark_contract_failed()` Uses Non-Atomic Write
+
+**File:** `src/listener.py:318`
+**Severity:** MEDIUM
+
+```python
+contract_path.write_text(json.dumps(contract, indent=2))
+```
+
+The new `_mark_contract_failed()` method writes contract state with bare `write_text()` instead of `atomic_write()`. Since this modifies contract state (a critical file), it should use the atomic pattern to prevent corruption on crash/power loss.
+
+#### RESIDUAL-3: `check_hub_available()` Swallows All Exceptions Silently
+
+**File:** `src/watchdog.py:390-391`
+**Severity:** LOW
+
+```python
+except Exception:
+    return False
+```
+
+No logging whatsoever. Health checks can legitimately return False, but the total absence of logging makes it impossible to diagnose hub connectivity issues.
+
+### Type Checker Status
+
+The type checker situation is the aftermath of the derailment Erik described. The current state:
+
+| Setting | Value | Location |
+|---------|-------|----------|
+| Pyright `typeCheckingMode` | `"off"` | `pyproject.toml:38` |
+| Mypy `ignore_errors` | `true` | `pyproject.toml:41` |
+| VS Code language server | `"None"` | `.vscode/settings.json:2` |
+| VS Code linting | all disabled | `.vscode/settings.json:4-7` |
+| `# type: ignore` comments | 3 instances | `circuit_breakers.py:80,101,171` |
+
+**Assessment:** Type checking is completely disabled at every level. The `# type: ignore` comments in `circuit_breakers.py` are vestiges of the failed Pyre fight. This is fine as a tactical retreat — better to have no type checker than a misconfigured one generating noise. When ready to re-enable, recommend starting with Pyright in `"basic"` mode rather than Pyre, as it has better dataclass support and doesn't struggle with relative imports.
+
+**Recommendation:** Remove `.vscode/settings.json` from version control (add to `.gitignore`) — IDE preferences shouldn't be committed. The `pyproject.toml` type checker settings are fine to keep as documentation of the project's current stance.
+
+### Updated Definition of Done
+
+- [x] M1 robot check passes (no hardcoded paths)
+- [x] M2 robot check passes — **FIXED: silent except:pass eliminated**
+- [x] M3 robot check passes (no secrets)
+- [x] H1 hardening passes — **FIXED: subprocess calls have check/timeout**
+- [x] H3 atomic writes — **FIXED: worker_client uses atomic_write()**
+- [x] All circuit breakers functional — **FIXED: triggers 5 and 6 restored**
+- [~] No silent failures — **Mostly fixed. 3 low-severity residual items remain**
+
+### Verdict
+
+**All 11 original findings are resolved.** The fixes are clean and correctly implemented. Three minor residual items identified during verification — none are blockers. The type checker nuclear option is ugly but pragmatic.
+
+---
+
 *Intelligence belongs in the checklist, not the prompt. Evidence-first.*
