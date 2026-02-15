@@ -84,16 +84,18 @@ def validate_drafts(task_id: str, handoff_dir: Path = None) -> dict:
         # Hallucination/placeholder patterns
         placeholder_patterns = [
             "<paste",
+            "<the ",  # "<the updated content>"
             "paste the",
             "insert code here",
             "add code here",
             "your code here",
+            "code goes here",
+            "implementation here",
             "todo:",
             "fixme:",
             "placeholder",
             "# ...",
             "// ...",
-            "...",  # Ellipsis as placeholder
         ]
         
         content_lower = content.lower()
