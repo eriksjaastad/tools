@@ -295,12 +295,30 @@ class MessageListener:
             except subprocess.CalledProcessError as e:
                 logger.error(f"Command failed: {' '.join(cmd)}")
                 logger.error(f"Error output: {e.stderr}")
+                # Update contract state to reflect failure
+                self._mark_contract_failed(contract_path, f"Pipeline step failed: {cmd[3]}", e.stderr)
                 break
             except subprocess.TimeoutExpired:
                 logger.error(f"Command timed out: {' '.join(cmd)}")
+                # Update contract state to reflect timeout
+                self._mark_contract_failed(contract_path, f"Pipeline step timed out: {cmd[3]}", "Timeout after 600s")
                 break
             
         logger.info(f"Pipeline finished for {contract_path.name}")
+
+    def _mark_contract_failed(self, contract_path: Path, reason: str, details: str):
+        """Mark a contract as failed and log the reason."""
+        try:
+            import json
+            if contract_path.exists():
+                contract = json.loads(contract_path.read_text())
+                contract["state"] = "failed"
+                contract["failure_reason"] = reason
+                contract["failure_details"] = details
+                contract_path.write_text(json.dumps(contract, indent=2))
+                logger.warning(f"Contract marked as failed: {reason}")
+        except Exception as e:
+            logger.error(f"Failed to update contract state: {e}")
 
     def handle_stop_task(self, message: dict):
         """
