@@ -238,6 +238,31 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                         f.write(res.get("response") or "No response")
                         f.write(f"\n\n---\n**Stats:** {res.get('iterations')} iterations, {res.get('tool_calls_made')} tool calls.\n")
                     print(f"[DEBUG] Successfully appended to {task_path}")
+                    
+                    # Validate drafts and notify Floor Manager
+                    print(f"\n[VALIDATION] Checking drafts for task {task_id}...")
+                    try:
+                        # Import and run validation
+                        sys.path.insert(0, str(Path(__file__).parent))
+                        from validate_draft import validate_drafts, write_notification
+                        
+                        validation_result = validate_drafts(task_id)
+                        
+                        if validation_result["valid"]:
+                            print(f"✅ Validation passed: {validation_result['draft_count']} draft(s), {validation_result['total_bytes']} bytes")
+                            notification_file = write_notification(task_id, validation_result)
+                            print(f"📬 Floor Manager notified: {notification_file}")
+                            print(f"\n🎉 Task {task_id} ready for Floor Manager review!")
+                        else:
+                            print(f"⚠️  Validation issues found:")
+                            for issue in validation_result["issues"]:
+                                print(f"  - {issue}")
+                            notification_file = write_notification(task_id, validation_result)
+                            print(f"📬 Floor Manager notified (needs attention): {notification_file}")
+                    except Exception as e:
+                        print(f"⚠️  Validation failed with error: {e}")
+                        print("Continuing anyway - Floor Manager can review manually")
+                        
                 else:
                     print(f"[WARNING] Unexpected result type: {type(res)}")
                     print(json.dumps(res, indent=2))
