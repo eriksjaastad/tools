@@ -2,3 +2,4 @@
 _handoff/*
 !_handoff/drafts/
 !_handoff/.gitignore
+.vscode/

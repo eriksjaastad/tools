@@ -1,8 +1,0 @@
-{
-    "python.languageServer": "None",
-    "python.analysis.typeCheckingMode": "off",
-    "python.linting.enabled": false,
-    "python.linting.pylintEnabled": false,
-    "python.linting.pycodestyleEnabled": false,
-    "python.linting.flake8Enabled": false
-}
