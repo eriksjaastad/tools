@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import uuid
 import logging
 import threading
@@ -267,8 +268,8 @@ def check_circuit_breakers(contract: Dict[str, Any]) -> Tuple[bool, str]:
                 
                 if all_style:
                     return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles of pure style issues"
-            except json.JSONDecodeError:
-                pass
+            except json.JSONDecodeError as e:
+                logger.warning(f"Cannot parse judge report for trigger 5: {judge_report_path} - {e}")
 
     # 6. Timeout (Inactivity)
     now = datetime.now(timezone.utc)
