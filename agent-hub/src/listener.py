@@ -315,7 +315,8 @@ class MessageListener:
                 contract["state"] = "failed"
                 contract["failure_reason"] = reason
                 contract["failure_details"] = details
-                contract_path.write_text(json.dumps(contract, indent=2))
+                from .utils import atomic_write
+                atomic_write(contract_path, json.dumps(contract, indent=2))
                 logger.warning(f"Contract marked as failed: {reason}")
         except Exception as e:
             logger.error(f"Failed to update contract state: {e}")

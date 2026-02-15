@@ -387,7 +387,8 @@ def check_hub_available(hub_path: Path) -> bool:
         with MCPClient(hub_path) as mcp:
             hub = HubClient(mcp)
             return hub.connect("health_check_watchdog")
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Hub not available: {e}")
         return False
 
 def update_cost(contract: Dict[str, Any], tokens_in: int, tokens_out: int, model: str) -> None:
@@ -830,6 +831,7 @@ def main(argv):
                             print("Updated costs from Judge report")
                     except json.JSONDecodeError:
                         print("Error: Invalid JUDGE_REPORT.json")
+                        logger.warning("Cannot parse JUDGE_REPORT.json in report-judge command")
             
             # Now transition status
             old_status = contract["status"]
