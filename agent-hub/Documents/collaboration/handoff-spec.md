@@ -45,6 +45,4 @@ What the receiving AI should do with this information.
 
 ## Related Documentation
 
-- [[ai_model_comparison]] - AI models
-- [[session_documentation]] - session notes
 

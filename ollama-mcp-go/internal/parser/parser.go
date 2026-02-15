@@ -25,6 +25,9 @@ var (
 	xmlToolCallRegex = regexp.MustCompile(`(?s)<tool_call>(.*?)</tool_call>`)
 	jsonBlockRegex   = regexp.MustCompile("(?s)```(?:json)?\n?(.*?)\n?```")
 	nakedJsonRegex   = regexp.MustCompile(`(?s)\{.*?"name".*?"arguments".*?\}`)
+	// Qwen native format: <|im_start|>{"name": "...", "arguments": {...}}
+	// or <|im_start|>assistant\n{"name": "...", "arguments": {...}}
+	qwenToolCallRegex = regexp.MustCompile(`(?s)<\|im_start\|>(?:assistant)?[\s\n]*(\{.*?"name".*?"arguments".*?\})`)
 )
 
 // ParseToolCalls extracts tool calls from the given text.
@@ -47,7 +50,34 @@ func (p *Parser) ParseToolCalls(text string) []ToolCall {
 		return results
 	}
 
-	// 2. Try Markdown JSON blocks
+	// 2. Try Qwen native format: <|im_start|>assistant\n{"name": "...", "arguments": {...}}
+	// Use a custom extraction since regex can't handle nested braces well
+	if strings.Contains(text, "<|im_start|>") {
+		idx := strings.Index(text, "<|im_start|>")
+		if idx >= 0 {
+			// Skip past <|im_start|> and optional "assistant"
+			remaining := text[idx+len("<|im_start|>"):]
+			remaining = strings.TrimPrefix(remaining, "assistant")
+			remaining = strings.TrimSpace(remaining)
+
+			// Find the JSON object
+			if len(remaining) > 0 && remaining[0] == '{' {
+				jsonStr := extractBalancedJSON(remaining)
+				if jsonStr != "" {
+					var tc ToolCall
+					if err := json.Unmarshal([]byte(jsonStr), &tc); err == nil && tc.Name != "" {
+						results = append(results, tc)
+					}
+				}
+			}
+		}
+	}
+
+	if len(results) > 0 {
+		return results
+	}
+
+	// 3. Try Markdown JSON blocks
 	blockMatches := jsonBlockRegex.FindAllStringSubmatch(text, -1)
 	for _, match := range blockMatches {
 		if len(match) < 2 {
@@ -63,7 +93,7 @@ func (p *Parser) ParseToolCalls(text string) []ToolCall {
 		return results
 	}
 
-	// 3. Try Naked JSON objects
+	// 4. Try Naked JSON objects
 	nakedMatches := nakedJsonRegex.FindAllString(text, -1)
 	for _, match := range nakedMatches {
 		var tc ToolCall
@@ -76,7 +106,7 @@ func (p *Parser) ParseToolCalls(text string) []ToolCall {
 		return results
 	}
 
-	// 4. Try JSON array: [{"name": "...", "arguments": {...}}]
+	// 5. Try JSON array: [{"name": "...", "arguments": {...}}]
 	trimmed := strings.TrimSpace(text)
 	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
 		var tcs []ToolCall
@@ -86,4 +116,47 @@ func (p *Parser) ParseToolCalls(text string) []ToolCall {
 	}
 
 	return results
+}
+
+// extractBalancedJSON extracts a balanced JSON object from the start of the string.
+func extractBalancedJSON(s string) string {
+	if len(s) == 0 || s[0] != '{' {
+		return ""
+	}
+
+	depth := 0
+	inString := false
+	escape := false
+
+	for i, ch := range s {
+		if escape {
+			escape = false
+			continue
+		}
+
+		if ch == '\\' {
+			escape = true
+			continue
+		}
+
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+
+		if inString {
+			continue
+		}
+
+		if ch == '{' {
+			depth++
+		} else if ch == '}' {
+			depth--
+			if depth == 0 {
+				return s[:i+1]
+			}
+		}
+	}
+
+	return ""
 }

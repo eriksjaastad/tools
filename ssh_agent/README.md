@@ -34,9 +34,9 @@ tail -1 queue/results.jsonl
 ```
 
 ## Components
-- [[agent.py|SSH Agent Core]] - Python script that processes the command queue.
-- [[ssh_hosts.yaml|SSH Hosts Config]] - YAML configuration for remote host connection details.
-- [[queue/.agent_state.json|Agent State]] - Internal persistence for tracking queue progress.
+- [SSH Agent Core](agent.py) - Python script that processes the command queue.
+- [SSH Hosts Config](ssh_hosts.yaml) - YAML configuration for remote host connection details.
+- [Agent State](queue/.agent_state.json) - Internal persistence for tracking queue progress.
 
 ## Notes
 
@@ -47,7 +47,3 @@ tail -1 queue/results.jsonl
 
 ## Related Documentation
 
-- [[cloud_gpu_setup]] - cloud GPU
-- [[queue_processing_guide]] - queue/workflow
-- [[ai_model_comparison]] - AI models
-- [[testing_strategy]] - testing/QA

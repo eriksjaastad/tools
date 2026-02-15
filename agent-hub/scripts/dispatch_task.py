@@ -1,3 +1,16 @@
+"""
+Dispatch a task to a local Ollama worker via the Go MCP server.
+
+Usage:
+    python scripts/dispatch_task.py <task_file.md> <role> [max_iterations]
+
+Roles: coder, reviewer, implementer, embedder
+       (or any Ollama model alias like "coding:current")
+
+The role is resolved through config/routing.yaml role_aliases,
+then validated against installed Ollama models before dispatch.
+"""
+
 import json
 import subprocess
 import os
@@ -6,9 +19,19 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-def dispatch_task(task_path: Path, model: str, max_iterations: int = 15):
+# Add parent dir so we can import config.models
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config.models import resolve_role, validate_routing_config
+
+
+def dispatch_task(task_path: Path, role: str, max_iterations: int = 15):
     """
     Dispatches a task to agent_loop via ollama-mcp-go server.
+
+    Args:
+        task_path: Path to the task markdown file.
+        role: Role name ("coder", "reviewer") or model alias ("coding:current").
+        max_iterations: Max agent loop iterations.
     """
     agent_hub_dir = Path(__file__).parent.parent
     root_dir = agent_hub_dir.parent
@@ -16,6 +39,19 @@ def dispatch_task(task_path: Path, model: str, max_iterations: int = 15):
 
     if not server_bin.exists():
         print(f"Error: MCP server not found at {server_bin}")
+        sys.exit(1)
+
+    # Resolve role to model name
+    model = resolve_role(role)
+    if model != role:
+        print(f"Resolved role '{role}' -> '{model}'")
+
+    # Preflight: validate models are actually installed
+    errors = validate_routing_config()
+    if errors:
+        print("Preflight check failed:")
+        for err in errors:
+            print(f"  - {err}")
         sys.exit(1)
 
     # Read task content
@@ -49,7 +85,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        cwd=str(root_dir), # Run from root
+        cwd=str(root_dir),
         text=True,
         bufsize=1,
         env={**os.environ, "SANDBOX_ROOT": str(root_dir), "LOG_LEVEL": "info"}
@@ -57,7 +93,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
 
     # Give it a moment to start
     time.sleep(1)
-    
+
     # Call agent_loop
     request = {
         "jsonrpc": "2.0",
@@ -80,7 +116,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
 
     # Wait for response and log stderr in background
     print("Waiting for response (check terminal for logs)...")
-    
+
     # Read response
     response_str = ""
     while True:
@@ -89,7 +125,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
             response_str += line
             if '"result":' in line or '"error":' in line:
                 break
-        
+
         # Also check stderr
         err_line = process.stderr.readline()
         if err_line:
@@ -97,7 +133,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
 
         if process.poll() is not None:
              break
-        
+
     if response_str:
         try:
             response = json.loads(response_str)
@@ -110,12 +146,14 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                 if isinstance(res, dict):
                     print(f"Iterations: {res.get('iterations')}")
                     print(f"Tools Called: {res.get('tool_calls_made')}")
-                    print(f"Final Response: {res.get('response')[:500]}...")
-                    
+                    response_text = res.get("response") or ""
+                    preview = response_text[:500] if response_text else "(none)"
+                    print(f"Final Response: {preview}...")
+
                     # Append to task file
                     with open(task_path, "a") as f:
                         f.write(f"\n\n## Worker Output ({datetime.now().isoformat()})\n\n")
-                        f.write(res.get('response', 'No response'))
+                        f.write(res.get("response") or "No response")
                         f.write(f"\n\n---\n**Stats:** {res.get('iterations')} iterations, {res.get('tool_calls_made')} tool calls.\n")
                 else:
                     print(json.dumps(res, indent=2))
@@ -127,11 +165,14 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python dispatch_task.py <task_file> <model> [max_iterations]")
+        print("Usage: python dispatch_task.py <task_file> <role> [max_iterations]")
+        print()
+        print("Roles: coder, reviewer, implementer, embedder")
+        print("       (or any Ollama alias like 'coding:current')")
         sys.exit(1)
-    
+
     task_file = Path(sys.argv[1])
-    model_name = sys.argv[2]
+    role_name = sys.argv[2]
     max_iters = int(sys.argv[3]) if len(sys.argv) > 3 else 15
-    
-    dispatch_task(task_file, model_name, max_iters)
+
+    dispatch_task(task_file, role_name, max_iters)

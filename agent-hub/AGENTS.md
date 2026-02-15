@@ -192,7 +192,6 @@ pytest tests/test_e2e.py          # End-to-end pipeline
 
 ## Related Documentation
 
-- [[V4_IMPLEMENTATION_COMPLETE]] - V4 implementation details
-- [[PRD]] - Product requirements (V3.0)
-- [[project-scaffolding/AGENTS]] - Ecosystem constitution
-- [[ollama-mcp/AGENTS]] - Worker tools documentation
+- [PRD](../../prospector/PRD.md) - Product requirements (V3.0)
+- [project-scaffolding/AGENTS](../../AGENTS.md) - Ecosystem constitution
+- [ollama-mcp/AGENTS](../../AGENTS.md) - Worker tools documentation

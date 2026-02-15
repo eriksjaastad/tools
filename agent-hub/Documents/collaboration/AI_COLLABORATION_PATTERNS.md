@@ -58,10 +58,5 @@ Check the `_templates/` folder for standard formats for different types of hando
 
 ## Related Documentation
 
-- [[CODE_REVIEW_ANTI_PATTERNS]] - code review
-- [[ai_model_comparison]] - AI models
-- [[case_studies]] - examples
-- [[research_methodology]] - research
-- [[security_patterns]] - security
-- [[session_documentation]] - session notes
+- [CODE_REVIEW_ANTI_PATTERNS](../../../../project-scaffolding/Documents/reference/CODE_REVIEW_ANTI_PATTERNS.md) - code review
 
