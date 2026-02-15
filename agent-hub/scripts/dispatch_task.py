@@ -25,7 +25,7 @@ from datetime import datetime
 
 # Add parent dir so we can import config.models
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from config.models import resolve_role, validate_routing_config
+from config.models import resolve_role, validate_routing_config  # type: ignore[import]
 
 
 def dispatch_task(task_path: Path, role: str, max_iterations: int = 15, project_root: Path = None):
