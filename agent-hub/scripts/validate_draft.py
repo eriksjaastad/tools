@@ -68,7 +68,7 @@ def validate_drafts(task_id: str, handoff_dir: Path = None) -> dict:
             issues.append(f"{draft_file.name} is empty")
             continue
         
-        # Check if it's just an error message
+        # Check if it's just an error message or placeholder
         content = draft_file.read_text()
         
         # Common error patterns
@@ -81,11 +81,36 @@ def validate_drafts(task_id: str, handoff_dir: Path = None) -> dict:
             "permission denied"
         ]
         
+        # Hallucination/placeholder patterns
+        placeholder_patterns = [
+            "<paste",
+            "paste the",
+            "insert code here",
+            "add code here",
+            "your code here",
+            "todo:",
+            "fixme:",
+            "placeholder",
+            "# ...",
+            "// ...",
+            "...",  # Ellipsis as placeholder
+        ]
+        
         content_lower = content.lower()
+        
+        # Check for error messages
         if any(pattern in content_lower for pattern in error_patterns):
             # Check if it's ONLY errors (no actual content)
             if len(content.strip()) < 100:
                 issues.append(f"{draft_file.name} appears to contain only error messages")
+        
+        # Check for placeholders/hallucinations
+        if any(pattern in content_lower for pattern in placeholder_patterns):
+            issues.append(f"{draft_file.name} contains placeholder text instead of actual code")
+        
+        # Check if file is suspiciously small for code
+        if size < 50 and draft_file.suffix in ['.py', '.js', '.ts', '.go']:
+            issues.append(f"{draft_file.name} is suspiciously small ({size} bytes) for a code file")
     
     # Determine if valid
     valid = len(draft_files) > 0 and total_bytes > 0 and len(issues) == 0

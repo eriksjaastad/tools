@@ -254,11 +254,57 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                             print(f"📬 Floor Manager notified: {notification_file}")
                             print(f"\n🎉 Task {task_id} ready for Floor Manager review!")
                         else:
-                            print(f"⚠️  Validation issues found:")
+                            # LOUD FAILURE - Make it impossible to miss
+                            print("\n" + "="*80)
+                            print("🚨 WORKER FAILURE DETECTED 🚨".center(80))
+                            print("="*80)
+                            print(f"\nTask: {task_id}")
+                            print(f"Issues found:")
                             for issue in validation_result["issues"]:
-                                print(f"  - {issue}")
+                                print(f"  ❌ {issue}")
+                            
+                            # Write failure file
+                            failure_file = Path("_handoff") / f"FAILURE_{task_id}.md"
+                            failure_content = f"""# 🚨 WORKER FAILURE: {task_id}
+
+**Timestamp:** {datetime.now().isoformat()}
+**Status:** FAILED - Worker did not produce valid output
+
+## Issues Detected:
+
+{chr(10).join(f'- {issue}' for issue in validation_result["issues"])}
+
+## Worker Stats:
+
+- Iterations: {res.get('iterations')}
+- Tool Calls: {res.get('tool_calls_made')}
+- Draft Count: {validation_result['draft_count']}
+- Total Bytes: {validation_result['total_bytes']}
+
+## Next Steps:
+
+1. Check if the task is too complex for the local model
+2. Consider escalating to cloud model (Claude/GPT)
+3. Review worker output in task file for hallucination
+4. Retry with different model or better prompt
+
+## Notification:
+
+See `notification_{task_id}.json` for details.
+"""
+                            failure_file.write_text(failure_content)
+                            
                             notification_file = write_notification(task_id, validation_result)
+                            
+                            print(f"\n📋 Failure report written: {failure_file}")
                             print(f"📬 Floor Manager notified (needs attention): {notification_file}")
+                            print("\n" + "="*80)
+                            print("⚠️  THIS TASK FAILED - MANUAL INTERVENTION REQUIRED".center(80))
+                            print("="*80 + "\n")
+                            
+                            # Exit with error code
+                            sys.exit(1)
+                            
                     except Exception as e:
                         print(f"⚠️  Validation failed with error: {e}")
                         print("Continuing anyway - Floor Manager can review manually")
