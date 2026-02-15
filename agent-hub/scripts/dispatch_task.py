@@ -210,14 +210,20 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
              break
 
     if response_str:
+        print(f"\n[DEBUG] Raw response: {response_str[:500]}...")
         try:
             response = json.loads(response_str)
+            print(f"[DEBUG] Parsed response keys: {response.keys()}")
+            
             if "error" in response:
                 print(f"Error from MCP: {response['error']}")
             else:
                 print("Task execution loop finished.")
                 print("Worker Result Summary:")
                 res = response.get("result", {})
+                print(f"[DEBUG] Result type: {type(res)}")
+                print(f"[DEBUG] Result content: {json.dumps(res, indent=2)[:1000]}")
+                
                 if isinstance(res, dict):
                     print(f"Iterations: {res.get('iterations')}")
                     print(f"Tools Called: {res.get('tool_calls_made')}")
@@ -226,14 +232,18 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                     print(f"Final Response: {preview}...")
 
                     # Append to task file
+                    print(f"\n[DEBUG] Appending to task file: {task_path}")
                     with open(task_path, "a") as f:
                         f.write(f"\n\n## Worker Output ({datetime.now().isoformat()})\n\n")
                         f.write(res.get("response") or "No response")
                         f.write(f"\n\n---\n**Stats:** {res.get('iterations')} iterations, {res.get('tool_calls_made')} tool calls.\n")
+                    print(f"[DEBUG] Successfully appended to {task_path}")
                 else:
+                    print(f"[WARNING] Unexpected result type: {type(res)}")
                     print(json.dumps(res, indent=2))
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
             print(f"Malformed response from server: {response_str}")
+            print(f"[DEBUG] JSON decode error: {e}")
 
     process.terminate()
     process.wait()
