@@ -257,8 +257,9 @@ def check_circuit_breakers(contract: Dict[str, Any]) -> Tuple[bool, str]:
                 all_style = True
                 STYLE_KEYWORDS = ["style", "formatting", "indentation", "spacing", "naming", "whitespace"]
                 
+                # If there are no issues and no suggestions after 3+ cycles, that IS nitpicking
                 if not issues and not suggestions:
-                    all_style = False # Should have been a PASS then?
+                    return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles with no substantive feedback"
                 
                 for issue in issues + suggestions:
                     desc = issue.get("description", "").lower()
@@ -378,7 +379,7 @@ def start_heartbeat(hub_server_path: Path, task_id: str, stop_event: threading.E
                 hub.emit_heartbeat(f"implementing {task_id}")
                 time.sleep(30)
     except Exception as e:
-        logger.debug(f"Heartbeat thread failed: {e}")
+        logger.warning(f"Heartbeat thread failed: {e}")
 
 def check_hub_available(hub_path: Path) -> bool:
     """Verify MCP hub is running before any operation."""
