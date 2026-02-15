@@ -8,43 +8,43 @@ Builder utilities and helper scripts for working across all projects.
 
 ### 🤖 AI Router (`ai_router/`)
 Cost-optimized routing between local Ollama and cloud AI models.
-- **Documentation:** [[ai_router/README|AI Router README]]
-- **Logic:** [[router.py|AIRouter Library]]
+- **Documentation:** [AI Router README](../ai-model-scratch-build/README.md)
+- **Logic:** [AIRouter Library](ai_router/router.py)
 
 ### 🛡️ Integrity Warden (`integrity-warden/`)
 Ecosystem health checks and automated remediation.
-- **Documentation:** [[integrity-warden/README|Integrity Warden README]]
-- **Core Logic:** [[integrity_warden.py|Integrity Warden Core]]
+- **Documentation:** [Integrity Warden README](../ai-model-scratch-build/README.md)
+- **Core Logic:** [Integrity Warden Core](integrity-warden/integrity_warden.py)
 
 ### 🔌 Ollama MCP (`ollama-mcp/`)
 Model Context Protocol integration for local Ollama instances.
-- **Documentation:** [[ollama-mcp/README|Ollama MCP README]]
+- **Documentation:** [Ollama MCP README](../ai-model-scratch-build/README.md)
 
 ### 🔑 SSH Agent (`ssh_agent/`)
 Automated SSH management and host routing.
-- **Documentation:** [[ssh_agent/README|SSH Agent README]]
-- **Agent:** [[agent.py|SSH Agent Logic]]
+- **Documentation:** [SSH Agent README](../ai-model-scratch-build/README.md)
+- **Agent:** [SSH Agent Logic](ssh_agent/agent.py)
 
 ### 📄 PDF to Markdown Converter (`pdf-converter/`)
 Convert PDFs to clean markdown for processing.
-- **Converter:** [[pdf_to_markdown_converter.py|PDF Converter]]
-- **Cleanup:** [[cleanup_converted_pdfs.py|Cleanup Utility]]
+- **Converter:** [PDF Converter](pdf-converter/pdf_to_markdown_converter.py)
+- **Cleanup:** [Cleanup Utility](pdf-converter/cleanup_converted_pdfs.py)
 
 ### 💬 Claude CLI (`claude-cli/`)
 Legacy command-line interface to Claude.
-- **Script:** [[claude-cli.py|Claude CLI Script]]
+- **Script:** [Claude CLI Script](claude-cli/claude-cli.py)
 
 ### 🏗️ Agent Hub (`agent-hub/`)
 Central orchestration point for agent communication.
-- **Index:** [[agent-hub/00_Index_agent-hub|Agent Hub Index]]
-- **Hub:** [[hub.py|Hub Core]]
+- **Index:** [Agent Hub Index](agent-hub/00_Index_agent-hub.md)
+- **Hub:** [Hub Core](agent-hub/hub.py)
 
 ---
 
 ## 📋 Planning Templates
-- [[create-prd|Create PRD Template]]
-- [[baseline_metrics_plan|Baseline Metrics Plan]]
-- [[project_lifecycle_tracking_blueprint|Project Lifecycle Tracking]]
+- Create PRD Template (see agent-hub)
+- Baseline Metrics Plan (see agent-hub)
+- Project Lifecycle Tracking (see agent-hub)
 
 ---
 
@@ -137,30 +137,24 @@ Part of the `..` workspace.
 
 ## Related Documentation
 
-- [[LOCAL_MODEL_LEARNINGS]] - local AI
-- [[cost_management]] - cost management
-- [[dashboard_architecture]] - dashboard/UI
-- [[prompt_engineering_guide]] - prompt engineering
-- [[ai_model_comparison]] - AI models
-- [[case_studies]] - examples
-- [[cortana_architecture]] - Cortana AI
-- [[cortana-personal-ai/README]] - Cortana AI
+- [LOCAL_MODEL_LEARNINGS](../writing/Documents/reference/LOCAL_MODEL_LEARNINGS.md) - local AI
+- [cortana-personal-ai/README](../ai-model-scratch-build/README.md) - Cortana AI
 
 ## Development Resources
-- [[_tools/integrity-warden/integrity_warden.py|integrity_warden.py]]
-- [[_tools/integrity-warden/deep_cleanup.py|deep_cleanup.py]]
-- [[_tools/integrity-warden/remediate_renames.py|remediate_renames.py]]
-- [[_tools/integrity-warden/rename_indices.py|rename_indices.py]]
-- [[_tools/ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json]]
-- [[_tools/ollama-mcp/package-lock.json|package-lock.json]]
-- [[_tools/ollama-mcp/tsconfig.json|tsconfig.json]]
-- [[_tools/ollama-mcp/config/routing.yaml|routing.yaml]]
-- [[_tools/agent-hub/hub.py|hub.py]]
-- [[_tools/ai_router/router.py|router.py]]
-- [[_tools/ai_router/Documents/README.md|README.md]]
-- [[_tools/pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py]]
-- [[_tools/claude-cli/claude-cli.py|claude-cli.py]]
-- [[_tools/ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml]]
-- [[_tools/ssh_agent/README.md|README.md]]
-- [[_tools/ssh_agent/agent.py|agent.py]]
-- [[_tools/ssh_agent/queue/.agent_state.json|.agent_state.json]]
+- [integrity-warden/integrity_warden.py|integrity_warden.py](integrity-warden/integrity_warden.py|integrity_warden.py)
+- [integrity-warden/deep_cleanup.py|deep_cleanup.py](integrity-warden/deep_cleanup.py|deep_cleanup.py)
+- [integrity-warden/remediate_renames.py|remediate_renames.py](integrity-warden/remediate_renames.py|remediate_renames.py)
+- [integrity-warden/rename_indices.py|rename_indices.py](integrity-warden/rename_indices.py|rename_indices.py)
+- [ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json](ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json)
+- [ollama-mcp/package-lock.json|package-lock.json](ollama-mcp/package-lock.json|package-lock.json)
+- [ollama-mcp/tsconfig.json|tsconfig.json](ollama-mcp/tsconfig.json|tsconfig.json)
+- [ollama-mcp/config/routing.yaml|routing.yaml](ollama-mcp/config/routing.yaml|routing.yaml)
+- [agent-hub/hub.py|hub.py](agent-hub/hub.py|hub.py)
+- [ai_router/router.py|router.py](ai_router/router.py|router.py)
+- [README.md](../ai-model-scratch-build/README.md)
+- [pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py](pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py)
+- [claude-cli/claude-cli.py|claude-cli.py](claude-cli/claude-cli.py|claude-cli.py)
+- [ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml](ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml)
+- [README.md](../ai-model-scratch-build/README.md)
+- [ssh_agent/agent.py|agent.py](ssh_agent/agent.py|agent.py)
+- [ssh_agent/queue/.agent_state.json|.agent_state.json](ssh_agent/queue/.agent_state.json|.agent_state.json)

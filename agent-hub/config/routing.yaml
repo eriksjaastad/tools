@@ -1,9 +1,8 @@
 model_tiers:
   local:
     models:
-      - ollama/qwen2.5-coder:14b
-      - ollama/deepseek-r1-distill:32b
-      - ollama/llama3.2:1b
+      - ollama/coding:current
+      - ollama/llama3.2-vision:11b
     cost_per_1k_tokens: 0.0
     max_retries: 2
     timeout_ms: 120000
@@ -22,6 +21,14 @@ model_tiers:
     cost_per_1k_tokens: 0.003
     max_retries: 1
     timeout_ms: 120000
+
+# Role aliases — floor managers use these instead of raw model names
+# dispatch_task.py resolves these before calling Ollama
+role_aliases:
+  coder: "coding:current"
+  reviewer: "coding:current"
+  implementer: "coding:current"
+  embedder: "embedding:current"
 
 task_routing:
   triage:

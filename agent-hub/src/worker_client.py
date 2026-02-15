@@ -112,7 +112,7 @@ CONSTRAINTS:
 - Output ONLY the code for the target file, inside a code block.
 """
         prompt = prepare_prompt(prompt)
-        model = contract.get("roles", {}).get("implementer", "qwen2.5-coder:14b")
+        model = contract.get("roles", {}).get("implementer", "coding:current")
         
         try:
             # Ensure model name doesn't contain disallowed chars if we want to be safe, 
@@ -249,7 +249,7 @@ Return a JSON object with this structure:
 Output ONLY the JSON.
 """
         prompt = prepare_prompt(prompt)
-        model = contract.get("roles", {}).get("local_reviewer", "deepseek-r1:7b")
+        model = contract.get("roles", {}).get("local_reviewer", "coding:current")
         
         try:
             timeout_min = contract.get("limits", {}).get("timeout_minutes", {}).get("local_review", 5)

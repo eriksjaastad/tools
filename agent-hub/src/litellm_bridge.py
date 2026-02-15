@@ -3,6 +3,8 @@ LiteLLM Bridge - Routing layer with fallbacks and cooldowns.
 
 Translates MCP-style calls to LiteLLM router.
 Feature flag: UAS_LITELLM_ROUTING
+
+Model list is built dynamically from config/routing.yaml — no hardcoded model names.
 """
 
 import os
@@ -10,6 +12,7 @@ import logging
 import time
 from typing import Any
 from pathlib import Path
+import sys
 
 import litellm
 from litellm import Router
@@ -19,47 +22,71 @@ from .utils import timing
 
 logger = logging.getLogger(__name__)
 
-# Model tier definitions (matches config/routing.yaml)
-DEFAULT_MODEL_LIST = [
-    # Tier 1: Free (Ollama)
-    {
-        "model_name": "local-fast",
-        "litellm_params": {
-            "model": "ollama/llama3.2:1b",
-            "api_base": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        },
-    },
-    {
+# Import centralized model resolution
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config.models import get_tier_models, resolve_role
+
+
+def _build_model_list() -> list[dict]:
+    """Build LiteLLM model list dynamically from routing.yaml."""
+    ollama_base = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    model_list = []
+
+    # Local tier — map to local-* names for fallback chains
+    local_models = get_tier_models("local")
+    coder_model = resolve_role("coder")
+
+    # First local model = local-fast, coder alias = local-coder
+    if local_models:
+        model_list.append({
+            "model_name": "local-fast",
+            "litellm_params": {
+                "model": f"ollama/{local_models[0]}",
+                "api_base": ollama_base,
+            },
+        })
+    model_list.append({
         "model_name": "local-coder",
         "litellm_params": {
-            "model": "ollama/qwen2.5-coder:14b",
-            "api_base": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            "model": f"ollama/{coder_model}",
+            "api_base": ollama_base,
         },
-    },
-    {
+    })
+    # local-reasoning uses same coder model (only one big local model fits in RAM)
+    model_list.append({
         "model_name": "local-reasoning",
         "litellm_params": {
-            "model": "ollama/deepseek-r1-distill-qwen:32b",
-            "api_base": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            "model": f"ollama/{coder_model}",
+            "api_base": ollama_base,
         },
-    },
-    # Tier 2: Cheap (Gemini)
-    {
-        "model_name": "cloud-fast",
-        "litellm_params": {
-            "model": "gemini/gemini-2.0-flash",
-            "api_key": os.getenv("GEMINI_API_KEY"),
-        },
-    },
-    # Tier 3: Premium (Claude)
-    {
-        "model_name": "cloud-premium",
-        "litellm_params": {
-            "model": "claude-3-5-sonnet-20241022",
-            "api_key": os.getenv("ANTHROPIC_API_KEY"),
-        },
-    },
-]
+    })
+
+    # Cheap tier (Gemini)
+    cheap_models = get_tier_models("cheap")
+    if cheap_models:
+        model_list.append({
+            "model_name": "cloud-fast",
+            "litellm_params": {
+                "model": f"gemini/{cheap_models[0]}",
+                "api_key": os.getenv("GEMINI_API_KEY"),
+            },
+        })
+
+    # Premium tier (Claude)
+    premium_models = get_tier_models("premium")
+    if premium_models:
+        model_list.append({
+            "model_name": "cloud-premium",
+            "litellm_params": {
+                "model": premium_models[0],
+                "api_key": os.getenv("ANTHROPIC_API_KEY"),
+            },
+        })
+
+    return model_list
+
+
+DEFAULT_MODEL_LIST = _build_model_list()
 
 # Fallback chains
 FALLBACK_CHAINS = {

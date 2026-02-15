@@ -3,8 +3,8 @@
 Floor Manager Pre-Flight Script
 
 Gathers all context needed before task execution:
-- Available Ollama models
-- Model capabilities and recommendations
+- Available Ollama models (queried dynamically, no hardcoded names)
+- Role aliases and what they resolve to
 - Active tasks in _handoff/
 - System state (stalls, blockers)
 
@@ -24,39 +24,32 @@ SCRIPT_DIR = Path(__file__).parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 HANDOFF_DIR = PROJECT_ROOT / "_handoff"
 
-# Model capability database (from LOCAL_MODEL_LEARNINGS.md)
-MODEL_CAPABILITIES = {
-    "deepseek-r1:7b": {
-        "context_window": 32768,
-        "strengths": ["reasoning", "debugging", "step-by-step logic"],
-        "weaknesses": ["full file rewrites", "JSON-only output"],
-        "max_output_lines": 200,
-        "recommended_for": ["micro-tasks", "bug fixes", "code review"],
-        "avoid_for": ["large refactors", "file rewrites > 100 lines"],
+# Import centralized model resolution
+sys.path.insert(0, str(PROJECT_ROOT))
+from config.models import get_role_aliases, get_installed_models, validate_routing_config
+
+
+# Role descriptions — keyed by role, not by model name
+ROLE_INFO = {
+    "coder": {
+        "description": "Code generation, refactoring, implementation",
+        "recommended_for": ["new functions", "feature implementation", "refactoring"],
+        "avoid_for": ["debugging complex logic", "architecture decisions"],
     },
-    "deepseek-r1:14b": {
-        "context_window": 32768,
-        "strengths": ["complex reasoning", "multi-step tasks", "debugging"],
-        "weaknesses": ["JSON-only output", "impatient with simple tasks"],
-        "max_output_lines": 400,
-        "recommended_for": ["debugging", "architecture decisions", "complex logic"],
-        "avoid_for": ["simple edits", "boilerplate generation"],
+    "reviewer": {
+        "description": "Code review, debugging, reasoning",
+        "recommended_for": ["bug fixes", "code review", "debugging"],
+        "avoid_for": ["boilerplate generation", "simple edits"],
     },
-    "qwen2.5-coder:7b": {
-        "context_window": 32768,
-        "strengths": ["code generation", "refactoring", "following patterns"],
-        "weaknesses": ["long context", "reasoning about why"],
-        "max_output_lines": 300,
-        "recommended_for": ["new functions", "code generation", "pattern application"],
-        "avoid_for": ["debugging", "architecture decisions"],
+    "implementer": {
+        "description": "Same as coder (alias)",
+        "recommended_for": ["implementation tasks"],
+        "avoid_for": [],
     },
-    "qwen2.5-coder:14b": {
-        "context_window": 32768,
-        "strengths": ["larger code tasks", "refactoring", "multi-file awareness"],
-        "weaknesses": ["overkill for simple tasks", "slower"],
-        "max_output_lines": 500,
-        "recommended_for": ["medium refactors", "feature implementation"],
-        "avoid_for": ["micro-tasks", "single-line fixes"],
+    "embedder": {
+        "description": "Embedding generation for vector search",
+        "recommended_for": ["embedding tasks"],
+        "avoid_for": ["code generation"],
     },
 }
 
@@ -86,7 +79,6 @@ def get_ollama_models() -> list[dict]:
                 model_name = parts[0]
                 model_id = parts[1]
                 size = parts[2]
-                # Parse modified time (remaining parts)
                 modified = " ".join(parts[3:])
 
                 models.append({
@@ -94,7 +86,6 @@ def get_ollama_models() -> list[dict]:
                     "id": model_id,
                     "size": size,
                     "modified": modified,
-                    "capabilities": MODEL_CAPABILITIES.get(model_name, {}),
                 })
 
         return models
@@ -187,36 +178,16 @@ def get_system_state() -> dict:
     return state
 
 
-def recommend_model(task: dict, models: list[dict]) -> str:
-    """Recommend a model for a given task."""
-    available_names = [m["name"] for m in models if "error" not in m]
-
-    if not available_names:
-        return "No models available"
-
-    # Simple heuristics based on task content
+def recommend_role(task: dict) -> str:
+    """Recommend a role for a given task based on objective keywords."""
     objective = task.get("objective", "").lower()
 
-    # Prefer smaller models for simple tasks
-    if any(word in objective for word in ["pin", "update", "change", "simple", "micro"]):
-        for model in ["qwen2.5-coder:7b", "deepseek-r1:7b"]:
-            if model in available_names:
-                return model
+    if any(word in objective for word in ["fix", "debug", "bug", "error", "review"]):
+        return "reviewer"
+    if any(word in objective for word in ["generate", "create", "add", "implement", "build", "refactor"]):
+        return "coder"
 
-    # Prefer reasoning models for debugging/fixing
-    if any(word in objective for word in ["fix", "debug", "bug", "error"]):
-        for model in ["deepseek-r1:7b", "deepseek-r1:14b"]:
-            if model in available_names:
-                return model
-
-    # Prefer coder models for generation
-    if any(word in objective for word in ["generate", "create", "add", "implement"]):
-        for model in ["qwen2.5-coder:7b", "qwen2.5-coder:14b"]:
-            if model in available_names:
-                return model
-
-    # Default to first available
-    return available_names[0] if available_names else "No recommendation"
+    return "coder"  # Default
 
 
 def print_report(as_json: bool = False):
@@ -226,14 +197,18 @@ def print_report(as_json: bool = False):
     tasks = get_active_tasks()
     stalls = get_stall_reports()
     state = get_system_state()
+    aliases = get_role_aliases()
+    config_errors = validate_routing_config()
 
     # Add recommendations to tasks
     for task in tasks:
         if "error" not in task:
-            task["recommended_model"] = recommend_model(task, models)
+            task["recommended_role"] = recommend_role(task)
 
     report = {
         "timestamp": datetime.now().isoformat(),
+        "role_aliases": aliases,
+        "config_errors": config_errors,
         "ollama_models": models,
         "active_tasks": tasks,
         "stall_reports": stalls,
@@ -250,8 +225,26 @@ def print_report(as_json: bool = False):
     print(f"Generated: {report['timestamp']}")
     print("=" * 60)
 
+    # Config validation
+    if config_errors:
+        print("\n## CONFIG ERRORS")
+        print("-" * 40)
+        for err in config_errors:
+            print(f"  WARNING: {err}")
+    else:
+        print("\n  Config validation: OK")
+
+    # Role Aliases
+    print("\n## AVAILABLE ROLES")
+    print("-" * 40)
+    print("  Use these role names with dispatch_task.py:")
+    for role, target in aliases.items():
+        info = ROLE_INFO.get(role, {})
+        desc = info.get("description", "")
+        print(f"  - {role} -> {target}  ({desc})")
+
     # Ollama Models
-    print("\n## AVAILABLE OLLAMA MODELS")
+    print("\n## INSTALLED OLLAMA MODELS")
     print("-" * 40)
     if not models:
         print("  No models found (is Ollama running?)")
@@ -260,11 +253,6 @@ def print_report(as_json: bool = False):
     else:
         for m in models:
             print(f"  - {m['name']} ({m['size']})")
-            caps = m.get("capabilities", {})
-            if caps:
-                print(f"    Context: {caps.get('context_window', 'unknown')}")
-                print(f"    Good for: {', '.join(caps.get('recommended_for', []))}")
-                print(f"    Avoid: {', '.join(caps.get('avoid_for', []))}")
 
     # Active Tasks
     print("\n## ACTIVE TASKS")
@@ -278,7 +266,7 @@ def print_report(as_json: bool = False):
             print(f"  - {t['file']}")
             print(f"    Objective: {t['objective'][:60]}..." if len(t.get('objective', '')) > 60 else f"    Objective: {t.get('objective', 'N/A')}")
             print(f"    Target: {t.get('target_file', 'N/A')}")
-            print(f"    Recommended Model: {t.get('recommended_model', 'N/A')}")
+            print(f"    Recommended Role: {t.get('recommended_role', 'N/A')}")
 
     # Stall Reports
     print("\n## STALL REPORTS")
@@ -303,7 +291,8 @@ def print_report(as_json: bool = False):
     print(f"  Archived tasks: {state.get('archived_task_count', 0)}")
 
     print("\n" + "=" * 60)
-    print("Ready for execution. Run tasks sequentially.")
+    print("Ready for execution. Use roles, not model names.")
+    print("  python scripts/dispatch_task.py <task.md> <role>")
     print("=" * 60)
 
 
