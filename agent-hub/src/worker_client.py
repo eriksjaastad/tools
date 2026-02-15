@@ -214,7 +214,11 @@ CONSTRAINTS:
 
         except MCPTimeoutError:
             return {"success": False, "stall_reason": "timeout"}
+        except MCPError as e:
+            logger.warning(f"MCP error during implementation: {e}")
+            return {"success": False, "stall_reason": f"mcp_error: {str(e)}"}
         except Exception as e:
+            logger.error(f"Unexpected error during implementation: {e}", exc_info=True)
             return {"success": False, "stall_reason": f"error: {str(e)}"}
 
     def run_local_review(self, contract: Dict[str, Any], changed_files: List[str]) -> Dict[str, Any]:
