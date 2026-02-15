@@ -123,6 +123,48 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
     # Give it a moment to start
     time.sleep(1)
 
+    # Perform MCP handshake
+    # 1. Send initialize request
+    init_request = {
+        "jsonrpc": "2.0",
+        "id": 0,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {
+                "name": "agent-hub-dispatcher",
+                "version": "1.0.0"
+            }
+        }
+    }
+    
+    print("Sending MCP initialize request...")
+    process.stdin.write(json.dumps(init_request) + "\n")
+    process.stdin.flush()
+    
+    # Wait for initialize response
+    init_response = process.stdout.readline()
+    if init_response:
+        try:
+            init_data = json.loads(init_response)
+            print(f"✓ Initialize response received")
+        except json.JSONDecodeError:
+            print(f"✗ Failed to parse initialize response: {init_response}")
+    
+    # 2. Send initialized notification
+    initialized_notification = {
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+    }
+    
+    print("Sending initialized notification...")
+    process.stdin.write(json.dumps(initialized_notification) + "\n")
+    process.stdin.flush()
+    
+    # Small delay to ensure notification is processed
+    time.sleep(0.1)
+
     # Call agent_loop
     arguments = {
         "prompt": prompt,
