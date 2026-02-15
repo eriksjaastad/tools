@@ -194,7 +194,9 @@ func main() {
 				"prompt": {"type": "string"},
 				"system": {"type": "string"},
 				"model": {"type": "string"},
-				"max_iterations": {"type": "number", "default": 10}
+				"max_iterations": {"type": "number", "default": 10},
+				"task_id": {"type": "string", "description": "Task identifier for draft redirection"},
+				"project_root": {"type": "string", "description": "Absolute path to the target project directory. When set, draft_read resolves relative paths against this root."}
 			},
 			"required": ["prompt", "model"]
 		}`),

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/eriksjaastad/ollama-mcp-go/internal/executor"
 	"github.com/eriksjaastad/ollama-mcp-go/internal/logger"
@@ -78,11 +79,20 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 					var raw map[string]interface{}
 					if err := json.Unmarshal(tc.Arguments, &raw); err == nil {
 						if path, ok := raw["path"].(string); ok {
-							// Redirection logic
-							if tc.Name == "draft_write" || tc.Name == "draft_patch" {
-								// Write to _handoff/drafts/filename.task_id.draft
-								filename := filepath.Base(path)
-								draftPath := filepath.Join("agent-hub", "_handoff", "drafts", fmt.Sprintf("%s.%s.draft", filename, input.TaskID))
+							if tc.Name == "draft_read" {
+								// Resolve relative paths against ProjectRoot so workers
+								// can read files from the target project, not just agent-hub.
+								if input.ProjectRoot != "" && !filepath.IsAbs(path) {
+									resolved := filepath.Join(input.ProjectRoot, path)
+									raw["path"] = resolved
+									logger.Info("Resolving draft_read against project root", "original", path, "resolved", resolved)
+								}
+							} else if tc.Name == "draft_write" || tc.Name == "draft_patch" {
+								// Redirect writes to _handoff/drafts/ staging area.
+								// Preserve relative path structure using __ separator
+								// so drafts can be mapped back to the correct project location.
+								safeName := strings.ReplaceAll(filepath.Clean(path), string(filepath.Separator), "__")
+								draftPath := filepath.Join("agent-hub", "_handoff", "drafts", fmt.Sprintf("%s.%s.draft", safeName, input.TaskID))
 								raw["path"] = draftPath
 								logger.Info("Redirecting tool call to draft", "tool", tc.Name, "original", path, "redirect", draftPath)
 							}
