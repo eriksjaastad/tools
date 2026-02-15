@@ -9,6 +9,7 @@ type AgentLoopInput struct {
 	Model         string `json:"model,omitempty"`
 	MaxIterations int    `json:"max_iterations,omitempty"`
 	TaskID        string `json:"task_id,omitempty"`
+	ProjectRoot   string `json:"project_root,omitempty"`
 }
 
 // AgentLoopResult represents the final result of the agent loop.
