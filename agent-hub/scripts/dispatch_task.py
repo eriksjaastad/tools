@@ -142,12 +142,13 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
         
         print("Sending MCP initialize request...")
-        if process.stdin:
-            process.stdin.write(json.dumps(init_request) + "\n")
-            process.stdin.flush()
+        assert process.stdin is not None, "Process stdin is None"
+        process.stdin.write(json.dumps(init_request) + "\n")
+        process.stdin.flush()
         
         # Wait for initialize response
-        init_response = process.stdout.readline() if process.stdout else ""
+        assert process.stdout is not None, "Process stdout is None"
+        init_response = process.stdout.readline()
         if init_response:
             try:
                 init_data = json.loads(init_response)
@@ -162,9 +163,9 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
         
         print("Sending initialized notification...")
-        if process.stdin:
-            process.stdin.write(json.dumps(initialized_notification) + "\n")
-            process.stdin.flush()
+        assert process.stdin is not None, "Process stdin is None"
+        process.stdin.write(json.dumps(initialized_notification) + "\n")
+        process.stdin.flush()
         
         # Small delay to ensure notification is processed
         time.sleep(0.1)
@@ -190,24 +191,26 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
 
         print(f"Dispatching task {task_path.name} to {model} via Go MCP...")
-        if process.stdin:
-            process.stdin.write(json.dumps(request) + "\n")
-            process.stdin.flush()
+        assert process.stdin is not None, "Process stdin is None"
+        process.stdin.write(json.dumps(request) + "\n")
+        process.stdin.flush()
 
         # Wait for response and log stderr in background
         print("Waiting for response (check terminal for logs)...")
 
         # Read response
+        assert process.stdout is not None, "Process stdout is None"
+        assert process.stderr is not None, "Process stderr is None"
         response_str: str = ""
         while True:
-            line = process.stdout.readline() if process.stdout else ""
+            line = str(process.stdout.readline())
             if line:
                 response_str += line  # type: ignore[operator]
                 if '"result":' in line or '"error":' in line:
                     break
 
             # Also check stderr
-            err_line = process.stderr.readline() if process.stderr else ""
+            err_line = str(process.stderr.readline())
             if err_line:
                 print(f"[LOG] {err_line.strip()}")
 
