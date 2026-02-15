@@ -22,13 +22,14 @@ import sys
 import time
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
 # Add parent dir so we can import config.models
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.models import resolve_role, validate_routing_config  # type: ignore[import]
 
 
-def dispatch_task(task_path: Path, role: str, max_iterations: int = 15, project_root: Path = None):
+def dispatch_task(task_path: Path, role: str, max_iterations: int = 15, project_root: Optional[Path] = None):
     """
     Dispatches a task to agent_loop via ollama-mcp-go server.
 
@@ -141,11 +142,12 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
         
         print("Sending MCP initialize request...")
-        process.stdin.write(json.dumps(init_request) + "\n")
-        process.stdin.flush()
+        if process.stdin:
+            process.stdin.write(json.dumps(init_request) + "\n")
+            process.stdin.flush()
         
         # Wait for initialize response
-        init_response = process.stdout.readline()
+        init_response = process.stdout.readline() if process.stdout else ""
         if init_response:
             try:
                 init_data = json.loads(init_response)
@@ -160,8 +162,9 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
         
         print("Sending initialized notification...")
-        process.stdin.write(json.dumps(initialized_notification) + "\n")
-        process.stdin.flush()
+        if process.stdin:
+            process.stdin.write(json.dumps(initialized_notification) + "\n")
+            process.stdin.flush()
         
         # Small delay to ensure notification is processed
         time.sleep(0.1)
@@ -187,23 +190,24 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         }
 
         print(f"Dispatching task {task_path.name} to {model} via Go MCP...")
-        process.stdin.write(json.dumps(request) + "\n")
-        process.stdin.flush()
+        if process.stdin:
+            process.stdin.write(json.dumps(request) + "\n")
+            process.stdin.flush()
 
         # Wait for response and log stderr in background
         print("Waiting for response (check terminal for logs)...")
 
         # Read response
-        response_str = ""
+        response_str: str = ""
         while True:
-            line = process.stdout.readline()
+            line = process.stdout.readline() if process.stdout else ""
             if line:
-                response_str += line
+                response_str += line  # type: ignore[operator]
                 if '"result":' in line or '"error":' in line:
                     break
 
             # Also check stderr
-            err_line = process.stderr.readline()
+            err_line = process.stderr.readline() if process.stderr else ""
             if err_line:
                 print(f"[LOG] {err_line.strip()}")
 
@@ -223,7 +227,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                     print("Worker Result Summary:")
                     res = response.get("result", {})
                     print(f"[DEBUG] Result type: {type(res)}")
-                    print(f"[DEBUG] Result content: {json.dumps(res, indent=2)[:1000]}")
+                    print(f"[DEBUG] Result content: {json.dumps(res, indent=2)[:1000]}")  # type: ignore[index]
                     
                     if isinstance(res, dict):
                         print(f"Iterations: {res.get('iterations')}")
@@ -245,7 +249,7 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
                         try:
                             # Import and run validation
                             sys.path.insert(0, str(Path(__file__).parent))
-                            from validate_draft import validate_drafts, write_notification
+                            from validate_draft import validate_drafts, write_notification  # type: ignore[import]
                             
                             validation_result = validate_drafts(task_id)
                             
