@@ -120,152 +120,153 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         env={**os.environ, "SANDBOX_ROOT": str(sandbox_root), "LOG_LEVEL": "info"}
     )
 
-    # Give it a moment to start
-    time.sleep(1)
+    try:
+        # Give it a moment to start
+        time.sleep(1)
 
-    # Perform MCP handshake
-    # 1. Send initialize request
-    init_request = {
-        "jsonrpc": "2.0",
-        "id": 0,
-        "method": "initialize",
-        "params": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {
-                "name": "agent-hub-dispatcher",
-                "version": "1.0.0"
+        # Perform MCP handshake
+        # 1. Send initialize request
+        init_request = {
+            "jsonrpc": "2.0",
+            "id": 0,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "agent-hub-dispatcher",
+                    "version": "1.0.0"
+                }
             }
         }
-    }
-    
-    print("Sending MCP initialize request...")
-    process.stdin.write(json.dumps(init_request) + "\n")
-    process.stdin.flush()
-    
-    # Wait for initialize response
-    init_response = process.stdout.readline()
-    if init_response:
-        try:
-            init_data = json.loads(init_response)
-            print(f"✓ Initialize response received")
-        except json.JSONDecodeError:
-            print(f"✗ Failed to parse initialize response: {init_response}")
-    
-    # 2. Send initialized notification
-    initialized_notification = {
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-    }
-    
-    print("Sending initialized notification...")
-    process.stdin.write(json.dumps(initialized_notification) + "\n")
-    process.stdin.flush()
-    
-    # Small delay to ensure notification is processed
-    time.sleep(0.1)
-
-    # Call agent_loop
-    arguments = {
-        "prompt": prompt,
-        "model": model,
-        "max_iterations": max_iterations,
-        "task_id": task_id
-    }
-    if resolved_project_root:
-        arguments["project_root"] = str(resolved_project_root)
-
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/call",
-        "params": {
-            "name": "agent_loop",
-            "arguments": arguments
+        
+        print("Sending MCP initialize request...")
+        process.stdin.write(json.dumps(init_request) + "\n")
+        process.stdin.flush()
+        
+        # Wait for initialize response
+        init_response = process.stdout.readline()
+        if init_response:
+            try:
+                init_data = json.loads(init_response)
+                print(f"✓ Initialize response received")
+            except json.JSONDecodeError:
+                print(f"✗ Failed to parse initialize response: {init_response}")
+        
+        # 2. Send initialized notification
+        initialized_notification = {
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
         }
-    }
+        
+        print("Sending initialized notification...")
+        process.stdin.write(json.dumps(initialized_notification) + "\n")
+        process.stdin.flush()
+        
+        # Small delay to ensure notification is processed
+        time.sleep(0.1)
 
-    print(f"Dispatching task {task_path.name} to {model} via Go MCP...")
-    process.stdin.write(json.dumps(request) + "\n")
-    process.stdin.flush()
+        # Call agent_loop
+        arguments = {
+            "prompt": prompt,
+            "model": model,
+            "max_iterations": max_iterations,
+            "task_id": task_id
+        }
+        if resolved_project_root:
+            arguments["project_root"] = str(resolved_project_root)
 
-    # Wait for response and log stderr in background
-    print("Waiting for response (check terminal for logs)...")
+        request = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {
+                "name": "agent_loop",
+                "arguments": arguments
+            }
+        }
 
-    # Read response
-    response_str = ""
-    while True:
-        line = process.stdout.readline()
-        if line:
-            response_str += line
-            if '"result":' in line or '"error":' in line:
-                break
+        print(f"Dispatching task {task_path.name} to {model} via Go MCP...")
+        process.stdin.write(json.dumps(request) + "\n")
+        process.stdin.flush()
 
-        # Also check stderr
-        err_line = process.stderr.readline()
-        if err_line:
-            print(f"[LOG] {err_line.strip()}")
+        # Wait for response and log stderr in background
+        print("Waiting for response (check terminal for logs)...")
 
-        if process.poll() is not None:
-             break
+        # Read response
+        response_str = ""
+        while True:
+            line = process.stdout.readline()
+            if line:
+                response_str += line
+                if '"result":' in line or '"error":' in line:
+                    break
 
-    if response_str:
-        print(f"\n[DEBUG] Raw response: {response_str[:500]}...")
-        try:
-            response = json.loads(response_str)
-            print(f"[DEBUG] Parsed response keys: {response.keys()}")
-            
-            if "error" in response:
-                print(f"Error from MCP: {response['error']}")
-            else:
-                print("Task execution loop finished.")
-                print("Worker Result Summary:")
-                res = response.get("result", {})
-                print(f"[DEBUG] Result type: {type(res)}")
-                print(f"[DEBUG] Result content: {json.dumps(res, indent=2)[:1000]}")
+            # Also check stderr
+            err_line = process.stderr.readline()
+            if err_line:
+                print(f"[LOG] {err_line.strip()}")
+
+            if process.poll() is not None:
+                 break
+
+        if response_str:
+            print(f"\n[DEBUG] Raw response: {response_str[:500]}...")
+            try:
+                response = json.loads(response_str)
+                print(f"[DEBUG] Parsed response keys: {response.keys()}")
                 
-                if isinstance(res, dict):
-                    print(f"Iterations: {res.get('iterations')}")
-                    print(f"Tools Called: {res.get('tool_calls_made')}")
-                    response_text = res.get("response") or ""
-                    preview = response_text[:500] if response_text else "(none)"
-                    print(f"Final Response: {preview}...")
-
-                    # Append to task file
-                    print(f"\n[DEBUG] Appending to task file: {task_path}")
-                    with open(task_path, "a") as f:
-                        f.write(f"\n\n## Worker Output ({datetime.now().isoformat()})\n\n")
-                        f.write(res.get("response") or "No response")
-                        f.write(f"\n\n---\n**Stats:** {res.get('iterations')} iterations, {res.get('tool_calls_made')} tool calls.\n")
-                    print(f"[DEBUG] Successfully appended to {task_path}")
+                if "error" in response:
+                    print(f"Error from MCP: {response['error']}")
+                else:
+                    print("Task execution loop finished.")
+                    print("Worker Result Summary:")
+                    res = response.get("result", {})
+                    print(f"[DEBUG] Result type: {type(res)}")
+                    print(f"[DEBUG] Result content: {json.dumps(res, indent=2)[:1000]}")
                     
-                    # Validate drafts and notify Floor Manager
-                    print(f"\n[VALIDATION] Checking drafts for task {task_id}...")
-                    try:
-                        # Import and run validation
-                        sys.path.insert(0, str(Path(__file__).parent))
-                        from validate_draft import validate_drafts, write_notification
+                    if isinstance(res, dict):
+                        print(f"Iterations: {res.get('iterations')}")
+                        print(f"Tools Called: {res.get('tool_calls_made')}")
+                        response_text = res.get("response") or ""
+                        preview = response_text[:500] if response_text else "(none)"
+                        print(f"Final Response: {preview}...")
+
+                        # Append to task file
+                        print(f"\n[DEBUG] Appending to task file: {task_path}")
+                        with open(task_path, "a") as f:
+                            f.write(f"\n\n## Worker Output ({datetime.now().isoformat()})\n\n")
+                            f.write(res.get("response") or "No response")
+                            f.write(f"\n\n---\n**Stats:** {res.get('iterations')} iterations, {res.get('tool_calls_made')} tool calls.\n")
+                        print(f"[DEBUG] Successfully appended to {task_path}")
                         
-                        validation_result = validate_drafts(task_id)
-                        
-                        if validation_result["valid"]:
-                            print(f"✅ Validation passed: {validation_result['draft_count']} draft(s), {validation_result['total_bytes']} bytes")
-                            notification_file = write_notification(task_id, validation_result)
-                            print(f"📬 Floor Manager notified: {notification_file}")
-                            print(f"\n🎉 Task {task_id} ready for Floor Manager review!")
-                        else:
-                            # LOUD FAILURE - Make it impossible to miss
-                            print("\n" + "="*80)
-                            print("🚨 WORKER FAILURE DETECTED 🚨".center(80))
-                            print("="*80)
-                            print(f"\nTask: {task_id}")
-                            print(f"Issues found:")
-                            for issue in validation_result["issues"]:
-                                print(f"  ❌ {issue}")
+                        # Validate drafts and notify Floor Manager
+                        print(f"\n[VALIDATION] Checking drafts for task {task_id}...")
+                        try:
+                            # Import and run validation
+                            sys.path.insert(0, str(Path(__file__).parent))
+                            from validate_draft import validate_drafts, write_notification
                             
-                            # Write failure file
-                            failure_file = Path("_handoff") / f"FAILURE_{task_id}.md"
-                            failure_content = f"""# 🚨 WORKER FAILURE: {task_id}
+                            validation_result = validate_drafts(task_id)
+                            
+                            if validation_result["valid"]:
+                                print(f"✅ Validation passed: {validation_result['draft_count']} draft(s), {validation_result['total_bytes']} bytes")
+                                notification_file = write_notification(task_id, validation_result)
+                                print(f"📬 Floor Manager notified: {notification_file}")
+                                print(f"\n🎉 Task {task_id} ready for Floor Manager review!")
+                            else:
+                                # LOUD FAILURE - Make it impossible to miss
+                                print("\n" + "="*80)
+                                print("🚨 WORKER FAILURE DETECTED 🚨".center(80))
+                                print("="*80)
+                                print(f"\nTask: {task_id}")
+                                print(f"Issues found:")
+                                for issue in validation_result["issues"]:
+                                    print(f"  ❌ {issue}")
+                                
+                                # Write failure file
+                                failure_file = Path("_handoff") / f"FAILURE_{task_id}.md"
+                                failure_content = f"""# 🚨 WORKER FAILURE: {task_id}
 
 **Timestamp:** {datetime.now().isoformat()}
 **Status:** FAILED - Worker did not produce valid output
@@ -292,40 +293,42 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
 
 See `notification_{task_id}.json` for details.
 """
-                            failure_file.write_text(failure_content)
+                                failure_file.write_text(failure_content)
+                                
+                                notification_file = write_notification(task_id, validation_result)
+                                
+                                print(f"\n📋 Failure report written: {failure_file}")
+                                print(f"📬 Floor Manager notified (needs attention): {notification_file}")
+                                print("\n" + "="*80)
+                                print("⚠️  THIS TASK FAILED - MANUAL INTERVENTION REQUIRED".center(80))
+                                print("="*80 + "\n")
+                                
+                                # Exit with error code
+                                sys.exit(1)
+                                
+                        except Exception as e:
+                            print(f"⚠️  Validation failed with error: {e}")
+                            print("Continuing anyway - Floor Manager can review manually")
                             
-                            notification_file = write_notification(task_id, validation_result)
-                            
-                            print(f"\n📋 Failure report written: {failure_file}")
-                            print(f"📬 Floor Manager notified (needs attention): {notification_file}")
-                            print("\n" + "="*80)
-                            print("⚠️  THIS TASK FAILED - MANUAL INTERVENTION REQUIRED".center(80))
-                            print("="*80 + "\n")
-                            
-                            # Exit with error code
-                            sys.exit(1)
-                            
-                    except Exception as e:
-                        print(f"⚠️  Validation failed with error: {e}")
-                        print("Continuing anyway - Floor Manager can review manually")
-                        
-                else:
-                    print(f"[WARNING] Unexpected result type: {type(res)}")
-                    print(json.dumps(res, indent=2))
-        except json.JSONDecodeError as e:
-            print(f"Malformed response from server: {response_str}")
-            print(f"[DEBUG] JSON decode error: {e}")
+                    else:
+                        print(f"[WARNING] Unexpected result type: {type(res)}")
+                        print(json.dumps(res, indent=2))
+            except json.JSONDecodeError as e:
+                print(f"Malformed response from server: {response_str}")
+                print(f"[DEBUG] JSON decode error: {e}")
 
-    # Cleanup: ensure MCP server process is terminated
-    try:
-        process.terminate()
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        print("[WARNING] MCP server didn't terminate gracefully, killing...")
-        process.kill()
-        process.wait()
-    except Exception as e:
-        print(f"[WARNING] Error during cleanup: {e}")
+    finally:
+        # Cleanup: ensure MCP server process is terminated
+        try:
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print("[WARNING] MCP server didn't terminate gracefully, killing...")
+            process.kill()
+            process.wait()
+        except Exception as e:
+            print(f"[WARNING] Error during cleanup: {e}")
 
 if __name__ == "__main__":
     import argparse
