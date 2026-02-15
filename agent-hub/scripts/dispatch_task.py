@@ -270,8 +270,16 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
             print(f"Malformed response from server: {response_str}")
             print(f"[DEBUG] JSON decode error: {e}")
 
-    process.terminate()
-    process.wait()
+    # Cleanup: ensure MCP server process is terminated
+    try:
+        process.terminate()
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        print("[WARNING] MCP server didn't terminate gracefully, killing...")
+        process.kill()
+        process.wait()
+    except Exception as e:
+        print(f"[WARNING] Error during cleanup: {e}")
 
 if __name__ == "__main__":
     import argparse
