@@ -190,7 +190,7 @@ When requesting a review, include:
 
 - **Project Owner:** Erik Sjaastad
 - **Super Manager:** Claude (that's you, cousin)
-- **Floor Manager:** Gemini 2.5 Flash (in Antigravity IDE)
+- **Floor Manager:** Claude or Gemini (as available)
 
 ---
 

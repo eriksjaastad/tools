@@ -153,8 +153,8 @@ def create_contract(proposal: Dict[str, Any]) -> Dict[str, Any]:
             "base_commit": ""
         },
         "roles": {
-            "implementer": "qwen2.5-coder:14b",
-            "local_reviewer": "deepseek-r1:7b",
+            "implementer": "coding:current",
+            "local_reviewer": "coding:current",
             "judge": "claude-code-cli"
         },
         "limits": {

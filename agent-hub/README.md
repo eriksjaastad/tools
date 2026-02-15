@@ -1,20 +1,98 @@
 # Agent Hub - Unified Agent System
 
-Autonomous Floor Manager for multi-agent task pipelines. Orchestrates task execution between Implementer, Local Reviewer, and Judge agents using a Model Context Protocol (MCP) message bus.
+Autonomous Floor Manager for multi-agent task pipelines. Dispatches work to local Ollama workers via the Go MCP server.
 
-**Status:** Production Ready (Jan 2026)
-**Version:** 2.0 (Unified Agent System)
+## Quick Start
 
-## Features
+```bash
+# 1. Pre-flight check — see available roles, models, and tasks
+python scripts/handoff_info.py
 
-- **Message-Driven**: Real-time agent coordination via MCP message bus
-- **Multi-Environment**: Works with Claude CLI, Cursor, and Antigravity
-- **Tiered Model Routing**: Local-first with cloud fallback (LiteLLM integration)
-- **Git Integration**: Automatic branch creation, checkpointing, and merging
-- **Circuit Breakers**: 9 automatic halt conditions (paradox detection, hallucination loops, budget tracking)
-- **Budget Management**: Cost tracking, preflight estimates, and ceiling enforcement
-- **V4 Sandbox Draft Pattern**: Local models can safely edit files through a gated sandbox
-- **Feature Flags**: Gradual rollout of new capabilities
+# 2. Dispatch a task using a ROLE (not a model name)
+python scripts/dispatch_task.py <task_file.md> <role> [max_iterations]
+
+# 3. Monitor progress
+python scripts/monitor_pipeline.py
+```
+
+## Roles
+
+**Always use roles, never raw model names.** Roles are defined in `config/routing.yaml` and resolve to whatever model is currently installed. Models are managed by model-updater and can change at any time.
+
+| Role | What it does | Resolves to |
+|------|-------------|-------------|
+| `coder` | Code generation, refactoring, implementation | `coding:current` |
+| `reviewer` | Code review, debugging, reasoning | `coding:current` |
+| `implementer` | Same as coder (alias) | `coding:current` |
+| `embedder` | Embedding generation | `embedding:current` |
+
+### Examples
+
+```bash
+# Good — use roles
+python scripts/dispatch_task.py _handoff/TASK_001.md coder
+python scripts/dispatch_task.py _handoff/TASK_002.md reviewer
+
+# Also OK — use Ollama aliases directly
+python scripts/dispatch_task.py _handoff/TASK_001.md coding:current
+
+# BAD — never hardcode full model tags (these break when models update)
+# python scripts/dispatch_task.py _handoff/TASK_001.md qwen2.5-coder:32b-instruct-q3_K_L
+```
+
+## How Model Resolution Works
+
+```
+Your input        config/routing.yaml     Ollama alias system       Actual model
+─────────── ───→  ─────────────────── ───→ ──────────────────── ───→ ────────────
+"coder"           role_aliases:            coding:current            qwen2.5-coder:32b
+                    coder: coding:current                            (managed by model-updater)
+```
+
+1. **You say:** `coder`
+2. **routing.yaml** resolves the role alias to `coding:current`
+3. **Ollama** resolves `coding:current` to the actual model (managed weekly by model-updater)
+4. **You never need to know** what the actual model is
+
+## Pre-Flight Check
+
+Run `python scripts/handoff_info.py` before starting work. It shows:
+
+- Available roles and what they resolve to
+- Installed Ollama models
+- Active tasks in `_handoff/`
+- Stall reports and system state
+- Config validation errors (if any models are missing)
+
+Use `--json` for machine-readable output.
+
+## Task File Format
+
+Tasks live in `_handoff/TASK_*.md`:
+
+```markdown
+**Objective:** Implement the login validation function
+
+**Target File:** src/auth.py
+
+**Acceptance Criteria:**
+- [ ] Validates email format
+- [ ] Returns error for empty password
+- [ ] Unit tests pass
+```
+
+## Troubleshooting
+
+**"Preflight check failed: Model X not installed"**
+→ The model in `config/routing.yaml` isn't in Ollama. Run `ollama list` to see what's available, then update `routing.yaml`.
+
+**"MCP server not found"**
+→ Build the Go server: `cd ../ollama-mcp-go && go build -o bin/server ./cmd/server`
+
+**Broken pipe or silent failure**
+→ Usually means the model doesn't exist. The preflight check should catch this before it happens.
+
+---
 
 ## Architecture
 
@@ -45,48 +123,14 @@ Autonomous Floor Manager for multi-agent task pipelines. Orchestrates task execu
 
 ## V4 Sandbox Draft Pattern
 
-Local models can now edit files safely through a controlled sandbox:
+Local models edit files safely through a controlled sandbox:
 
 1. **Worker requests draft** - Source file copied to `_handoff/drafts/`
 2. **Worker edits draft** - Changes made only in sandbox
 3. **Worker submits draft** - Floor Manager reviews the diff
 4. **Gate decides** - Accept (apply), Reject (discard), or Escalate (human review)
 
-### Security Layers
-
-| Layer | Protection |
-|-------|------------|
-| Path Validation | Only `_handoff/drafts/` is writable |
-| Content Analysis | Secrets, hardcoded paths, deletion ratio |
-| Floor Manager Gate | Diff review, conflict detection |
-| Audit Trail | All decisions logged, rollback capable |
-
-See `AGENTS.md` for full V4 documentation.
-
-## Installation
-
-### From agent-skills-library
-```bash
-agent-skill install floor-manager
-```
-
-### Manual Installation
-```bash
-git clone https://github.com/eriksjaastad/agent-hub
-cd agent-hub
-pip install -r requirements.txt
-```
-
 ## Configuration
-
-### Quick Start
-
-```bash
-cp .env.example .env
-cp config/routing.yaml.example config/routing.yaml
-cp config/feature_flags.yaml.example config/feature_flags.yaml
-# Edit files with your paths
-```
 
 ### Environment Variables
 
@@ -96,77 +140,19 @@ cp config/feature_flags.yaml.example config/feature_flags.yaml
 | `MCP_SERVER_PATH` | Yes | Path to ollama-mcp-go binary |
 | `HANDOFF_DIR` | No | Contract/artifact directory (default: `_handoff`) |
 | `PROJECTS_ROOT` | No | Base path for portable prompts |
-| `AGENT_HUB_DRY_RUN` | No | Set to `1` for dry-run mode |
 | `LOG_LEVEL` | No | Logging level (default: `INFO`) |
 
 ### Model Routing (`config/routing.yaml`)
 
-Configure tiered model fallback chains:
+All model configuration lives here. Role aliases, tier definitions, and task routing matrix.
 
-```yaml
-tiers:
-  tier_1_free:     # Local Ollama models
-  tier_2_cheap:    # Gemini Flash, etc.
-  tier_3_premium:  # Claude Sonnet/Opus
+### Key Config Files
 
-fallback_chains:
-  default: ["local-fast", "cloud-fast", "cloud-premium"]
-  code_generation: ["local-coder", "cloud-fast", "cloud-premium"]
-```
-
-### Feature Flags (`config/feature_flags.yaml`)
-
-Enable/disable features via YAML or environment variables:
-
-```yaml
-ollama_http_client:
-  enabled: false
-  env_override: "UAS_OLLAMA_HTTP"
-
-budget_manager:
-  enabled: false
-  env_override: "UAS_BUDGET_MGR"
-```
-
-## Usage
-
-### Health Check
-```bash
-python scripts/health_check.py
-```
-
-### Start the Floor Manager
-```bash
-./scripts/start_agent_hub.sh
-```
-
-### Dispatch a Task
-```bash
-python scripts/dispatch_task.py --proposal path/to/PROPOSAL_FINAL.md
-```
-
-### Monitor Pipeline
-```bash
-python scripts/monitor_pipeline.py
-```
-
-### Generate MCP Config
-```bash
-python scripts/generate_mcp_config.py > mcp.json
-```
-
-### Run Benchmarks
-```bash
-python scripts/benchmark_phase_1.py
-```
-
-### Run Tests
-```bash
-pytest tests/                    # All tests
-pytest tests/test_sandbox.py     # Sandbox security
-pytest tests/test_draft_gate.py  # Draft gate logic
-pytest tests/test_e2e.py         # End-to-end pipeline
-```
+| File | Purpose |
+|------|---------|
+| `config/routing.yaml` | Model tiers, role aliases, task routing matrix |
+| `config/models.py` | Centralized model resolution (imported by all scripts) |
+| `config/budget.yaml` | Cost ceiling enforcement |
 
 ## Core Modules
 
@@ -179,21 +165,20 @@ pytest tests/test_e2e.py         # End-to-end pipeline
 | `git_manager.py` | Branch creation, checkpoints, merge |
 | `draft_gate.py` | V4 sandbox review and decision logic |
 | `sandbox.py` | Draft file isolation and validation |
-| `circuit_breakers.py` | Extended halt conditions (router, SQLite, budget) |
+| `circuit_breakers.py` | Extended halt conditions |
 | `budget_manager.py` | Cost tracking and ceiling enforcement |
 | `router.py` | Tiered model selection and fallback |
 | `litellm_bridge.py` | LiteLLM provider abstraction |
-| `message_bus.py` | SQLite-backed message queue |
-| `config.py` | Configuration loading and validation |
-| `audit_logger.py` | Transition logging to NDJSON |
 
-### Environment Adapters
+## Scripts
 
-| Adapter | Environment |
-|---------|-------------|
-| `environment/claude_cli.py` | Claude Code CLI |
-| `environment/cursor.py` | Cursor IDE |
-| `environment/antigravity.py` | Google Antigravity |
+| Script | Purpose |
+|--------|---------|
+| `scripts/handoff_info.py` | Pre-flight report (run first) |
+| `scripts/dispatch_task.py` | Send task to worker (main entry point) |
+| `scripts/monitor_pipeline.py` | Watch task progress |
+| `scripts/health_check.py` | System health verification |
+| `scripts/start_agent_hub.sh` | Start the Floor Manager |
 
 ## Circuit Breakers
 
@@ -209,20 +194,18 @@ The Floor Manager automatically halts when:
 8. Scope creep (>20 files changed)
 9. Review cycle limit
 
-## Audit Trail
+## Tests
 
-All transitions and messages logged to `_handoff/transition.ndjson`.
-
-## Documentation
-
-- `AGENTS.md` - V4 workflow and project-specific rules
-- `Documents/API.md` - API reference for key modules
-- `Documents/V4_IMPLEMENTATION_COMPLETE.md` - Implementation details
-- `Documents/FLOOR_MANAGER_STARTUP_PROTOCOL.md` - Startup procedures
-- `Documents/CURSOR_MCP_SETUP.md` - Cursor integration guide
-- `PRD.md` - Product requirements (V3.0)
+```bash
+pytest tests/                              # All tests
+pytest tests/test_dispatch_task.py         # Role resolution (unit)
+pytest tests/test_routing_validation.py    # Model availability (integration)
+pytest tests/test_sandbox.py               # Sandbox security
+pytest tests/test_e2e.py                   # End-to-end pipeline
+```
 
 ## Related Projects
 
 - [claude-mcp-go](../claude-mcp-go) - MCP hub for agent communication (Go)
 - [ollama-mcp-go](../ollama-mcp-go) - MCP server for local Ollama models (Go)
+- [model-updater](../../model-updater) - Weekly model discovery and alias management

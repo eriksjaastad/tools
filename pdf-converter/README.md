@@ -1,0 +1,3 @@
+# PDF-Converter
+
+This directory contains two Python scripts designed to automate PDF processing. The `cleanup_converted_pdfs.py` script is a utility for cleaning up and optimizing converted PDFs, ensuring they meet specific formatting requirements. Meanwhile, the `pdf_to_markdown_converter.py` script leverages OCR technology to convert PDF documents into editable Markdown files, facilitating easy content management and editing.

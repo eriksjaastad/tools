@@ -12,8 +12,8 @@ MODEL_COST_MAP = {
     "claude-code-cli": {"input": 3.00, "output": 15.00}, # Assuming Sonnet usage
     "gpt-4o": {"input": 2.50, "output": 10.00},
     "gemini-1.5-flash": {"input": 0.075, "output": 0.30},
-    "qwen2.5-coder:14b": {"input": 0.0, "output": 0.0}, # Local is free
-    "deepseek-r1:7b": {"input": 0.0, "output": 0.0},     # Local is free
+    "coding:current": {"input": 0.0, "output": 0.0},     # Local Ollama alias - always free
+    "embedding:current": {"input": 0.0, "output": 0.0},  # Local Ollama alias - always free
 }
 
 logger = logging.getLogger(__name__)

@@ -48,6 +48,4 @@ Specific areas where feedback would be valuable.
 
 ## Related Documentation
 
-- [[ai_model_comparison]] - AI models
-- [[testing_strategy]] - testing/QA
 

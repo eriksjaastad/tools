@@ -34,7 +34,7 @@ func NewClient(baseURL string) *Client {
 				IdleConnTimeout:     90 * time.Second,
 			},
 		},
-		Timeout: 120 * time.Second,
+		Timeout: 300 * time.Second, // 5 minutes - allows for slow responses under load
 	}
 }
 

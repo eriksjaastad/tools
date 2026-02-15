@@ -40,7 +40,7 @@ def chat(
     Send chat completion request to Ollama.
 
     Args:
-        model: Model name (e.g., "llama3.2:1b")
+        model: Model name (e.g., "coding:current")
         messages: List of {"role": "...", "content": "..."} dicts
         stream: If True, yields chunks as they arrive
         keep_alive: Override default keep_alive (e.g., "5m", "0", "-1")

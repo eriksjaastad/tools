@@ -44,6 +44,7 @@ func (h *Handler) RegisterTool(tool Tool) {
 // Serve starts the stdio loop.
 func (h *Handler) Serve(stdin io.Reader, stdout io.Writer) error {
 	scanner := bufio.NewScanner(stdin)
+	scanner.Buffer(make([]byte, 1024*1024), 1024*1024) // 1MB max line size
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {

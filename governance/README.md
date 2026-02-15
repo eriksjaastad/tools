@@ -8,6 +8,7 @@ This governance system provides reusable git pre-commit hooks that can be instal
 
 - **Secrets Scanner**: Blocks commits containing API keys, tokens, and other secrets
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
+- **Agent Config Sync**: Ensures AGENTS.md, .cursorrules, and CLAUDE.md stay in sync
 
 ## Directory Structure
 
@@ -264,6 +265,21 @@ Running absolute-path-check.py... ✓ PASS
 [main 1a2b3c4] Clean commit
  3 files changed, 42 insertions(+), 8 deletions(-)
 ```
+
+## Relationship to Claude Hooks
+
+There are two validation systems in the ecosystem:
+
+| System | Location | Trigger | Purpose |
+|--------|----------|---------|---------|
+| **Governance** | `_tools/governance/` | Git pre-commit | Blocks bad commits (all agents) |
+| **Claude Hooks** | `.claude/hooks/validators/` | File write | Real-time feedback (Claude only) |
+
+Both systems check for secrets and absolute paths, but have different interfaces:
+- Governance validators take file paths as arguments
+- Claude validators read from stdin (JSON format)
+
+The goal is universal enforcement: Claude gets real-time feedback, while git hooks catch anything that slips through regardless of which agent made the change.
 
 ## Best Practices
 

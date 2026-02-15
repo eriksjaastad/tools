@@ -255,20 +255,12 @@ python -c "from scripts.core.personal_ai_listener import *; print('OK')"
 
 ## Related Documentation
 
-- [[LOCAL_MODEL_LEARNINGS]] - local AI
-- [[billing_workflows]] - billing/payments
-- [[dashboard_architecture]] - dashboard/UI
-- [[prompt_engineering_guide]] - prompt engineering
-- [[tax_documentation]] - tax/accounting
-- [[case_studies]] - examples
-- [[cortana_architecture]] - Cortana AI
-- [[holoscape_architecture]] - Holoscape
-- [[portfolio_content]] - portfolio/career
-- [[ai-usage-billing-tracker/README]] - AI Billing Tracker
-- [[cortana-personal-ai/README]] - Cortana AI
-- [[flo-fi/README]] - Flo-Fi
-- [[holoscape/README]] - Holoscape
-- [[national-cattle-brands/README]] - Cattle Brands
-- [[portfolio-ai/README]] - Portfolio AI
-- [[tax-organizer/README]] - Tax Organizer
-- [[trading-copilot/README]] - Trading Copilot
+- [LOCAL_MODEL_LEARNINGS](../../writing/Documents/reference/LOCAL_MODEL_LEARNINGS.md) - local AI
+- [ai-usage-billing-tracker/README](../../ai-model-scratch-build/README.md) - AI Billing Tracker
+- [cortana-personal-ai/README](../../ai-model-scratch-build/README.md) - Cortana AI
+- [flo-fi/README](../../ai-model-scratch-build/README.md) - Flo-Fi
+- [holoscape/README](../../ai-model-scratch-build/README.md) - Holoscape
+- [national-cattle-brands/README](../../ai-model-scratch-build/README.md) - Cattle Brands
+- [portfolio-ai/README](../../ai-model-scratch-build/README.md) - Portfolio AI
+- [tax-organizer/README](../../ai-model-scratch-build/README.md) - Tax Organizer
+- [trading-copilot/README](../../ai-model-scratch-build/README.md) - Trading Copilot

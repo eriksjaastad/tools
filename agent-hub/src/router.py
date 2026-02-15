@@ -48,7 +48,9 @@ class Router:
         
         # Get models for this tier
         tier_config = self.config.get("model_tiers", {}).get(tier, {})
-        models = tier_config.get("models", ["ollama/llama3.2:1b"])
+        models = tier_config.get("models", [])
+        if not models:
+            raise ValueError(f"No models configured for tier '{tier}' in routing.yaml")
         
         # Simple selection: first available model in tier
         model = models[0]
