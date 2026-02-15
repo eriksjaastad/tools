@@ -183,8 +183,7 @@ CONSTRAINTS:
             if not code_match:
                  # Be lenient? Requirements say "stall_reason": "malformed_output" if no markers
                  # DEBUG: Log output
-                 with open("_handoff/last_worker_output.txt", "w") as f:
-                     f.write(output_text)
+                 atomic_write(Path("_handoff/last_worker_output.txt"), output_text)
                  
                  return {
                     "success": False,

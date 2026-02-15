@@ -78,8 +78,20 @@ class CircuitBreaker:
                 import json
                 data = json.loads(self.state_path.read_text())
                 return CircuitBreakerState(**data)
+            except json.JSONDecodeError as e:
+                # Corrupted file - backup and reset
+                backup_path = self.state_path.with_suffix(".json.corrupted")
+                self.state_path.rename(backup_path)
+                logger.error(f"Circuit breaker state file corrupted, backed up to {backup_path}: {e}")
+                return CircuitBreakerState()
+            except (TypeError, KeyError) as e:
+                # Schema mismatch - log and attempt to continue with defaults
+                logger.error(f"Circuit breaker state schema mismatch (may need migration): {e}")
+                return CircuitBreakerState()
             except Exception as e:
-                logger.warning(f"Failed to load circuit breaker state: {e}")
+                # Unexpected error - re-raise to avoid silent failures
+                logger.critical(f"Unexpected error loading circuit breaker state: {e}")
+                raise
         return CircuitBreakerState()
 
     def _save_state(self) -> None:
