@@ -2,13 +2,17 @@
 Dispatch a task to a local Ollama worker via the Go MCP server.
 
 Usage:
-    python scripts/dispatch_task.py <task_file.md> <role> [max_iterations]
+    python scripts/dispatch_task.py <task_file.md> <role> [--max-iterations N] [--project-root PATH]
 
 Roles: coder, reviewer, implementer, embedder
        (or any Ollama model alias like "coding:current")
 
 The role is resolved through config/routing.yaml role_aliases,
 then validated against installed Ollama models before dispatch.
+
+When --project-root is specified, the worker can read files from the target
+project via draft_read, and the sandbox is expanded to cover both the tools
+directory and the project directory.
 """
 
 import json
@@ -24,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from config.models import resolve_role, validate_routing_config
 
 
-def dispatch_task(task_path: Path, role: str, max_iterations: int = 15):
+def dispatch_task(task_path: Path, role: str, max_iterations: int = 15, project_root: Path = None):
     """
     Dispatches a task to agent_loop via ollama-mcp-go server.
 
@@ -32,6 +36,8 @@ def dispatch_task(task_path: Path, role: str, max_iterations: int = 15):
         task_path: Path to the task markdown file.
         role: Role name ("coder", "reviewer") or model alias ("coding:current").
         max_iterations: Max agent loop iterations.
+        project_root: Path to the target project directory. When set, the worker
+                      can read files from this project via draft_read.
     """
     agent_hub_dir = Path(__file__).parent.parent
     root_dir = agent_hub_dir.parent
@@ -60,7 +66,25 @@ def dispatch_task(task_path: Path, role: str, max_iterations: int = 15):
 
     task_id = task_path.name.replace(".md", "")
 
+    # Resolve project root
+    resolved_project_root = None
+    if project_root is not None:
+        resolved_project_root = project_root.resolve()
+        if not resolved_project_root.is_dir():
+            print(f"Error: Project root does not exist: {resolved_project_root}")
+            sys.exit(1)
+        print(f"Project root: {resolved_project_root}")
+
     # Prepare prompt
+    project_context = ""
+    if resolved_project_root:
+        project_context = f"""6. PROJECT ROOT: {resolved_project_root}
+   All file paths are relative to this project directory.
+   Use draft_read with relative paths (e.g., "pyproject.toml", "src/main.py") to read project files.
+"""
+    else:
+        project_context = "5. You are working in a sandbox. All paths should be relative to the root.\n"
+
     prompt = f"""TASK_ID: {task_id}
 
 TASK DETAILS:
@@ -74,10 +98,15 @@ INSTRUCTIONS:
 4. EXAMPLES:
    - To read a file: <tool_call>{{"name": "draft_read", "arguments": {{"path": "filename.py"}}}}</tool_call>
    - To write a file: <tool_call>{{"name": "draft_write", "arguments": {{"path": "filename.py", "content": "..."}}}}</tool_call>
-5. You are working in a sandbox. All paths should be relative to the root.
-
+{project_context}
 GOAL: Complete the objective stated in the task details. Perform the edits now.
 """
+
+    # Compute sandbox root: must cover both tools dir and project root
+    sandbox_root = root_dir
+    if resolved_project_root:
+        sandbox_root = Path(os.path.commonpath([str(root_dir), str(resolved_project_root)]))
+        print(f"Sandbox root expanded to: {sandbox_root}")
 
     # Start MCP server
     process = subprocess.Popen(
@@ -88,25 +117,29 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         cwd=str(root_dir),
         text=True,
         bufsize=1,
-        env={**os.environ, "SANDBOX_ROOT": str(root_dir), "LOG_LEVEL": "info"}
+        env={**os.environ, "SANDBOX_ROOT": str(sandbox_root), "LOG_LEVEL": "info"}
     )
 
     # Give it a moment to start
     time.sleep(1)
 
     # Call agent_loop
+    arguments = {
+        "prompt": prompt,
+        "model": model,
+        "max_iterations": max_iterations,
+        "task_id": task_id
+    }
+    if resolved_project_root:
+        arguments["project_root"] = str(resolved_project_root)
+
     request = {
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
         "params": {
             "name": "agent_loop",
-            "arguments": {
-                "prompt": prompt,
-                "model": model,
-                "max_iterations": max_iterations,
-                "task_id": task_id
-            }
+            "arguments": arguments
         }
     }
 
@@ -164,15 +197,15 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
     process.wait()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python dispatch_task.py <task_file> <role> [max_iterations]")
-        print()
-        print("Roles: coder, reviewer, implementer, embedder")
-        print("       (or any Ollama alias like 'coding:current')")
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description="Dispatch a task to a local Ollama worker via Go MCP server."
+    )
+    parser.add_argument("task_file", type=Path, help="Path to the task markdown file")
+    parser.add_argument("role", help="Role name (coder, reviewer) or model alias (coding:current)")
+    parser.add_argument("--max-iterations", type=int, default=15, help="Max agent loop iterations (default: 15)")
+    parser.add_argument("--project-root", type=Path, default=None,
+                        help="Path to target project directory (for tasks that modify external projects)")
+    args = parser.parse_args()
 
-    task_file = Path(sys.argv[1])
-    role_name = sys.argv[2]
-    max_iters = int(sys.argv[3]) if len(sys.argv) > 3 else 15
-
-    dispatch_task(task_file, role_name, max_iters)
+    dispatch_task(args.task_file, args.role, args.max_iterations, args.project_root)
