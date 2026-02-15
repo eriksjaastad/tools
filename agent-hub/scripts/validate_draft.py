@@ -13,8 +13,9 @@ This runs automatically after worker completes.
 import json
 from pathlib import Path
 from datetime import datetime
+from typing import Optional
 
-def validate_drafts(task_id: str, handoff_dir: Path = None) -> dict:
+def validate_drafts(task_id: str, handoff_dir: Optional[Path] = None) -> dict:
     """
     Quick sanity check on drafts created by a worker.
     
@@ -125,7 +126,7 @@ def validate_drafts(task_id: str, handoff_dir: Path = None) -> dict:
         "drafts": draft_paths
     }
 
-def write_notification(task_id: str, validation_result: dict, handoff_dir: Path = None):
+def write_notification(task_id: str, validation_result: dict, handoff_dir: Optional[Path] = None):
     """Write a notification file for Floor Manager."""
     if handoff_dir is None:
         handoff_dir = Path("_handoff")
