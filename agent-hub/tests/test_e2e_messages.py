@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
 
-from src.listener import MessageListener
+from src.listener import MessageListener, PipelineContext
 from src.hub_client import HubClient
 from src.mcp_client import MCPClient
 from src.watchdog import load_contract, save_contract
@@ -96,20 +96,44 @@ def test_proposal_to_review_message_flow(mock_mcp_env, tmp_path):
         assert mock_convert.called
         assert mock_convert.call_args[0][0] == proposal_path
 
-def test_stop_task_interrupts_work(mock_mcp_env):
-    hub, mcp = mock_mcp_env
-    listener = MessageListener("floor_manager", Path("fake/path"))
-    
+def test_stop_task_interrupts_work(tmp_path):
+    handoff_dir = tmp_path / "_handoff"
+    handoff_dir.mkdir()
+    contract_path = handoff_dir / "TASK_CONTRACT.json"
+    contract_path.write_text(json.dumps({
+        "task_id": "TASK-STOP-1",
+        "status": "implementation_in_progress",
+        "timestamps": {"updated_at": datetime.now(timezone.utc).isoformat()},
+    }))
+
+    listener = MessageListener("floor_manager", Path("fake/path"), handoff_dir=handoff_dir)
+    process = MagicMock()
+    process.poll.return_value = None
+    context = PipelineContext(task_id="TASK-STOP-1", contract_path=contract_path, process=process)
+    listener._active_pipelines["TASK-STOP-1"] = context
+
     msg = {
         "id": "msg-stop",
         "type": "STOP_TASK",
         "from": "super_manager",
-        "payload": {"reason": "User cancelled"}
+        "payload": {"reason": "User cancelled", "task_id": "TASK-STOP-1"}
     }
-    
-    # Currently handle_stop_task just logs. 
-    # We just verify it doesn't crash.
+
     listener.handle_stop_task(msg)
+    process.terminate.assert_called_once()
+    process.wait.assert_called_once_with(timeout=2)
+
+    updated = json.loads(contract_path.read_text())
+    assert updated["status"] == "erik_consultation"
+    assert "STOP_TASK cancellation" in updated["status_reason"]
+    assert updated["failure_details"] == "User cancelled"
+
+    transition_log = (handoff_dir / "transition.ndjson").read_text()
+    assert "stop_task_cancelled" in transition_log
+
+    # Idempotent: no second terminate on repeated STOP_TASK
+    listener.handle_stop_task(msg)
+    process.terminate.assert_called_once()
 
 def test_question_answer_negotiation(mock_mcp_env):
     hub, mcp = mock_mcp_env

@@ -244,33 +244,37 @@ def check_circuit_breakers(contract: Dict[str, Any]) -> Tuple[bool, str]:
 
     # 5. GPT-Energy Nitpicking
     # If review_cycle_count >= 3 AND only style issues
+    # IMPORTANT: Only evaluate when a task-specific judge_report_json is provided
+    # and that file exists and is readable. Do NOT fall back to shared _handoff/JUDGE_REPORT.json.
     if breaker.get("review_cycle_count", 0) >= 3:
-        judge_report_path = Path(handoff.get("judge_report_json", "_handoff/JUDGE_REPORT.json"))
-        report_content = safe_read(judge_report_path)
-        if report_content:
-            try:
-                report = json.loads(report_content)
-                issues = report.get("blocking_issues", [])
-                suggestions = report.get("suggestions", [])
-                
-                # Check if all issues/suggestions are style-related
-                all_style = True
-                STYLE_KEYWORDS = ["style", "formatting", "indentation", "spacing", "naming", "whitespace"]
-                
-                # If there are no issues and no suggestions after 3+ cycles, that IS nitpicking
-                if not issues and not suggestions:
-                    return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles with no substantive feedback"
-                
-                for issue in issues + suggestions:
-                    desc = issue.get("description", "").lower()
-                    if not any(k in desc for k in STYLE_KEYWORDS):
-                        all_style = False
-                        break
-                
-                if all_style:
-                    return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles of pure style issues"
-            except json.JSONDecodeError as e:
-                logger.warning(f"Cannot parse judge report for trigger 5: {judge_report_path} - {e}")
+        report_path_str = handoff.get("judge_report_json")
+        if report_path_str:
+            judge_report_path = Path(report_path_str)
+            report_content = safe_read(judge_report_path)
+            if report_content:
+                try:
+                    report = json.loads(report_content)
+                    issues = report.get("blocking_issues", [])
+                    suggestions = report.get("suggestions", [])
+
+                    # Check if all issues/suggestions are style-related
+                    all_style = True
+                    STYLE_KEYWORDS = ["style", "formatting", "indentation", "spacing", "naming", "whitespace"]
+
+                    # If there are no issues and no suggestions after 3+ cycles, that IS nitpicking
+                    if not issues and not suggestions:
+                        return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles with no substantive feedback"
+
+                    for issue in issues + suggestions:
+                        desc = issue.get("description", "").lower()
+                        if not any(k in desc for k in STYLE_KEYWORDS):
+                            all_style = False
+                            break
+
+                    if all_style:
+                        return True, "Trigger 5: GPT-Energy Nitpicking - 3+ cycles of pure style issues"
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Cannot parse judge report for trigger 5: {judge_report_path} - {e}")
 
     # 6. Timeout (Inactivity)
     now = datetime.now(timezone.utc)
@@ -470,6 +474,18 @@ def main(argv):
         sys.exit(1)
 
     handoff_dir = config.handoff_dir
+
+    # Optional override: allow explicit contract path via CLI
+    # Usage: watchdog <cmd> --contract /path/to/TASK_CONTRACT.json
+    # Falls back to `${HANDOFF_DIR}/TASK_CONTRACT.json` when omitted.
+    override_contract_path: Optional[Path] = None
+    if "--contract" in argv:
+        try:
+            idx = argv.index("--contract")
+            override_contract_path = Path(argv[idx + 1])
+        except (ValueError, IndexError):
+            print("Error: --contract requires a path argument")
+            sys.exit(1)
     
     if not check_hub_available(config.hub_path):
         print(f"Error: MCP Hub not available at {config.hub_path}. Start claude-mcp first.")
@@ -477,7 +493,7 @@ def main(argv):
     
     if len(argv) > 1:
         cmd = argv[1]
-        contract_path = handoff_dir / "TASK_CONTRACT.json"
+        contract_path = override_contract_path or (handoff_dir / "TASK_CONTRACT.json")
         
         if cmd == "timeout-judge":
             check_for_stop(HUB_SERVER_PATH)

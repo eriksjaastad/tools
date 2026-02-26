@@ -98,6 +98,22 @@ def test_get_status(temp_state):
 from src.watchdog import check_circuit_breakers
 from datetime import datetime, timezone
 
+def test_watchdog_nitpicking_requires_report_path(tmp_path):
+    """Trigger 5 should not evaluate without a task-specific report path."""
+    now = datetime.now(timezone.utc).isoformat()
+    contract = {
+        "task_id": "test",
+        "timestamps": {"updated_at": now, "created_at": now},
+        # 3 cycles qualifies for potential trigger 5, but no report path provided
+        "breaker": {"review_cycle_count": 3},
+        # Keep max_review_cycles high so trigger 9 doesn't mask behavior
+        "limits": {"max_review_cycles": 50},
+        # No 'judge_report_json' key in handoff_data
+        "handoff_data": {}
+    }
+    halt, reason = check_circuit_breakers(contract)
+    assert halt is False
+
 def test_watchdog_rebuttal_limit():
     now = datetime.now(timezone.utc).isoformat()
     contract = {
@@ -179,13 +195,17 @@ def test_watchdog_scope_creep():
     assert halt is True
     assert "Trigger 8" in reason
 
-def test_watchdog_review_cycle_limit():
+def test_watchdog_review_cycle_limit(tmp_path):
     now = datetime.now(timezone.utc).isoformat()
+    # Provide a non-existent task-specific judge_report_json to avoid any
+    # accidental fallback to shared _handoff/JUDGE_REPORT.json impacting order.
+    missing_report = tmp_path / "MISSING_JUDGE_REPORT.json"
     contract = {
         "task_id": "test",
         "timestamps": {"updated_at": now, "created_at": now},
         "breaker": {"review_cycle_count": 6},
-        "limits": {"max_review_cycles": 5}
+        "limits": {"max_review_cycles": 5},
+        "handoff_data": {"judge_report_json": str(missing_report)}
     }
     halt, reason = check_circuit_breakers(contract)
     assert halt is True
