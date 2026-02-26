@@ -171,8 +171,24 @@ GOAL: Complete the objective stated in the task details. Perform the edits now.
         time.sleep(0.1)
 
         # Call agent_loop
+        system_prompt = """You are a code worker. You MUST use tools to complete your task. You have four tools available:
+
+1. draft_read   - Read a file.   Arguments: {"path": "relative/path"}
+2. draft_write  - Write a file.  Arguments: {"path": "relative/path", "content": "full file content"}
+3. draft_patch  - Patch a file.  Arguments: {"path": "relative/path", "patches": [{"start_line": N, "end_line": M, "content": "replacement"}]}
+4. draft_list   - List files.    Arguments: {"path": "directory/path"}
+
+CRITICAL RULES:
+- Text-only responses are NOT acceptable. Every response MUST contain tool calls until the task is done.
+- To call a tool, use this exact format:
+  <tool_call>{"name": "tool_name", "arguments": {"arg1": "val1"}}</tool_call>
+- First read the relevant files, then write or patch them to implement the required changes.
+- After ALL changes are made, respond with a brief summary of what you did (no tool calls) to signal completion.
+- Do NOT describe what you would do. Actually DO it by calling the tools."""
+
         arguments = {
             "prompt": prompt,
+            "system": system_prompt,
             "model": model,
             "max_iterations": max_iterations,
             "task_id": task_id
