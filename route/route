@@ -1,0 +1,277 @@
+#!/usr/bin/env python3
+"""
+route — Token usage & shadow pricing CLI.
+
+Reads session data from Claude Code, Codex CLI, and Gemini CLI.
+Applies shadow pricing to show what subscription usage actually costs.
+
+Usage:
+    route summary [--week|--month|--all]
+    route sessions [--type coding|talking|research|mixed] [--limit N]
+    route estimate --role ROLE [--tokens N]
+    route models
+"""
+
+import argparse
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+# Add route directory to path for imports
+_route_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(_route_dir))
+
+from claude_reader import read_sessions as claude_sessions, get_token_totals as claude_totals
+from codex_reader import read_sessions as codex_sessions, get_token_totals as codex_totals
+from pricing import (
+    compute_shadow_cost,
+    compute_subscription_value,
+    format_cost,
+    load_registry,
+    get_model_pricing,
+)
+
+
+def cmd_summary(args):
+    """Show shadow cost summary."""
+    # Determine date range
+    since = None
+    label = "All time"
+    if args.week:
+        since = (datetime.now() - timedelta(days=7)).isoformat()
+        label = "Last 7 days"
+    elif args.month:
+        since = (datetime.now() - timedelta(days=30)).isoformat()
+        label = "Last 30 days"
+
+    print(f"\n  SHADOW COST SUMMARY — {label}")
+    print(f"  {'=' * 55}")
+
+    # Claude totals
+    claude_tok = claude_totals()
+    total_shadow = 0.0
+
+    if claude_tok:
+        print(f"\n  CLAUDE CODE")
+        print(f"  {'-' * 55}")
+        for model_id, tokens in sorted(claude_tok.items()):
+            cost = compute_shadow_cost(
+                model_id,
+                input_tokens=tokens["input_tokens"],
+                output_tokens=tokens["output_tokens"],
+                cache_read_tokens=tokens.get("cache_read_tokens", 0),
+                cache_write_tokens=tokens.get("cache_write_tokens", 0),
+            )
+            total_shadow += cost
+            in_tok = tokens["input_tokens"]
+            out_tok = tokens["output_tokens"]
+            cache_r = tokens.get("cache_read_tokens", 0)
+            cache_w = tokens.get("cache_write_tokens", 0)
+            print(f"  {model_id}")
+            print(f"    Input: {in_tok:>12,}   Output: {out_tok:>12,}")
+            print(f"    Cache read: {cache_r:>12,}   Cache write: {cache_w:>12,}")
+            print(f"    Shadow cost: {format_cost(cost)}")
+
+    # Codex totals
+    codex_tok = codex_totals()
+    if codex_tok:
+        print(f"\n  CODEX CLI")
+        print(f"  {'-' * 55}")
+        for model_id, tokens in sorted(codex_tok.items()):
+            cost = compute_shadow_cost(
+                model_id,
+                input_tokens=tokens["input_tokens"],
+                output_tokens=tokens["output_tokens"],
+                cache_read_tokens=tokens.get("cached_input_tokens", 0),
+            )
+            total_shadow += cost
+            in_tok = tokens["input_tokens"]
+            out_tok = tokens["output_tokens"]
+            cached = tokens.get("cached_input_tokens", 0)
+            reasoning = tokens.get("reasoning_tokens", 0)
+            print(f"  {model_id}")
+            print(f"    Input: {in_tok:>12,}   Output: {out_tok:>12,}")
+            print(f"    Cached: {cached:>12,}   Reasoning: {reasoning:>12,}")
+            print(f"    Shadow cost: {format_cost(cost)}")
+
+    # Totals
+    print(f"\n  {'=' * 55}")
+    print(f"  TOTAL SHADOW COST: {format_cost(total_shadow)}")
+
+    # Subscription comparison
+    registry = load_registry()
+    subs = registry.get("subscriptions", {})
+    if subs:
+        print(f"\n  SUBSCRIPTION VALUE")
+        print(f"  {'-' * 55}")
+        # Figure out which subscriptions have usage
+        sub_costs = []
+        if claude_tok:
+            sub_costs.append(("claude_max", sum(
+                compute_shadow_cost(
+                    mid,
+                    input_tokens=t["input_tokens"],
+                    output_tokens=t["output_tokens"],
+                    cache_read_tokens=t.get("cache_read_tokens", 0),
+                    cache_write_tokens=t.get("cache_write_tokens", 0),
+                )
+                for mid, t in claude_tok.items()
+            )))
+        if codex_tok:
+            sub_costs.append(("chatgpt_pro", sum(
+                compute_shadow_cost(
+                    mid,
+                    input_tokens=t["input_tokens"],
+                    output_tokens=t["output_tokens"],
+                    cache_read_tokens=t.get("cached_input_tokens", 0),
+                )
+                for mid, t in codex_tok.items()
+            )))
+
+        for sub_name, shadow in sub_costs:
+            if sub_name in subs:
+                val = compute_subscription_value(sub_name, shadow)
+                print(f"  {sub_name}: {format_cost(val['monthly_cost'])}/mo subscription")
+                print(f"    Shadow cost: {format_cost(val['shadow_cost'])}")
+                print(f"    Value multiplier: {val['multiplier']:.1f}x")
+                print(f"    You're saving: {format_cost(val['savings'])}")
+
+    print()
+
+
+def cmd_sessions(args):
+    """List recent sessions with classification."""
+    sessions = claude_sessions()
+
+    # Filter by type
+    if args.type:
+        type_upper = args.type.upper()
+        sessions = [s for s in sessions if s["category"] == type_upper]
+
+    # Sort by timestamp (most recent first)
+    sessions.sort(key=lambda s: s.get("timestamp", ""), reverse=True)
+
+    # Limit
+    limit = args.limit or 20
+    sessions = sessions[:limit]
+
+    print(f"\n  RECENT CLAUDE SESSIONS (showing {len(sessions)})")
+    print(f"  {'=' * 70}")
+    print(f"  {'Project':<25} {'Msgs':>5} {'Tools':>5} {'Writes':>6} {'Category':<10}")
+    print(f"  {'-' * 70}")
+
+    for s in sessions:
+        project = s.get("project", "unknown")[:24]
+        msgs = s.get("user_messages", 0) + s.get("assistant_messages", 0)
+        tools = sum(s.get("tool_calls", {}).values())
+        writes = s.get("write_tools", 0)
+        cat = s.get("category", "?")
+        print(f"  {project:<25} {msgs:>5} {tools:>5} {writes:>6} {cat:<10}")
+
+    print()
+
+
+def cmd_estimate(args):
+    """Estimate cost for a task by role."""
+    registry = load_registry()
+    models = registry.get("models", [])
+    role = args.role.lower()
+    tokens = args.tokens or 10000  # Default estimate
+
+    # Find models that fit this role
+    candidates = [m for m in models if role in m.get("role_fit", [])]
+
+    if not candidates:
+        print(f"\n  No models found for role '{role}'")
+        print(f"  Available roles: planner, coder, reviewer, floor_manager, reader")
+        return
+
+    # Sort by output price (dominant cost)
+    candidates.sort(key=lambda m: m["pricing_per_1M"].get("output_usd", 999))
+
+    print(f"\n  COST ESTIMATE — Role: {role}, ~{tokens:,} output tokens")
+    print(f"  {'=' * 55}")
+    print(f"  {'Model':<30} {'Output/1M':>10} {'Est. Cost':>10}")
+    print(f"  {'-' * 55}")
+
+    for m in candidates:
+        name = m.get("display_name", m["model_id"])
+        output_rate = m["pricing_per_1M"]["output_usd"]
+        est = (tokens / 1e6) * output_rate
+        print(f"  {name:<30} {format_cost(output_rate):>10} {format_cost(est):>10}")
+
+    cheapest = candidates[0]
+    most_expensive = candidates[-1]
+    cheap_cost = (tokens / 1e6) * cheapest["pricing_per_1M"]["output_usd"]
+    expensive_cost = (tokens / 1e6) * most_expensive["pricing_per_1M"]["output_usd"]
+
+    if len(candidates) > 1 and expensive_cost > 0:
+        savings = expensive_cost - cheap_cost
+        print(f"\n  Cheapest saves {format_cost(savings)} vs most expensive ({savings/expensive_cost*100:.0f}% less)")
+
+    print()
+
+
+def cmd_models(args):
+    """List all models in the registry."""
+    registry = load_registry()
+    models = registry.get("models", [])
+
+    print(f"\n  MODEL REGISTRY ({len(models)} models)")
+    print(f"  {'=' * 70}")
+    print(f"  {'Model':<25} {'Provider':<12} {'In/1M':>8} {'Out/1M':>8} {'Roles'}")
+    print(f"  {'-' * 70}")
+
+    for m in sorted(models, key=lambda m: m["pricing_per_1M"]["output_usd"]):
+        name = m.get("display_name", m["model_id"])[:24]
+        provider = m["provider"][:11]
+        in_price = format_cost(m["pricing_per_1M"]["input_usd"])
+        out_price = format_cost(m["pricing_per_1M"]["output_usd"])
+        roles = ", ".join(m.get("role_fit", []))
+        print(f"  {name:<25} {provider:<12} {in_price:>8} {out_price:>8} {roles}")
+
+    print()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="route",
+        description="Token usage & shadow pricing for AI CLIs",
+    )
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # summary
+    p_summary = subparsers.add_parser("summary", help="Shadow cost summary")
+    p_summary.add_argument("--week", action="store_true", help="Last 7 days")
+    p_summary.add_argument("--month", action="store_true", help="Last 30 days")
+    p_summary.add_argument("--all", action="store_true", help="All time (default)")
+
+    # sessions
+    p_sessions = subparsers.add_parser("sessions", help="List recent sessions")
+    p_sessions.add_argument("--type", choices=["coding", "talking", "research", "mixed"])
+    p_sessions.add_argument("--limit", type=int, default=20)
+
+    # estimate
+    p_estimate = subparsers.add_parser("estimate", help="Estimate cost by role")
+    p_estimate.add_argument("--role", required=True, help="Role: planner, coder, reviewer")
+    p_estimate.add_argument("--tokens", type=int, help="Estimated output tokens (default: 10000)")
+
+    # models
+    subparsers.add_parser("models", help="List model registry")
+
+    args = parser.parse_args()
+
+    if args.command == "summary":
+        cmd_summary(args)
+    elif args.command == "sessions":
+        cmd_sessions(args)
+    elif args.command == "estimate":
+        cmd_estimate(args)
+    elif args.command == "models":
+        cmd_models(args)
+    else:
+        parser.print_help()
+
+
+if __name__ == "__main__":
+    main()
