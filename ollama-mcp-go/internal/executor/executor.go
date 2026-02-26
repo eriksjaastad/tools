@@ -11,6 +11,7 @@ import (
 // ExecutionResult represents the result of a tool execution.
 type ExecutionResult struct {
 	ToolCallID string `json:"tool_call_id"`
+	ToolName   string `json:"tool_name,omitempty"`
 	Result     any    `json:"result,omitempty"`
 	Error      string `json:"error,omitempty"`
 }
@@ -44,6 +45,7 @@ func (e *Executor) Execute(tc parser.ToolCall) ExecutionResult {
 	if !ok {
 		return ExecutionResult{
 			ToolCallID: tc.ID,
+			ToolName:   tc.Name,
 			Error:      fmt.Sprintf("unknown tool: %s", tc.Name),
 		}
 	}
@@ -52,12 +54,14 @@ func (e *Executor) Execute(tc parser.ToolCall) ExecutionResult {
 	if err != nil {
 		return ExecutionResult{
 			ToolCallID: tc.ID,
+			ToolName:   tc.Name,
 			Error:      err.Error(),
 		}
 	}
 
 	return ExecutionResult{
 		ToolCallID: tc.ID,
+		ToolName:   tc.Name,
 		Result:     result,
 	}
 }

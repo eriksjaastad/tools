@@ -50,6 +50,7 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 		chatReq := ollama.ChatRequest{
 			Model:    input.Model,
 			Messages: messages,
+			Tools:    draftToolDefinitions(),
 		}
 
 		chatResp, err := a.client.Chat(ctx, chatReq)
@@ -63,6 +64,17 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 		// 2. Parse tool calls
 		toolCalls := a.parser.ParseToolCalls(content)
 		if len(toolCalls) == 0 {
+			// Check if this is a code task that should have produced writes.
+			// If we haven't made any draft_write/draft_patch calls yet and this
+			// isn't the final iteration, nudge the model to actually use tools.
+			if i < input.MaxIterations-1 && !hasWriteCalls(result.ExecutionTrace) {
+				logger.Info("No tool calls and no writes yet — nudging model to use tools", "iteration", i+1)
+				messages = append(messages, ollama.Message{
+					Role:    "user",
+					Content: "You provided only a text summary. You MUST call draft_write or draft_patch to make the actual code changes. Text descriptions are not acceptable. Try again — make the edits now.",
+				})
+				continue
+			}
 			result.Response = content
 			return result, nil
 		}
@@ -137,4 +149,115 @@ func (a *AgentLoop) Handler(params json.RawMessage) (any, error) {
 	}
 
 	return a.Run(context.Background(), input)
+}
+
+// hasWriteCalls checks if any draft_write or draft_patch calls have been made.
+func hasWriteCalls(trace []executor.ExecutionResult) bool {
+	for _, r := range trace {
+		if r.ToolName == "draft_write" || r.ToolName == "draft_patch" {
+			return true
+		}
+	}
+	return false
+}
+
+// draftToolDefinitions returns Ollama-native tool definitions for the draft tools.
+func draftToolDefinitions() json.RawMessage {
+	tools := `[
+  {
+    "type": "function",
+    "function": {
+      "name": "draft_read",
+      "description": "Read the contents of a file at the given path.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the file to read."
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "draft_write",
+      "description": "Write content to a file at the given path. Creates or overwrites the file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the file to write."
+          },
+          "content": {
+            "type": "string",
+            "description": "The full content to write to the file."
+          }
+        },
+        "required": ["path", "content"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "draft_patch",
+      "description": "Apply line-based patches to a file. Each patch replaces lines from start_line to end_line with new content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the file to patch."
+          },
+          "patches": {
+            "type": "array",
+            "description": "Array of patches to apply.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start_line": {
+                  "type": "integer",
+                  "description": "1-indexed start line to replace."
+                },
+                "end_line": {
+                  "type": "integer",
+                  "description": "1-indexed end line to replace (inclusive)."
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Replacement content for the specified line range."
+                }
+              },
+              "required": ["start_line", "end_line", "content"]
+            }
+          }
+        },
+        "required": ["path", "patches"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "draft_list",
+      "description": "List files and directories at the given path.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Relative path to the directory to list."
+          }
+        },
+        "required": ["path"]
+      }
+    }
+  }
+]`
+	return json.RawMessage(tools)
 }
