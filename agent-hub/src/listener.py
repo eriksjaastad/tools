@@ -9,9 +9,11 @@ import time
 import json
 import logging
 import threading
+import subprocess
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 from datetime import datetime, timezone
+from dataclasses import dataclass
 
 from .mcp_client import MCPClient, MCPError
 from .hub_client import HubClient
@@ -20,7 +22,7 @@ from .watchdog import load_contract, save_contract, transition, log_transition
 from .draft_gate import handle_draft_submission, apply_draft, reject_draft, GateDecision
 from .config import get_config
 from . import adaptive_poller
-from .utils import feature_flags
+from .utils import feature_flags, atomic_write
 
 # Configure logging to console
 logging.basicConfig(
@@ -28,6 +30,16 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("MessageListener")
+
+@dataclass
+class PipelineContext:
+    task_id: str
+    contract_path: Path
+    thread: Optional[threading.Thread] = None
+    process: Optional[subprocess.Popen] = None
+    cancelled: bool = False
+    cancel_reason: str = ""
+    cancellation_recorded: bool = False
 
 class MessageListener:
     def __init__(self, agent_id: str, hub_path: Path, handoff_dir: Path = Path("_handoff")):
@@ -40,6 +52,8 @@ class MessageListener:
         self._heartbeat_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
         self.poller = adaptive_poller.create_poller(adaptive=feature_flags.use_adaptive_polling())
+        self._active_pipelines: Dict[str, PipelineContext] = {}
+        self._pipeline_lock = threading.Lock()
 
     def register_handler(self, msg_type: str, handler: Callable):
         """Register a handler for a specific message type."""
@@ -178,6 +192,7 @@ class MessageListener:
             "event": event,
             "task_id": task_id
         }
+        self.handoff_dir.mkdir(parents=True, exist_ok=True)
         log_file = self.handoff_dir / "transition.ndjson"
         try:
             with open(log_file, "a", encoding="utf-8") as f:
@@ -263,63 +278,172 @@ class MessageListener:
         
         if contract_path:
             logger.info(f"Proposal converted to contract: {contract_path}")
+            task_id = self._extract_task_id(contract_path)
+            context = PipelineContext(task_id=task_id, contract_path=contract_path)
+            with self._pipeline_lock:
+                existing = self._active_pipelines.get(task_id)
+                if existing and existing.thread and existing.thread.is_alive():
+                    logger.warning(f"Pipeline already active for task {task_id}; ignoring duplicate PROPOSAL_READY.")
+                    return
+                self._active_pipelines[task_id] = context
             # Start the pipeline in a background thread
             pipeline_thread = threading.Thread(
                 target=self._run_pipeline,
-                args=(contract_path,),
+                args=(context,),
                 daemon=True
             )
+            context.thread = pipeline_thread
             pipeline_thread.start()
         else:
             logger.error(f"Failed to convert proposal: {proposal_path}")
 
-    def _run_pipeline(self, contract_path: Path):
+    def _extract_task_id(self, contract_path: Path) -> str:
+        """Best-effort task_id extraction for pipeline tracking."""
+        try:
+            contract = load_contract(contract_path)
+            task_id = contract.get("task_id")
+            if task_id:
+                return str(task_id)
+        except Exception as e:
+            logger.warning(f"Failed to read task_id from {contract_path}: {e}")
+        return contract_path.stem
+
+    def _record_stop_cancellation(self, context: PipelineContext):
+        """Record STOP_TASK cancellation once per pipeline."""
+        with self._pipeline_lock:
+            if context.cancellation_recorded:
+                return
+            context.cancellation_recorded = True
+            reason = context.cancel_reason or "STOP_TASK requested"
+
+        self._mark_contract_cancelled(context.contract_path, reason)
+        self._log_transition("stop_task_cancelled", context.task_id)
+
+    def _run_pipeline(self, context: PipelineContext):
         """Runs the full watchdog pipeline for a contract."""
-        import subprocess
+        contract_path = context.contract_path
         
         commands = [
-            ["python", "-m", "src.watchdog", "setup-task", "--contract", str(contract_path)],
-            ["python", "-m", "src.watchdog", "run-implementer", "--contract", str(contract_path)],
-            ["python", "-m", "src.watchdog", "run-local-review", "--contract", str(contract_path)],
-            ["python", "-m", "src.watchdog", "report-judge", "--contract", str(contract_path)],
-            ["python", "-m", "src.watchdog", "finalize-task", "--contract", str(contract_path)]
+            ["uv", "run", "python", "-m", "src.watchdog", "setup-task", "--contract", str(contract_path)],
+            ["uv", "run", "python", "-m", "src.watchdog", "run-implementer", "--contract", str(contract_path)],
+            ["uv", "run", "python", "-m", "src.watchdog", "run-local-review", "--contract", str(contract_path)],
+            ["uv", "run", "python", "-m", "src.watchdog", "report-judge", "--contract", str(contract_path)],
+            ["uv", "run", "python", "-m", "src.watchdog", "finalize-task", "--contract", str(contract_path)]
         ]
 
-        logger.info(f"Starting pipeline for {contract_path.name}")
-        
-        for cmd in commands:
-            logger.info(f"Executing: {' '.join(cmd)}")
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=True)
-                logger.info(f"Command succeeded: {cmd[3]}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Command failed: {' '.join(cmd)}")
-                logger.error(f"Error output: {e.stderr}")
-                # Update contract state to reflect failure
-                self._mark_contract_failed(contract_path, f"Pipeline step failed: {cmd[3]}", e.stderr)
-                break
-            except subprocess.TimeoutExpired:
-                logger.error(f"Command timed out: {' '.join(cmd)}")
-                # Update contract state to reflect timeout
-                self._mark_contract_failed(contract_path, f"Pipeline step timed out: {cmd[3]}", "Timeout after 600s")
-                break
-            
-        logger.info(f"Pipeline finished for {contract_path.name}")
+        logger.info(f"Starting pipeline for {contract_path.name} ({context.task_id})")
+        try:
+            for cmd in commands:
+                with self._pipeline_lock:
+                    if context.cancelled:
+                        logger.warning(f"Pipeline cancelled before command start: {context.task_id}")
+                        break
+
+                if "--contract" in cmd:
+                    command_name = cmd[cmd.index("--contract") - 1]
+                else:
+                    command_name = cmd[-1]
+                logger.info(f"Executing: {' '.join(cmd)}")
+                process = None
+                try:
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    with self._pipeline_lock:
+                        context.process = process
+
+                    stdout, stderr = process.communicate(timeout=600)
+
+                    with self._pipeline_lock:
+                        was_cancelled = context.cancelled
+
+                    if was_cancelled:
+                        logger.warning(f"Command interrupted by STOP_TASK: {command_name}")
+                        break
+
+                    if process.returncode != 0:
+                        logger.error(f"Command failed: {' '.join(cmd)}")
+                        logger.error(f"Error output: {stderr}")
+                        self._mark_contract_failed(
+                            contract_path,
+                            f"Pipeline step failed: {command_name}",
+                            stderr or stdout or f"Exit code {process.returncode}"
+                        )
+                        break
+
+                    logger.info(f"Command succeeded: {command_name}")
+                except subprocess.TimeoutExpired:
+                    logger.error(f"Command timed out: {' '.join(cmd)}")
+                    if process:
+                        process.kill()
+                        _, stderr = process.communicate()
+                    else:
+                        stderr = "No process handle available"
+                    self._mark_contract_failed(
+                        contract_path,
+                        f"Pipeline step timed out: {command_name}",
+                        stderr or "Timeout after 600s"
+                    )
+                    break
+                except Exception as e:
+                    logger.error(f"Unexpected pipeline command failure: {e}")
+                    self._mark_contract_failed(
+                        contract_path,
+                        f"Pipeline step failed: {command_name}",
+                        str(e)
+                    )
+                    break
+                finally:
+                    with self._pipeline_lock:
+                        if context.process is process:
+                            context.process = None
+
+            with self._pipeline_lock:
+                cancelled = context.cancelled
+            if cancelled:
+                self._record_stop_cancellation(context)
+        finally:
+            with self._pipeline_lock:
+                current = self._active_pipelines.get(context.task_id)
+                if current is context:
+                    self._active_pipelines.pop(context.task_id, None)
+            logger.info(f"Pipeline finished for {contract_path.name} ({context.task_id})")
 
     def _mark_contract_failed(self, contract_path: Path, reason: str, details: str):
-        """Mark a contract as failed and log the reason."""
+        """Mark a contract as failed and log the reason.
+
+        Writes the canonical contract status field and preserves
+        failure_reason/failure_details. Uses atomic write.
+        """
         try:
-            import json
             if contract_path.exists():
                 contract = json.loads(contract_path.read_text())
-                contract["state"] = "failed"
+                # Use canonical status field (not deprecated 'state')
+                # Choose a valid status to represent failure escalation.
+                contract["status"] = "erik_consultation"
                 contract["failure_reason"] = reason
                 contract["failure_details"] = details
-                from .utils import atomic_write
                 atomic_write(contract_path, json.dumps(contract, indent=2))
                 logger.warning(f"Contract marked as failed: {reason}")
         except Exception as e:
             logger.error(f"Failed to update contract state: {e}")
+
+    def _mark_contract_cancelled(self, contract_path: Path, reason: str):
+        """Mark a contract as cancelled via STOP_TASK."""
+        try:
+            if contract_path.exists():
+                contract = json.loads(contract_path.read_text())
+                contract["status"] = "erik_consultation"
+                contract["status_reason"] = f"STOP_TASK cancellation: {reason}"
+                contract["failure_reason"] = "STOP_TASK cancellation"
+                contract["failure_details"] = reason
+                atomic_write(contract_path, json.dumps(contract, indent=2))
+                logger.warning(f"Contract marked as cancelled: {reason}")
+        except Exception as e:
+            logger.error(f"Failed to mark contract cancelled: {e}")
 
     def handle_stop_task(self, message: dict):
         """
@@ -330,10 +454,70 @@ class MessageListener:
         """
         payload = message.get("payload", {})
         reason = payload.get("reason", "No reason provided")
-        logger.warning(f"STOP_TASK received: {reason}")
-        # In a real system, we'd need to find the running task and kill it.
-        # For now, we'll just log and potentially stop the listener if it's task-specific?
-        # Usually STOP_TASK would target a specific task implementation process.
+        target_task_id = payload.get("task_id")
+        target_contract_path = payload.get("contract_path")
+        broadcast = bool(payload.get("broadcast")) or bool(payload.get("all_tasks"))
+        if not target_task_id and not target_contract_path:
+            broadcast = True
+
+        logger.warning(
+            f"STOP_TASK received: reason={reason}; task_id={target_task_id}; contract_path={target_contract_path}; "
+            f"broadcast={broadcast}"
+        )
+
+        contract_match_path = str(Path(target_contract_path).resolve()) if target_contract_path else None
+        with self._pipeline_lock:
+            contexts = list(self._active_pipelines.values())
+            matched_contexts: List[PipelineContext] = []
+            targets: List[PipelineContext] = []
+            for context in contexts:
+                context_path = str(context.contract_path.resolve())
+                if broadcast:
+                    matches = True
+                else:
+                    matches = False
+                    if target_task_id and context.task_id == target_task_id:
+                        matches = True
+                    if contract_match_path and context_path == contract_match_path:
+                        matches = True
+
+                if not matches:
+                    continue
+                matched_contexts.append(context)
+
+                if context.cancelled:
+                    continue
+
+                context.cancelled = True
+                if not context.cancel_reason:
+                    context.cancel_reason = reason
+                targets.append(context)
+
+        if not matched_contexts:
+            logger.info("STOP_TASK matched no active pipeline.")
+            self._log_transition("stop_task_no_active_pipeline", target_task_id or "broadcast")
+            return
+        if not targets:
+            logger.info("STOP_TASK matched pipelines already marked cancelled; no new action required.")
+            return
+
+        for context in targets:
+            process = None
+            with self._pipeline_lock:
+                process = context.process
+
+            if process and process.poll() is None:
+                try:
+                    process.terminate()
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"STOP_TASK force-killing process for {context.task_id}")
+                    process.kill()
+                    process.wait(timeout=2)
+                except Exception as e:
+                    logger.error(f"Failed to terminate process for {context.task_id}: {e}")
+
+            self._record_stop_cancellation(context)
 
     def handle_question(self, message: dict):
         """
