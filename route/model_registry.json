@@ -1,0 +1,124 @@
+{
+  "schema_version": "1.0",
+  "last_updated": "2026-02-20",
+  "models": [
+    {
+      "provider": "anthropic",
+      "model_id": "claude-opus-4-6",
+      "display_name": "Claude Opus 4.6",
+      "role_fit": ["planner", "reviewer", "architect"],
+      "pricing_per_1M": {
+        "input_usd": 15.00,
+        "cached_input_usd": 1.875,
+        "output_usd": 75.00
+      },
+      "source_url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-opus-4-5-20251101",
+      "display_name": "Claude Opus 4.5",
+      "role_fit": ["planner", "reviewer", "architect"],
+      "pricing_per_1M": {
+        "input_usd": 15.00,
+        "cached_input_usd": 1.875,
+        "output_usd": 75.00
+      },
+      "source_url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-4-5-20250929",
+      "display_name": "Claude Sonnet 4.5",
+      "role_fit": ["coder", "reviewer", "floor_manager"],
+      "pricing_per_1M": {
+        "input_usd": 3.00,
+        "cached_input_usd": 0.375,
+        "output_usd": 15.00
+      },
+      "source_url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-haiku-4-5",
+      "display_name": "Claude Haiku 4.5",
+      "role_fit": ["coder", "reviewer"],
+      "pricing_per_1M": {
+        "input_usd": 0.80,
+        "cached_input_usd": 0.08,
+        "output_usd": 4.00
+      },
+      "source_url": "https://docs.anthropic.com/en/docs/about-claude/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "openai",
+      "model_id": "gpt-5.2-codex",
+      "display_name": "GPT-5.2 Codex",
+      "role_fit": ["coder", "reviewer"],
+      "pricing_per_1M": {
+        "input_usd": 3.00,
+        "cached_input_usd": 0.75,
+        "output_usd": 15.00
+      },
+      "source_url": "https://platform.openai.com/docs/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "openai",
+      "model_id": "gpt-4.1-mini",
+      "display_name": "GPT-4.1 Mini",
+      "role_fit": ["coder"],
+      "pricing_per_1M": {
+        "input_usd": 0.40,
+        "cached_input_usd": 0.10,
+        "output_usd": 1.60
+      },
+      "source_url": "https://platform.openai.com/docs/models",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "google",
+      "model_id": "gemini-2.5-flash",
+      "display_name": "Gemini 2.5 Flash",
+      "role_fit": ["coder", "reader", "floor_manager"],
+      "pricing_per_1M": {
+        "input_usd": 0.15,
+        "cached_input_usd": 0.0375,
+        "output_usd": 0.60
+      },
+      "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "last_verified_date": "2026-02-20"
+    },
+    {
+      "provider": "google",
+      "model_id": "gemini-2.5-pro",
+      "display_name": "Gemini 2.5 Pro",
+      "role_fit": ["planner", "reviewer", "floor_manager"],
+      "pricing_per_1M": {
+        "input_usd": 1.25,
+        "cached_input_usd": 0.3125,
+        "output_usd": 10.00
+      },
+      "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
+      "last_verified_date": "2026-02-20"
+    }
+  ],
+  "subscriptions": {
+    "claude_max": {
+      "cost_usd_monthly": 200,
+      "shadow_model": "claude-opus-4-6"
+    },
+    "chatgpt_pro": {
+      "cost_usd_monthly": 200,
+      "shadow_model": "gpt-5.2-codex"
+    },
+    "gemini_advanced": {
+      "cost_usd_monthly": 20,
+      "shadow_model": "gemini-2.5-pro"
+    }
+  }
+}
