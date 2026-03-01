@@ -22,10 +22,10 @@ MCP_SERVERS = {
         "env": {"SANDBOX_ROOT": str(Path.home() / "projects")},
         "description": "Ollama MCP - local model inference via Go server",
     },
-    "claude-mcp": {
+    "agent-hub": {
         "command": str(Path.home() / "projects" / "_tools" / "claude-mcp-go" / "bin" / "claude-mcp-go"),
         "args": [],
-        "description": "Claude MCP - hub messaging and review tools",
+        "description": "Agent Hub MCP - hub messaging and review tools",
     },
     "librarian-mcp": {
         "command": str(Path.home() / "projects" / "_tools" / "librarian-mcp" / "venv" / "bin" / "python3"),
@@ -35,7 +35,7 @@ MCP_SERVERS = {
             "LIBRARIAN_PROJECTS_ROOT": str(Path.home() / "projects"),
         },
         "description": "Librarian MCP - knowledge graph queries for project discovery",
-        "enabled": True,
+        "enabled": False,
     },
 }
 
