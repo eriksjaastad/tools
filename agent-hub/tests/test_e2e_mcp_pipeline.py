@@ -13,6 +13,11 @@ ROOT = Path(__file__).parent.parent.parent
 OLLAMA_BIN = ROOT / "ollama-mcp-go" / "bin" / "server"
 CLAUDE_BIN = ROOT / "claude-mcp-go" / "bin" / "claude-mcp-go"
 
+requires_mcp_binaries = pytest.mark.skipif(
+    not OLLAMA_BIN.exists() or not CLAUDE_BIN.exists(),
+    reason="MCP server binaries not built (expected at ollama-mcp-go/bin/server and claude-mcp-go/bin/claude-mcp-go)",
+)
+
 @pytest.fixture
 def ollama_server():
     """Start ollama-mcp-go server."""
@@ -54,6 +59,7 @@ def mcp_call(proc, method, params=None):
     proc.stdin.flush()
     return json.loads(proc.stdout.readline())
 
+@requires_mcp_binaries
 class TestOllamaMCP:
     def test_server_starts(self, ollama_server):
         assert ollama_server.poll() is None
@@ -67,6 +73,7 @@ class TestOllamaMCP:
         assert "draft_write" in tools
         assert "ollama_list_models" in tools
 
+@requires_mcp_binaries
 class TestClaudeMCP:
     def test_server_starts(self, claude_server):
         assert claude_server.poll() is None
@@ -78,6 +85,7 @@ class TestClaudeMCP:
         assert "hub_send_message" in tools
         assert "request_draft_review" in tools
 
+@requires_mcp_binaries
 class TestHubMessaging:
     def test_connect_and_send(self, claude_server):
         # Connect

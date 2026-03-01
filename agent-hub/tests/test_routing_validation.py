@@ -52,8 +52,18 @@ def _ollama_available() -> bool:
         return False
 
 
+def _required_models_available() -> bool:
+    """Check whether all configured local/alias models are installed."""
+    if not _ollama_available():
+        return False
+    installed = get_installed_models()
+    required = set(get_tier_models("local")) | set(get_role_aliases().values())
+    return required.issubset(installed)
+
+
 needs_ollama = pytest.mark.skipif(
-    not _ollama_available(), reason="Ollama not running"
+    not _required_models_available(),
+    reason="Ollama/configured models unavailable for this environment",
 )
 
 
