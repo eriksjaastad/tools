@@ -103,12 +103,12 @@ File: bad_secrets.py
 #### Test 2: Absolute Path Detection ✅
 ```bash
 # Created file with hardcoded absolute path
-data_dir = "/Users/eriksjaastad/projects/data"
+data_dir = "/Users/eriksjaastad/.openclaw/workspace/projects/data"
 
 # Result: BLOCKED ✓
 🚫 HARDCODED ABSOLUTE PATHS DETECTED
 File: bad_paths.py
-  Line 4: data_dir = "/Users/eriksjaastad/projects/data"
+  Line 4: data_dir = "/Users/eriksjaastad/.openclaw/workspace/projects/data"
 ✗ Governance checks failed - commit blocked
 ```
 
@@ -190,7 +190,7 @@ Beyond the requirements, I also added:
 
 ## File Locations
 
-All files created in: `/Users/eriksjaastad/projects/_tools/governance/`
+All files created in: `/Users/eriksjaastad/.openclaw/workspace/projects/_tools/governance/`
 
 ```
 governance/
@@ -208,9 +208,9 @@ governance/
 The governance system is ready for production use. To deploy to other projects:
 
 1. Navigate to a project: `cd /path/to/project`
-2. Install hooks: `/Users/eriksjaastad/projects/_tools/governance/install-hooks.sh`
+2. Install hooks: `/Users/eriksjaastad/.openclaw/workspace/projects/_tools/governance/install-hooks.sh`
 3. Test with a commit
-4. To uninstall: `/Users/eriksjaastad/projects/_tools/governance/uninstall-hooks.sh`
+4. To uninstall: `/Users/eriksjaastad/.openclaw/workspace/projects/_tools/governance/uninstall-hooks.sh`
 
 ## Notes
 

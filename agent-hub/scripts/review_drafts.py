@@ -32,7 +32,7 @@ def parse_draft_filename(draft_file: Path) -> dict:
     sanitized_path, task_id = parts
     
     # Convert sanitized path back to real path
-    # __Users__eriksjaastad__projects__... -> /Users/eriksjaastad/projects/...
+    # __Users__eriksjaastad__projects__... -> /Users/eriksjaastad/.openclaw/workspace/projects/...
     original_path = sanitized_path.replace('__', '/')
     
     return {
