@@ -25,46 +25,48 @@ import urllib.request
 import jwt
 
 
-DOPPLER_PROJECT = "synth-insight-labs"
 DOPPLER_CONFIG = "dev"
 
+# Per-agent Doppler project mapping.
+# openclaw keys live in the 'openclaw' project; all others in 'synth-insight-labs'.
 AGENT_MAP = {
-    "claude": "CLAUDE",
-    "gemini": "GEMINI",
-    "openclaw": "OPENCLAW",
-    "antigravity": "ANTIGRAVITY",
-    "codex": "CODEX",
+    "claude": ("CLAUDE", "synth-insight-labs"),
+    "gemini": ("GEMINI", "synth-insight-labs"),
+    "openclaw": ("OPENCLAW", "openclaw"),
+    "antigravity": ("ANTIGRAVITY", "synth-insight-labs"),
+    "codex": ("CODEX", "synth-insight-labs"),
 }
 
 
-def doppler_get(key: str) -> str:
+def doppler_get(key: str, project: str) -> str:
     result = subprocess.run(
         ["doppler", "secrets", "get", key,
-         "--project", DOPPLER_PROJECT, "--config", DOPPLER_CONFIG, "--plain"],
+         "--project", project, "--config", DOPPLER_CONFIG, "--plain"],
         capture_output=True, text=True, timeout=10,
     )
     if result.returncode != 0:
-        print(f"Error: Could not fetch {key} from Doppler", file=sys.stderr)
+        print(f"Error: Could not fetch {key} from Doppler project '{project}'", file=sys.stderr)
         sys.exit(1)
     return result.stdout.strip()
 
 
 def generate_token(agent: str) -> str:
-    suffix = AGENT_MAP.get(agent)
-    if not suffix:
+    entry = AGENT_MAP.get(agent)
+    if not entry:
         print(f"Error: Unknown agent '{agent}'. Valid: {', '.join(AGENT_MAP.keys())}", file=sys.stderr)
         sys.exit(1)
+    suffix, project = entry
 
-    app_id = doppler_get(f"GITHUB_APP_ID_{suffix}")
-    installation_id = doppler_get(f"GITHUB_APP_INSTALLATION_ID_{suffix}")
-    private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}")
+    app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
+    installation_id = doppler_get(f"GITHUB_APP_INSTALLATION_ID_{suffix}", project)
+    private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
 
     # Generate JWT
     now = int(time.time())
     payload = {
         "iat": now,
         "exp": now + 300,
-        "iss": int(app_id),
+        "iss": app_id,
     }
     encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
 
@@ -97,11 +99,11 @@ def main():
 
     if args.verify:
         # Verify JWT first
-        suffix = AGENT_MAP[args.agent]
-        app_id = doppler_get(f"GITHUB_APP_ID_{suffix}")
-        private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}")
+        suffix, project = AGENT_MAP[args.agent]
+        app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
+        private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
         now = int(time.time())
-        encoded_jwt = jwt.encode({"iat": now, "exp": now + 300, "iss": int(app_id)},
+        encoded_jwt = jwt.encode({"iat": now, "exp": now + 300, "iss": app_id},
                                   private_key, algorithm="RS256")
         req = urllib.request.Request(
             "https://api.github.com/app",
