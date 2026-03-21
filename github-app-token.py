@@ -66,7 +66,7 @@ def generate_token(agent: str) -> str:
     payload = {
         "iat": now,
         "exp": now + 300,
-        "iss": app_id,
+        "iss": str(app_id),
     }
     encoded_jwt = jwt.encode(payload, private_key, algorithm="RS256")
 
@@ -103,7 +103,7 @@ def main():
         app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
         private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
         now = int(time.time())
-        encoded_jwt = jwt.encode({"iat": now, "exp": now + 300, "iss": app_id},
+        encoded_jwt = jwt.encode({"iat": now, "exp": now + 300, "iss": str(app_id)},
                                   private_key, algorithm="RS256")
         req = urllib.request.Request(
             "https://api.github.com/app",
