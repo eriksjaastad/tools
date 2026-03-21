@@ -239,7 +239,6 @@ def run(envelope: dict, system_prompt: str | None = None, dry_run: bool = False)
 
     parsed = parse_claude_output(proc.stdout)
     cost = parsed.get("cost", {})
-    cost["wall_time_seconds"] = round(wall_time, 2)
 
     return make_result_envelope(
         task_id=envelope["task_id"],

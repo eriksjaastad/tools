@@ -29,11 +29,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Add adapters to path
-ADAPTERS_DIR = Path(__file__).resolve().parent / "adapters"
-sys.path.insert(0, str(ADAPTERS_DIR))
-
-from floor_manager import run_floor_manager
+from adapters.floor_manager import run_floor_manager
 
 
 def generate_task_id() -> str:
@@ -157,8 +153,8 @@ def main():
             acceptance_criteria=args.criteria,
             constraints=constraints,
         )
-    else:
-        # Interactive mode
+    elif sys.stdin.isatty():
+        # Interactive mode — only when attached to a terminal
         print("Multi-Layer Delegation Orchestrator")
         print("Enter your goal (what should be accomplished):")
         goal = input("> ").strip()
@@ -166,6 +162,8 @@ def main():
             print("No goal provided. Exiting.")
             return
         envelope = goal_to_envelope(goal=goal)
+    else:
+        parser.error("Provide a goal via --goal, an envelope via --envelope, or run interactively in a terminal")
 
     # Show the envelope
     if args.dry_run:
