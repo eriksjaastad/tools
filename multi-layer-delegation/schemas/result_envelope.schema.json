@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "result_envelope.schema.json",
+  "title": "Result Envelope",
+  "description": "The upward result contract. Returned from a lower layer to a higher layer in the agent tree.",
+  "type": "object",
+  "required": ["task_id", "status", "result"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "description": "Matches the task_id from the incoming Task Envelope."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "failed", "blocked", "partial"],
+      "description": "Outcome status. 'blocked' means the worker needs something it can't get. 'partial' means useful work was done but the task isn't fully complete."
+    },
+    "result": {
+      "description": "The deliverable. Shape should match the Task Envelope's output_schema. Can be a string, object, array, or null (on failure)."
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["file_path", "url", "diff", "reference", "inline"],
+            "description": "What kind of artifact this is."
+          },
+          "value": {
+            "type": "string",
+            "description": "The artifact content or pointer."
+          },
+          "description": {
+            "type": "string",
+            "description": "What this artifact is."
+          }
+        }
+      },
+      "default": [],
+      "description": "File paths, URLs, diffs, or references to created artifacts."
+    },
+    "cost": {
+      "type": "object",
+      "properties": {
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "total_tokens": { "type": "integer" },
+        "api_cost_usd": { "type": "number" },
+        "wall_time_seconds": { "type": "number" }
+      },
+      "default": {},
+      "description": "Resource consumption for this task."
+    },
+    "notes": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Anything the delegator should know: blockers, assumptions, warnings, surprises."
+    },
+    "child_tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["task_id", "status"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "goal": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["completed", "failed", "blocked", "partial"]
+          },
+          "summary": { "type": "string" }
+        }
+      },
+      "default": [],
+      "description": "If this agent delegated further, a summary of sub-task results."
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "worker_id": {
+          "type": "string",
+          "description": "Identity of the agent that executed this task."
+        },
+        "runtime": {
+          "type": "string",
+          "description": "Which runtime adapter was used."
+        },
+        "model": {
+          "type": "string",
+          "description": "Which model actually executed the task."
+        }
+      },
+      "additionalProperties": true,
+      "default": {}
+    }
+  },
+  "additionalProperties": false
+}
