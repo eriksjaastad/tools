@@ -12,12 +12,13 @@ Usage:
 
 import argparse
 import json
+import subprocess
 import sys
 import time
 import uuid
 from pathlib import Path
 
-from claude_code import make_result_envelope, validate_task_envelope, run as run_worker
+from adapters.claude_code import make_result_envelope, validate_task_envelope, run as run_worker
 
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 FM_PROMPT = PROMPTS_DIR / "floor_manager.md"
@@ -55,8 +56,6 @@ def run_floor_manager(envelope: dict, dry_run: bool = False) -> dict:
     # In practice, this uses claude -p with --tool-use, but since that requires
     # the tool-use streaming protocol, the MVP uses a simpler approach:
     # The FM outputs a plan, we execute it, then ask the FM to aggregate.
-
-    import subprocess
 
     start = time.time()
     constraints = envelope.get("constraints", {})

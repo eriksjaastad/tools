@@ -23,7 +23,7 @@ import sys
 import time
 from pathlib import Path
 
-from claude_code import make_result_envelope, validate_task_envelope
+from adapters.claude_code import make_result_envelope, validate_task_envelope
 
 # Default path to the adapter on remote machines
 DEFAULT_REMOTE_ADAPTER = "~/projects/_tools/multi-layer-delegation/adapters/claude_code.py"
@@ -93,13 +93,23 @@ def run_remote(
         port=port,
     )
 
-    if system_prompt:
-        # Pass system prompt as a base64-encoded env var to avoid quoting issues
-        import base64
-        encoded = base64.b64encode(system_prompt.encode()).decode()
-        # Modify the remote command to include the system prompt
-        remote_cmd = cmd[-1]
-        cmd[-1] = f"echo '{encoded}' | base64 -d > /tmp/_delegation_sysprompt_$$.md && {remote_cmd} --system-prompt-file /tmp/_delegation_sysprompt_$$.md; rm -f /tmp/_delegation_sysprompt_$$.md"
+    # When a system prompt is provided, we bundle it with the envelope as a
+    # wrapper JSON object and use a remote one-liner to split them apart.
+    # This avoids tempfiles, rm, and shell injection entirely.
+    use_wrapper = system_prompt is not None
+
+    if use_wrapper:
+        # The wrapper JSON has {"envelope": ..., "system_prompt": "..."}.
+        # Remote side: python3 -c reads wrapper, writes envelope to stdin of adapter.
+        unwrap_script = (
+            "import json,sys,subprocess; "
+            "w=json.load(sys.stdin); "
+            "p=subprocess.run("
+            f"[*'{remote_python}'.split(), '{remote_adapter}', '--system-prompt', w['system_prompt']],"
+            "input=json.dumps(w['envelope']),capture_output=True,text=True); "
+            "sys.stdout.write(p.stdout); sys.stderr.write(p.stderr); sys.exit(p.returncode)"
+        )
+        cmd[-1] = f"python3 -c {repr(unwrap_script)}"
 
     if dry_run:
         return {
@@ -113,13 +123,16 @@ def run_remote(
     # SSH tasks get extra timeout for connection overhead
     timeout = constraints.get("timeout_seconds", 300) + 30
 
-    envelope_json = json.dumps(envelope)
+    if use_wrapper:
+        stdin_payload = json.dumps({"envelope": envelope, "system_prompt": system_prompt})
+    else:
+        stdin_payload = json.dumps(envelope)
     start = time.time()
 
     try:
         proc = subprocess.run(
             cmd,
-            input=envelope_json,
+            input=stdin_payload,
             capture_output=True,
             text=True,
             timeout=timeout,
