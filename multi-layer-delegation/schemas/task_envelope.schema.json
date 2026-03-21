@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://synthinsightlabs.com/schemas/task_envelope.schema.json",
+  "$id": "task_envelope.schema.json",
   "title": "Task Envelope",
   "description": "The downward delegation contract. Sent from a higher layer to a lower layer in the agent tree.",
   "type": "object",

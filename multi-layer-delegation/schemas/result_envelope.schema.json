@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://synthinsightlabs.com/schemas/result_envelope.schema.json",
+  "$id": "result_envelope.schema.json",
   "title": "Result Envelope",
   "description": "The upward result contract. Returned from a lower layer to a higher layer in the agent tree.",
   "type": "object",
