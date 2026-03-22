@@ -1,0 +1,9 @@
+name: "PR: Require Type Label"
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+
+jobs:
+  require-label:
+    uses: eriksjaastad/.github/.github/workflows/require-pr-label.yml@main
