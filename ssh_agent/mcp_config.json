@@ -1,13 +1,14 @@
 {
     "mcpServers": {
         "ssh-agent": {
-            "command": "/Users/eriksjaastad/projects/_tools/ssh_agent/venv/bin/python",
+            "command": "uv",
             "args": [
+                "run",
                 "-m",
                 "src.ssh_mcp.server"
             ],
             "env": {
-                "PYTHONPATH": "/Users/eriksjaastad/projects/_tools/ssh_agent"
+                "PYTHONPATH": "."
             }
         }
     }

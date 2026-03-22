@@ -28,7 +28,9 @@ To use the tools provided by the Agent Hub, you must add the following MCP serve
 
 ### Configuration JSON
 
-Copy the JSON below and follow the instructions in the next section to apply it. Replace `<ABSOLUTE_PATH>` with the full path to your `_tools` directory (e.g., `/Users/eriksjaastad/projects/_tools`).
+Copy the JSON below and follow the instructions in the next section to apply it. Replace `<ABSOLUTE_PATH>` with the full path to your `_tools` directory. Examples:
+- **Laptop:** `~/projects/_tools` (or `/Users/YOUR_USERNAME/projects/_tools`)
+- **Mac Mini:** `~/.openclaw/workspace/projects/tools` (note: no underscore prefix)
 
 ```json
 {

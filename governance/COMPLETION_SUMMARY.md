@@ -102,14 +102,17 @@ File: bad_secrets.py
 
 #### Test 2: Absolute Path Detection ✅
 ```bash
-# Created file with hardcoded absolute path
-data_dir = "/Users/eriksjaastad/projects/data"
+# Created file with hardcoded absolute path (BAD)
+data_dir = "/Users/eriksjaastad/projects/data"  # Laptop-only, breaks on Mac Mini
 
 # Result: BLOCKED ✓
 🚫 HARDCODED ABSOLUTE PATHS DETECTED
 File: bad_paths.py
   Line 4: data_dir = "/Users/eriksjaastad/projects/data"
 ✗ Governance checks failed - commit blocked
+
+# CORRECT: Use environment variables instead
+data_dir = os.getenv('PROJECTS_ROOT') + "/data"  # Works on both machines
 ```
 
 #### Test 3: Clean Code Passes ✅
@@ -190,7 +193,8 @@ Beyond the requirements, I also added:
 
 ## File Locations
 
-All files created in: `/Users/eriksjaastad/projects/_tools/governance/`
+All files created in: `$PROJECTS_ROOT/_tools/governance/`
+(Expands to `/Users/eriksjaastad/projects/_tools/governance/` on laptop or `~/.openclaw/workspace/projects/tools/governance/` on Mac Mini)
 
 ```
 governance/
@@ -208,9 +212,9 @@ governance/
 The governance system is ready for production use. To deploy to other projects:
 
 1. Navigate to a project: `cd /path/to/project`
-2. Install hooks: `/Users/eriksjaastad/projects/_tools/governance/install-hooks.sh`
+2. Install hooks: `$PROJECTS_ROOT/_tools/governance/install-hooks.sh`
 3. Test with a commit
-4. To uninstall: `/Users/eriksjaastad/projects/_tools/governance/uninstall-hooks.sh`
+4. To uninstall: `$PROJECTS_ROOT/_tools/governance/uninstall-hooks.sh`
 
 ## Notes
 
