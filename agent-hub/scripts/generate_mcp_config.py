@@ -14,25 +14,29 @@ import os
 from pathlib import Path
 from typing import Any
 
+# Get PROJECTS_ROOT from environment or default to ~/projects on this machine
+PROJECTS_ROOT = Path(os.environ.get("PROJECTS_ROOT", Path.home() / "projects"))
+TOOLS_DIR = PROJECTS_ROOT / "_tools"
+
 # Base MCP server definitions (source of truth)
 MCP_SERVERS = {
     "ollama-mcp": {
-        "command": str(Path.home() / "projects" / "_tools" / "ollama-mcp-go" / "bin" / "server"),
+        "command": str(TOOLS_DIR / "ollama-mcp-go" / "bin" / "server"),
         "args": [],
-        "env": {"SANDBOX_ROOT": str(Path.home() / "projects")},
+        "env": {"SANDBOX_ROOT": str(PROJECTS_ROOT)},
         "description": "Ollama MCP - local model inference via Go server",
     },
     "agent-hub": {
-        "command": str(Path.home() / "projects" / "_tools" / "claude-mcp-go" / "bin" / "claude-mcp-go"),
+        "command": str(TOOLS_DIR / "claude-mcp-go" / "bin" / "claude-mcp-go"),
         "args": [],
         "description": "Agent Hub MCP - hub messaging and review tools",
     },
     "librarian-mcp": {
-        "command": str(Path.home() / "projects" / "_tools" / "librarian-mcp" / "venv" / "bin" / "python3"),
+        "command": str(TOOLS_DIR / "librarian-mcp" / "venv" / "bin" / "python3"),
         "args": ["-m", "librarian_mcp.server"],
-        "cwd": str(Path.home() / "projects" / "_tools" / "librarian-mcp" / "src"),
+        "cwd": str(TOOLS_DIR / "librarian-mcp" / "src"),
         "env": {
-            "LIBRARIAN_PROJECTS_ROOT": str(Path.home() / "projects"),
+            "LIBRARIAN_PROJECTS_ROOT": str(PROJECTS_ROOT),
         },
         "description": "Librarian MCP - knowledge graph queries for project discovery",
         "enabled": False,
