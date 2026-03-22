@@ -22,6 +22,9 @@ def parse_draft_filename(draft_file: Path) -> dict:
     
     Format: {sanitized_path}.{task_id}.draft
     Example: __Users__eriksjaastad__projects__smart-invoice-workflow__AGENT_HUB_TEST.txt.task_simple_test.draft
+    
+    Note: This works on both laptop (~projects/) and Mac Mini (~.openclaw/workspace/projects/)
+    because it uses simple string substitution (__  ->  /) without hardcoded paths.
     """
     name = draft_file.stem  # Remove .draft
     parts = name.rsplit('.', 1)
