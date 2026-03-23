@@ -18,7 +18,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
-          TYPES="feature bug chore refactor docs test hotfix security perf"
+          TYPES="feature enhancement bug chore refactor docs test hotfix security perf"
           for type in $TYPES; do
             if echo "$LABELS" | grep -qx "$type"; then
               echo "Found type label: $type"
@@ -26,6 +26,6 @@ jobs:
             fi
           done
           echo "Missing type label on PR #${PR_NUMBER}"
-          echo "Every PR must have one of: feature, bug, chore, refactor, docs, test, hotfix, security, perf"
+          echo "Every PR must have one of: feature, enhancement, bug, chore, refactor, docs, test, hotfix, security, perf"
           echo "Add one with: gh pr edit $PR_NUMBER --add-label feature"
           exit 1
