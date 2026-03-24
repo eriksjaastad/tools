@@ -3,7 +3,7 @@ set -euo pipefail
 
 if [ "$#" -lt 2 ]; then
   echo "Usage: $0 <agent> <gh args...>" >&2
-  echo "   or: $0 <agent> -- <command...>" >&2
+  echo "   or: $0 <agent> -- git <args...>" >&2
   exit 1
 fi
 
@@ -35,8 +35,8 @@ export GIT_COMMITTER_EMAIL="$botname@users.noreply.github.com"
 
 if [ "${1:-}" = "--" ]; then
   shift
-  if [ "$#" -eq 0 ]; then
-    echo "No command provided after --" >&2
+  if [ "$#" -eq 0 ] || [ "$1" != "git" ]; then
+    echo "Only git commands are allowed after --" >&2
     exit 1
   fi
   exec "$@"
