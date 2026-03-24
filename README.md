@@ -4,7 +4,55 @@ Builder utilities and helper scripts for working across all projects.
 
 ---
 
-## 🛠️ Active Tools
+## CI Review System (Reusable Workflow)
+
+**This repo hosts the centralized code review workflow used by all 24 projects.**
+
+The reusable workflow lives at `.github/workflows/claude-review-reusable.yml`. Every repo calls it with a thin ~15-line wrapper:
+
+```yaml
+jobs:
+  claude-review:
+    uses: eriksjaastad/tools/.github/workflows/claude-review-reusable.yml@main
+    with:
+      review_style: governance
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_GITHUB_API_KEY }}
+```
+
+### What it does
+
+On every PR (`opened` / `synchronize`):
+1. **Runs tests** — configurable per repo (defaults to pytest)
+2. **AI code review** — Claude Sonnet reviews the diff against CLAUDE.md and governance protocol
+3. **Posts sticky comment** — Updates a single review comment (no spam)
+4. **Posts commit status** — `context: "claude-review"` for branch protection gating
+5. **Auto-merges** on APPROVE (squash + delete branch)
+6. **Blocks** on REQUEST_CHANGES
+
+### Review gates
+
+- **Gate 0:** Robotic scan (hardcoded paths, silent exceptions, API keys, placeholders)
+- **Gate 1:** Governance checklist against protocol
+- **Gate 2:** Cognitive audit (test gaps, scope creep, database safety, silent failures)
+
+### Configurable inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `test_command` | pytest auto-detect | Shell command for tests |
+| `review_style` | `governance` | `governance` (full 3-gate) or `simple` |
+| `review_model` | `claude-sonnet-4-20250514` | Claude model for review |
+| `comment_marker` | `<!-- claude-review -->` | Marker for sticky comments |
+| `diff_max_bytes` | `100000` | Max PR diff size |
+
+### Why this matters
+
+One file to update, all 24 repos inherit changes. The commit status API integration means branch protection can gate merges on the review verdict, enabling fully autonomous agent workflows: Worker writes code, Floor Manager submits PR, Architect reviews, auto-merge, done.
+
+---
+
+## Active Tools
 
 ### 🤖 AI Router (`ai_router/`)
 Cost-optimized routing between local Ollama and cloud AI models.
