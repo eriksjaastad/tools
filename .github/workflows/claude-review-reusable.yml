@@ -70,6 +70,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -315,6 +316,33 @@ jobs:
           else
             gh pr comment "${PR_NUMBER}" --body-file "${COMMENT_FILE}"
           fi
+
+      - name: Post commit status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          VERDICT="${{ steps.extract-verdict.outputs.verdict }}"
+          case "${VERDICT}" in
+            approve)
+              STATE="success"
+              DESC="PASS — no blocking issues found"
+              ;;
+            request_changes)
+              STATE="failure"
+              DESC="FAIL — blocking issues require changes"
+              ;;
+            *)
+              STATE="error"
+              DESC="Review did not produce a machine-readable verdict"
+              ;;
+          esac
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            --method POST \
+            --field state="${STATE}" \
+            --field context="claude-review" \
+            --field description="${DESC}"
 
   auto-merge:
     needs: [test, review]
