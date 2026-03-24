@@ -5,22 +5,23 @@ if [[ "${MODEL_HEALTH_INNER:-0}" != "1" ]]; then
   exec doppler run --project openclaw --config dev -- env MODEL_HEALTH_INNER=1 /bin/bash "$0" "$@"
 fi
 
-PATH="/opt/homebrew/bin:/usr/bin:/bin"
+export PATH="${PATH:+$PATH:}/usr/bin:/bin:/opt/homebrew/bin"
 STATE_FILE="$HOME/.openclaw/workspace/model_health.json"
 TMP_STATE="$(mktemp)"
 CHECKED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 STATUS_LINES=""
+CURL_TIMEOUT=(--connect-timeout 5 --max-time 30)
 
 check_ollama() {
   local body
-  body="$(curl -fsS http://127.0.0.1:11434/api/tags)"
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" http://127.0.0.1:11434/api/tags)"
   echo "$body" | jq -e '.models[]?.name | select(. == "qwen3.5:35b")' >/dev/null
 }
 
 check_anthropic() {
   local prefix="$1"
   local body
-  body="$(curl -fsS https://api.anthropic.com/v1/models \
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.anthropic.com/v1/models \
     -H "x-api-key: ${ANTHROPIC_API_KEY}" \
     -H "anthropic-version: 2023-06-01")"
   echo "$body" | jq -e --arg prefix "$prefix" '.data[]?.id | select(startswith($prefix))' >/dev/null
@@ -28,20 +29,20 @@ check_anthropic() {
 
 check_openai() {
   local body
-  body="$(curl -fsS https://api.openai.com/v1/models \
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.openai.com/v1/models \
     -H "Authorization: Bearer ${OPENAI_API_KEY}")"
   echo "$body" | jq -e '.data[]?.id | select(. == "gpt-4o")' >/dev/null
 }
 
 check_gemini() {
   local body
-  body="$(curl -fsS "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}")"
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}")"
   echo "$body" | jq -e '.models[]?.name | select(. == "models/gemini-2.5-flash" or . == "models/gemini-2.5-flash-latest")' >/dev/null
 }
 
 check_xai() {
   local body
-  body="$(curl -fsS https://api.x.ai/v1/models \
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.x.ai/v1/models \
     -H "Authorization: Bearer ${XAI_API_KEY}")"
   echo "$body" | jq -e '.data[]?.id | select(startswith("grok-3-mini"))' >/dev/null
 }

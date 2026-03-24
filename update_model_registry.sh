@@ -5,8 +5,9 @@ if [[ "${MODEL_REGISTRY_INNER:-0}" != "1" ]]; then
   exec doppler run --project openclaw --config dev -- env MODEL_REGISTRY_INNER=1 /bin/bash "$0" "$@"
 fi
 
-PATH="/opt/homebrew/bin:/usr/bin:/bin"
+export PATH="${PATH:+$PATH:}/usr/bin:/bin:/opt/homebrew/bin"
 TOOLS_MD="$HOME/.openclaw/workspace/TOOLS.md"
+CURL_TIMEOUT=(--connect-timeout 5 --max-time 30)
 
 EXPECTED_MODELS="$(python3 - <<'PY'
 import re
@@ -25,15 +26,15 @@ for model in models:
 PY
 )"
 
-ANTHROPIC_MODELS="$(curl -fsS https://api.anthropic.com/v1/models \
+ANTHROPIC_MODELS="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.anthropic.com/v1/models \
   -H "x-api-key: ${ANTHROPIC_API_KEY}" \
   -H "anthropic-version: 2023-06-01" | jq -r '.data[]?.id')"
-OPENAI_MODELS="$(curl -fsS https://api.openai.com/v1/models \
+OPENAI_MODELS="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.openai.com/v1/models \
   -H "Authorization: Bearer ${OPENAI_API_KEY}" | jq -r '.data[]?.id')"
-GEMINI_MODELS="$(curl -fsS "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}" | jq -r '.models[]?.name | sub("^models/"; "")')"
-XAI_MODELS="$(curl -fsS https://api.x.ai/v1/models \
+GEMINI_MODELS="$(curl -fsS "${CURL_TIMEOUT[@]}" "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}" | jq -r '.models[]?.name | sub("^models/"; "")')"
+XAI_MODELS="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.x.ai/v1/models \
   -H "Authorization: Bearer ${XAI_API_KEY}" | jq -r '.data[]?.id')"
-OLLAMA_MODELS="$(curl -fsS http://127.0.0.1:11434/api/tags | jq -r '.models[]?.name')"
+OLLAMA_MODELS="$(curl -fsS "${CURL_TIMEOUT[@]}" http://127.0.0.1:11434/api/tags | jq -r '.models[]?.name')"
 
 has_match() {
   local expected="$1"
