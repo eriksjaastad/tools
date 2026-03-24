@@ -7,6 +7,7 @@ Usage:
     uv run --with PyJWT --with cryptography _tools/github-app-token.py gemini
     uv run --with PyJWT --with cryptography _tools/github-app-token.py openclaw
     uv run --with PyJWT --with cryptography _tools/github-app-token.py antigravity
+    uv run --with PyJWT --with cryptography _tools/github-app-token.py codex
 
 Credentials are stored in Doppler (synth-insight-labs/dev) with the naming convention:
     GITHUB_APP_ID_{AGENT}
@@ -28,13 +29,13 @@ import jwt
 DOPPLER_CONFIG = "dev"
 
 # Per-agent Doppler project mapping.
-# openclaw keys live in the 'openclaw' project; all others in 'synth-insight-labs'.
+# openclaw and codex keys live in the 'openclaw' project on the Mini.
 AGENT_MAP = {
     "claude": ("CLAUDE", "synth-insight-labs"),
     "gemini": ("GEMINI", "synth-insight-labs"),
     "openclaw": ("OPENCLAW", "openclaw"),
     "antigravity": ("ANTIGRAVITY", "synth-insight-labs"),
-    "codex": ("CODEX", "synth-insight-labs"),
+    "codex": ("CODEX", "openclaw"),
 }
 
 
