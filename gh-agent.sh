@@ -35,10 +35,20 @@ export GIT_COMMITTER_EMAIL="$botname@users.noreply.github.com"
 
 if [ "${1:-}" = "--" ]; then
   shift
-  if [ "$#" -eq 0 ] || [ "$1" != "git" ]; then
-    echo "Only git commands are allowed after --" >&2
+  if [ "$#" -lt 2 ] || [ "$1" != "git" ]; then
+    echo "Usage: $0 <agent> -- git <subcommand> [args...]" >&2
     exit 1
   fi
+  git_subcommand="$2"
+  case "$git_subcommand" in
+    add|commit|push|status|log|rev-parse)
+      ;;
+    *)
+      echo "Git subcommand not allowed: $git_subcommand" >&2
+      exit 1
+      ;;
+  esac
+  echo "[$agent] git $git_subcommand" >&2
   exec "$@"
 fi
 
