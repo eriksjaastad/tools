@@ -1,32 +1,50 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ "$#" -lt 2 ]; then
-  echo "Usage: $0 <agent> <gh args...>" >&2
-  echo "   or: $0 <agent> -- git <args...>" >&2
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 <identity> <gh args...>" >&2
+  echo "   or: $0 <identity> -- git <args...>" >&2
+  echo "   or: $0 --auto <gh args...>" >&2
+  echo "   or: $0 --auto -- git <args...>" >&2
+  echo "" >&2
+  echo "Identities: claude, antigravity, codex, openclaw, gemini," >&2
+  echo "  ai-memory, smart-invoice-workflow, hypocrisynow," >&2
+  echo "  project-tracker, tax-organizer, _tools, muffinpanrecipes" >&2
   exit 1
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-agent="$1"
+TOKEN_SCRIPT="$SCRIPT_DIR/github-app-token.py"
+
+identity="$1"
 shift
 
-case "$agent" in
-  claude)       botname="claude-opus-erik[bot]" ;;
-  antigravity)  botname="antigravity-ide-erik[bot]" ;;
-  codex)        botname="codex-mini-erik[bot]" ;;
-  openclaw)     botname="openclaw-ceo-erik[bot]" ;;
-  gemini)       botname="gemini-cli-erik[bot]" ;;
-  *)
-    echo "Unknown agent: $agent" >&2
-    exit 1
-    ;;
-esac
-
-export GH_TOKEN="$(
-  UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
-  uv run --with PyJWT --with cryptography "$SCRIPT_DIR/github-app-token.py" "$agent"
-)"
+# Auto-detect: try project-based identity from cwd, fall back to claude
+if [ "$identity" = "--auto" ]; then
+  identity=$(UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
+    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" --auto --botname 2>/dev/null | head -1)
+  if [ -z "$identity" ]; then
+    echo "Auto-detect failed, falling back to claude" >&2
+    identity="claude"
+  fi
+  # We got the botname, now get the token using auto
+  export GH_TOKEN="$(
+    UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
+    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" --auto 2>/dev/null
+  )"
+  botname="$identity"
+else
+  # Get botname from the token script
+  botname=$(UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
+    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" "$identity" --botname 2>/dev/null)
+  if [ -z "$botname" ]; then
+    botname="${identity}[bot]"
+  fi
+  export GH_TOKEN="$(
+    UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
+    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" "$identity"
+  )"
+fi
 
 export GIT_AUTHOR_NAME="$botname"
 export GIT_AUTHOR_EMAIL="$botname@users.noreply.github.com"
@@ -48,7 +66,7 @@ if [ "${1:-}" = "--" ]; then
       exit 1
       ;;
   esac
-  echo "[$agent] git $git_subcommand" >&2
+  echo "[$identity] git $git_subcommand" >&2
   exec "$@"
 fi
 
