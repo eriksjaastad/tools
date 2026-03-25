@@ -17,6 +17,7 @@ Usage:
     python integrity_warden.py --list-checkers
 """
 
+import logging
 import os
 import re
 import subprocess
@@ -25,6 +26,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Set, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -177,7 +180,8 @@ class BaseChecker(ABC):
         """Safely read a file's contents."""
         try:
             return file_path.read_text(encoding="utf-8", errors="ignore")
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to read file %s: %s", file_path, e)
             return None
 
     def _relative_path(self, file_path: Path, ctx: ScanContext) -> str:
@@ -303,8 +307,8 @@ class MarkdownLinkChecker(BaseChecker):
                             context=match.group(0),
                             checker=self.name
                         ))
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to resolve markdown link path '%s' in %s: %s", clean_path, file_path, e)
 
         return issues
 
@@ -426,8 +430,8 @@ class RelativePathChecker(BaseChecker):
                                 context=f"...{content[context_start:context_end]}...",
                                 checker=self.name
                             ))
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Failed to resolve cross-project path '%s' in %s: %s", full_rel_path, file_path, e)
 
         return issues
 

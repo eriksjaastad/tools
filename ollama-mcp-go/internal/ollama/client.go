@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/eriksjaastad/ollama-mcp-go/internal/logger"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -111,7 +112,11 @@ func (c *Client) Generate(ctx context.Context, req GenerateRequest) (*GenerateRe
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error("failed to read generate error response body", err, "status", resp.StatusCode)
+			return nil, fmt.Errorf("ollama error (status %d): could not read response body", resp.StatusCode)
+		}
 		return nil, fmt.Errorf("ollama error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -145,7 +150,11 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, erro
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error("failed to read chat error response body", err, "status", resp.StatusCode)
+			return nil, fmt.Errorf("ollama error (status %d): could not read response body", resp.StatusCode)
+		}
 		return nil, fmt.Errorf("ollama error (status %d): %s", resp.StatusCode, string(body))
 	}
 
@@ -209,7 +218,11 @@ func (c *Client) ListModels(ctx context.Context) (*ListModelsResponse, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			logger.Error("failed to read list-models error response body", err, "status", resp.StatusCode)
+			return nil, fmt.Errorf("ollama error (status %d): could not read response body", resp.StatusCode)
+		}
 		return nil, fmt.Errorf("ollama error (status %d): %s", resp.StatusCode, string(body))
 	}
 

@@ -11,7 +11,6 @@ Provides functions to extract session metadata, tool usage, and activity classif
 
 import json
 import logging
-import warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Optional

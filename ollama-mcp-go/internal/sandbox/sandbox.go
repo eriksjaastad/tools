@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/eriksjaastad/ollama-mcp-go/internal/logger"
 )
 
 // Sandbox provides safe file operations within a root directory.
@@ -83,13 +85,17 @@ func (s *Sandbox) SafeWrite(path string, content []byte) error {
 	defer os.Remove(tmpName)
 
 	if _, err := tmpFile.Write(content); err != nil {
-		_ = tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			logger.Warn("failed to close temp file after write error", "path", tmpName, "closeErr", closeErr)
+		}
 		return err
 	}
 
 	// Sync to ensure data is flushed to disk before rename
 	if err := tmpFile.Sync(); err != nil {
-		_ = tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			logger.Warn("failed to close temp file after sync error", "path", tmpName, "closeErr", closeErr)
+		}
 		return err
 	}
 
