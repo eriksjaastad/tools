@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 """
-Generate a GitHub App installation token for any registered agent.
+Generate a GitHub App installation token for any registered agent or project.
 
-Usage:
+Usage (agent-based):
     uv run --with PyJWT --with cryptography _tools/github-app-token.py claude
-    uv run --with PyJWT --with cryptography _tools/github-app-token.py gemini
-    uv run --with PyJWT --with cryptography _tools/github-app-token.py openclaw
     uv run --with PyJWT --with cryptography _tools/github-app-token.py antigravity
-    uv run --with PyJWT --with cryptography _tools/github-app-token.py codex
+
+Usage (project-based):
+    uv run --with PyJWT --with cryptography _tools/github-app-token.py ai-memory
+    uv run --with PyJWT --with cryptography _tools/github-app-token.py hypocrisynow
+
+Usage (auto-detect from cwd):
+    uv run --with PyJWT --with cryptography _tools/github-app-token.py --auto
 
 Credentials are stored in Doppler (synth-insight-labs/dev) with the naming convention:
-    GITHUB_APP_ID_{AGENT}
-    GITHUB_APP_PRIVATE_KEY_{AGENT}
-    GITHUB_APP_INSTALLATION_ID_{AGENT}
+    GITHUB_APP_ID_{NAME}
+    GITHUB_APP_PRIVATE_KEY_{NAME}
+    GITHUB_APP_INSTALLATION_ID_{NAME}
 
 Output: prints only the token to stdout (suitable for piping into gh auth or curl).
 """
@@ -26,17 +30,50 @@ import urllib.request
 import jwt
 
 
+from pathlib import Path
+
 DOPPLER_CONFIG = "dev"
 
-# Per-agent Doppler project mapping.
-# openclaw and codex keys live in the 'openclaw' project on the Mini.
-AGENT_MAP = {
-    "claude": ("CLAUDE", "synth-insight-labs"),
-    "gemini": ("GEMINI", "synth-insight-labs"),
-    "openclaw": ("OPENCLAW", "openclaw"),
-    "antigravity": ("ANTIGRAVITY", "synth-insight-labs"),
-    "codex": ("CODEX", "openclaw"),
+# Maps identity names to (DOPPLER_SUFFIX, DOPPLER_PROJECT, BOT_NAME).
+# Supports both agent-based and project-based identities.
+IDENTITY_MAP = {
+    # Agent identities (legacy — still work)
+    "claude": ("CLAUDE", "synth-insight-labs", "claude-opus-erik[bot]"),
+    "gemini": ("GEMINI", "synth-insight-labs", "gemini-cli-erik[bot]"),
+    "openclaw": ("OPENCLAW", "openclaw", "openclaw-ceo-erik[bot]"),
+    "antigravity": ("ANTIGRAVITY", "synth-insight-labs", "antigravity-ide-erik[bot]"),
+    "codex": ("CODEX", "openclaw", "codex-mini-erik[bot]"),
+    # Project identities (new — per-project bots)
+    "ai-memory": ("AI_MEMORY", "synth-insight-labs", "ai-memory-manager[bot]"),
+    "smart-invoice-workflow": ("SMART_INVOICE_WORKFLOW", "synth-insight-labs", "siw-manager[bot]"),
+    "hypocrisynow": ("HYPOCRISYNOW", "synth-insight-labs", "hypocrisynow-manager[bot]"),
+    "project-tracker": ("PROJECT_TRACKER", "synth-insight-labs", "project-tracker-manager[bot]"),
+    "tax-organizer": ("TAX_ORGANIZER", "synth-insight-labs", "tax-organizer-manager[bot]"),
+    "_tools": ("TOOLS", "synth-insight-labs", "tools-manager[bot]"),
+    "muffinpanrecipes": ("MUFFINPANRECIPES", "synth-insight-labs", "muffinpanrecipes-manager[bot]"),
 }
+
+# Map project directory names to identity keys for auto-detection
+PROJECT_DIR_MAP = {
+    "ai-memory": "ai-memory",
+    "smart-invoice-workflow": "smart-invoice-workflow",
+    "hypocrisynow": "hypocrisynow",
+    "project-tracker": "project-tracker",
+    "tax-organizer": "tax-organizer",
+    "_tools": "_tools",
+    "muffinpanrecipes": "muffinpanrecipes",
+}
+
+
+def detect_project_from_cwd() -> str:
+    """Walk up from cwd to find which project we're in. Falls back to 'claude'."""
+    cwd = Path.cwd()
+    projects_root = Path.home() / "projects"
+    if not str(cwd).startswith(str(projects_root)):
+        return "claude"  # Not in a project dir — use default
+    relative = cwd.relative_to(projects_root)
+    top_dir = str(relative).split("/")[0]
+    return PROJECT_DIR_MAP.get(top_dir, "claude")  # Unknown project — use default
 
 
 def doppler_get(key: str, project: str) -> str:
@@ -51,12 +88,12 @@ def doppler_get(key: str, project: str) -> str:
     return result.stdout.strip()
 
 
-def generate_token(agent: str) -> str:
-    entry = AGENT_MAP.get(agent)
+def generate_token(identity: str) -> str:
+    entry = IDENTITY_MAP.get(identity)
     if not entry:
-        print(f"Error: Unknown agent '{agent}'. Valid: {', '.join(AGENT_MAP.keys())}", file=sys.stderr)
+        print(f"Error: Unknown identity '{identity}'. Valid: {', '.join(IDENTITY_MAP.keys())}", file=sys.stderr)
         sys.exit(1)
-    suffix, project = entry
+    suffix, project, _botname = entry
 
     app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
     installation_id = doppler_get(f"GITHUB_APP_INSTALLATION_ID_{suffix}", project)
@@ -90,17 +127,45 @@ def generate_token(agent: str) -> str:
         sys.exit(1)
 
 
+def get_botname(identity: str) -> str:
+    """Return the bot display name for an identity."""
+    entry = IDENTITY_MAP.get(identity)
+    if not entry:
+        return f"{identity}[bot]"
+    return entry[2]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate GitHub App installation token")
-    parser.add_argument("agent", choices=list(AGENT_MAP.keys()),
-                        help="Agent to generate token for")
+    parser.add_argument("identity", nargs="?", default=None,
+                        help=f"Agent or project name. Valid: {', '.join(IDENTITY_MAP.keys())}")
+    parser.add_argument("--auto", action="store_true",
+                        help="Auto-detect project from current working directory")
     parser.add_argument("--verify", action="store_true",
                         help="Verify token by calling /app endpoint")
+    parser.add_argument("--botname", action="store_true",
+                        help="Print the bot display name instead of a token")
     args = parser.parse_args()
 
+    # Resolve identity
+    identity = args.identity
+    if args.auto or identity is None:
+        identity = detect_project_from_cwd()
+        if not identity:
+            print("Error: Could not detect project from cwd. Specify identity explicitly.", file=sys.stderr)
+            sys.exit(1)
+        print(f"Auto-detected project: {identity}", file=sys.stderr)
+
+    if identity not in IDENTITY_MAP:
+        print(f"Error: Unknown identity '{identity}'. Valid: {', '.join(IDENTITY_MAP.keys())}", file=sys.stderr)
+        sys.exit(1)
+
+    if args.botname:
+        print(get_botname(identity))
+        return
+
     if args.verify:
-        # Verify JWT first
-        suffix, project = AGENT_MAP[args.agent]
+        suffix, project, _botname = IDENTITY_MAP[identity]
         app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
         private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
         now = int(time.time())
@@ -115,7 +180,7 @@ def main():
             app_data = json.loads(resp.read().decode())
             print(f"Authenticated as: {app_data['name']}", file=sys.stderr)
 
-    token = generate_token(args.agent)
+    token = generate_token(identity)
     print(token)
 
 
