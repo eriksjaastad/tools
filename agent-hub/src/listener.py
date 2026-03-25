@@ -31,6 +31,46 @@ logging.basicConfig(
 )
 logger = logging.getLogger("MessageListener")
 
+def sweep_stale_handoff(handoff_dir: Path) -> int:
+    """Move stale handoff files (not modified today) into .trash."""
+    if not handoff_dir.exists():
+        return 0
+
+    today = datetime.now().date()
+    trash_dir = handoff_dir / ".trash"
+    trash_dir.mkdir(parents=True, exist_ok=True)
+    moved = 0
+
+    for path in handoff_dir.rglob("*"):
+        if path.is_dir():
+            continue
+        if ".trash" in path.parts:
+            continue
+        if path.name in {".gitignore", ".gitkeep"}:
+            continue
+        try:
+            file_date = datetime.fromtimestamp(path.stat().st_mtime).date()
+        except FileNotFoundError:
+            continue
+        if file_date == today:
+            continue
+
+        rel_path = path.relative_to(handoff_dir)
+        dest = trash_dir / rel_path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            suffix = int(time.time())
+            dest = dest.with_name(f"{dest.name}.{suffix}")
+        try:
+            path.rename(dest)
+            moved += 1
+        except Exception as e:
+            logger.warning(f"Failed to trash stale handoff file {path}: {e}")
+
+    if moved:
+        logger.info(f"Swept {moved} stale handoff files into {trash_dir}")
+    return moved
+
 @dataclass
 class PipelineContext:
     task_id: str
@@ -69,6 +109,11 @@ class MessageListener:
         4. Dispatch to registered handlers
         """
         logger.info(f"Starting MessageListener for {self.agent_id}...")
+
+        try:
+            sweep_stale_handoff(self.handoff_dir)
+        except Exception as e:
+            logger.warning(f"Failed to sweep stale handoff files: {e}")
         
         try:
             with MCPClient(self.hub_path) as mcp:
@@ -265,6 +310,11 @@ class MessageListener:
         2. Convert to contract
         3. Start implementation pipeline
         """
+        try:
+            sweep_stale_handoff(self.handoff_dir)
+        except Exception as e:
+            logger.warning(f"Failed to sweep stale handoff files: {e}")
+
         payload = message.get("payload", {})
         proposal_path = Path(payload.get("proposal_path", ""))
         handoff_dir = self.handoff_dir
