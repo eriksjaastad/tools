@@ -106,6 +106,31 @@ func (p *Parser) ParseToolCalls(text string) []ToolCall {
 		return results
 	}
 
+	// 4b. Try balanced JSON extraction (handles nested braces)
+	if strings.Contains(text, "\"name\"") && strings.Contains(text, "\"arguments\"") {
+		start := strings.Index(text, "{")
+		for start >= 0 {
+			jsonStr := extractBalancedJSON(text[start:])
+			if jsonStr == "" {
+				break
+			}
+			var tc ToolCall
+			if err := json.Unmarshal([]byte(jsonStr), &tc); err == nil && tc.Name != "" {
+				results = append(results, tc)
+				return results
+			}
+			next := strings.Index(text[start+1:], "{")
+			if next < 0 {
+				break
+			}
+			start = start + 1 + next
+		}
+	}
+
+	if len(results) > 0 {
+		return results
+	}
+
 	// 5. Try JSON array: [{"name": "...", "arguments": {...}}]
 	trimmed := strings.TrimSpace(text)
 	if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {

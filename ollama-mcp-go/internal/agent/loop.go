@@ -62,7 +62,10 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 		messages = append(messages, chatResp.Message)
 
 		// 2. Parse tool calls
-		toolCalls := a.parser.ParseToolCalls(content)
+		toolCalls := parseToolCallsFromRaw(chatResp.Message.ToolCalls)
+		if len(toolCalls) == 0 {
+			toolCalls = a.parser.ParseToolCalls(content)
+		}
 		if len(toolCalls) == 0 {
 			// Check if this is a code task that should have produced writes.
 			// If we haven't made any draft_write/draft_patch calls yet and this
@@ -159,6 +162,86 @@ func hasWriteCalls(trace []executor.ExecutionResult) bool {
 		}
 	}
 	return false
+}
+
+func parseToolCallsFromRaw(raw json.RawMessage) []parser.ToolCall {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" || trimmed == "null" || trimmed == "[]" {
+		return nil
+	}
+
+	// 1) Try direct array of parser.ToolCall
+	var direct []parser.ToolCall
+	if err := json.Unmarshal(raw, &direct); err == nil {
+		if normalized := normalizeToolCalls(direct); len(normalized) > 0 {
+			return normalized
+		}
+	}
+
+	// 2) Try single parser.ToolCall
+	var single parser.ToolCall
+	if err := json.Unmarshal(raw, &single); err == nil && single.Name != "" {
+		single.Arguments = normalizeArgs(single.Arguments)
+		return []parser.ToolCall{single}
+	}
+
+	// 3) Try OpenAI-style tool_calls
+	type functionCall struct {
+		Name      string          `json:"name"`
+		Arguments json.RawMessage `json:"arguments"`
+	}
+	type openAIToolCall struct {
+		ID       string       `json:"id"`
+		Type     string       `json:"type"`
+		Function functionCall `json:"function"`
+	}
+	var openai []openAIToolCall
+	if err := json.Unmarshal(raw, &openai); err == nil {
+		out := make([]parser.ToolCall, 0, len(openai))
+		for _, tc := range openai {
+			if tc.Function.Name == "" {
+				continue
+			}
+			out = append(out, parser.ToolCall{
+				ID:        tc.ID,
+				Name:      tc.Function.Name,
+				Arguments: normalizeArgs(tc.Function.Arguments),
+			})
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+
+	logger.Info("ToolCalls present but could not be parsed", "raw", trimmed)
+	return nil
+}
+
+func normalizeToolCalls(tcs []parser.ToolCall) []parser.ToolCall {
+	out := make([]parser.ToolCall, 0, len(tcs))
+	for _, tc := range tcs {
+		if tc.Name == "" {
+			continue
+		}
+		tc.Arguments = normalizeArgs(tc.Arguments)
+		out = append(out, tc)
+	}
+	return out
+}
+
+func normalizeArgs(raw json.RawMessage) json.RawMessage {
+	trimmed := strings.TrimSpace(string(raw))
+	if trimmed == "" {
+		return raw
+	}
+	// If arguments are a JSON string, unquote it to a raw object/string
+	if strings.HasPrefix(trimmed, "\"") {
+		var s string
+		if err := json.Unmarshal(raw, &s); err == nil {
+			return json.RawMessage(s)
+		}
+	}
+	return raw
 }
 
 // draftToolDefinitions returns Ollama-native tool definitions for the draft tools.
