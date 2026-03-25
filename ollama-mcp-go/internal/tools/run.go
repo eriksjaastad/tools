@@ -45,8 +45,11 @@ func (h *RunHandler) Run(params json.RawMessage) (any, error) {
 		Options: input.Options,
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
 	start := time.Now()
-	resp, err := h.client.Generate(context.TODO(), req) // Using context.TODO() as per lint guidance
+	resp, err := h.client.Generate(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +84,10 @@ func (h *RunHandler) RunMany(params json.RawMessage) (any, error) {
 		}
 	}
 
-	resps, err := h.client.RunMany(context.TODO(), ollamaReqs, input.MaxConcurrency)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	resps, err := h.client.RunMany(ctx, ollamaReqs, input.MaxConcurrency)
 	if err != nil {
 		return nil, err
 	}
