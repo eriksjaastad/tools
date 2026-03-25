@@ -162,7 +162,9 @@ func (h *Handler) sendResponse(stdout io.Writer, resp *JSONRPCResponse) error {
 
 func (h *Handler) sendError(stdout io.Writer, id any, code int, message string, data any) {
 	resp := h.makeError(id, code, message, data)
-	_ = h.sendResponse(stdout, resp)
+	if err := h.sendResponse(stdout, resp); err != nil {
+		logger.Error("failed to send error response", err, "code", code, "message", message)
+	}
 }
 
 func (h *Handler) makeError(id any, code int, message string, data any) *JSONRPCResponse {
