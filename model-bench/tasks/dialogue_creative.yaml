@@ -1,0 +1,85 @@
+category: dialogue_creative
+tasks:
+  - id: dial_cre_001
+    name: "character voice consistency"
+    description: "Write dialogue for a grumpy chef character"
+    variants:
+      - id: direct
+        prompt: "Write 5 lines of dialogue for a grumpy head chef named Marcus who just discovered his sous chef used canned tomatoes instead of fresh ones. Marcus is passionate about food quality but secretly cares about his staff. Keep each line under 100 characters."
+      - id: cot
+        prompt: "First, think about what makes a grumpy but caring chef's voice distinctive. Then write 5 lines of dialogue for Marcus, a grumpy head chef who just found out his sous chef used canned tomatoes. He's passionate about quality but secretly cares about his team."
+    rubric:
+      - name: voice_consistency
+        weight: 3
+        description: "All lines sound like the same character — consistent tone, vocabulary, speech patterns"
+      - name: emotional_range
+        weight: 2
+        description: "Shows grumpiness AND the underlying caring, not one-note"
+      - name: naturalness
+        weight: 2
+        description: "Sounds like real speech, not AI-generated prose"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: dial_cre_002
+    name: "group chat banter"
+    description: "Write a text message group chat between 3 distinct characters"
+    variants:
+      - id: direct
+        prompt: "Write a 10-message group chat thread between three friends planning a surprise birthday party. Characters: Steph (organized planner, uses bullet points in texts), Julian (enthusiastic, excessive emojis), Devon (dry humor, one-liners). Format as 'Name: message' per line."
+      - id: minimal
+        prompt: "10-message group chat. Steph (planner, bullet points), Julian (enthusiastic, emojis), Devon (dry humor). Planning a surprise party. Format: 'Name: message'."
+    rubric:
+      - name: voice_distinction
+        weight: 3
+        description: "Could identify speaker without the name label (name-strip test)"
+      - name: interaction_quality
+        weight: 2
+        description: "Characters respond to each other, not just parallel monologues"
+      - name: humor_tone
+        weight: 1
+        description: "Feels like real friends texting, appropriate humor"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: dial_cre_003
+    name: "scene description"
+    description: "Write a vivid scene description for a story"
+    variants:
+      - id: direct
+        prompt: "Write a 150-word scene description of a small-town bakery at 5 AM. The baker is alone, starting the day. Include sensory details: smell, sound, texture, light. Tone should be warm but slightly melancholy."
+      - id: cot
+        prompt: "Think about what a bakery is like in the early morning — the sensory experience, the solitude. Then write a 150-word scene description of a small-town bakery at 5 AM with a lone baker starting the day. Warm but slightly melancholy tone."
+    rubric:
+      - name: sensory_detail
+        weight: 3
+        description: "Engages multiple senses (smell, sound, texture, light) naturally"
+      - name: tone
+        weight: 2
+        description: "Achieves warm-but-melancholy balance without being heavy-handed"
+      - name: conciseness
+        weight: 1
+        description: "Near 150 words, no padding or filler"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: dial_cre_004
+    name: "conflict dialogue"
+    description: "Write a tense but realistic argument"
+    variants:
+      - id: direct
+        prompt: "Write a 6-line dialogue between two business partners who disagree about whether to accept a big investor's offer. Partner A wants to take the money (practical, anxious about cash flow). Partner B wants to stay independent (idealistic, stubborn). Neither is fully right. No stage directions."
+      - id: cot
+        prompt: "Think about how real people argue — they interrupt, repeat themselves, and get emotional. Then write 6 lines of dialogue between two business partners disagreeing about an investor offer. A is practical/anxious, B is idealistic/stubborn. Neither is fully right."
+    rubric:
+      - name: conflict_realism
+        weight: 3
+        description: "Feels like a real disagreement, not a debate — emotional, messy"
+      - name: balance
+        weight: 2
+        description: "Both sides have valid points, neither is a strawman"
+      - name: subtext
+        weight: 1
+        description: "What they say vs what they mean — layered dialogue"
+    max_score: 5
+    timeout_seconds: 30

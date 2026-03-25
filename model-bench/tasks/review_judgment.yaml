@@ -1,0 +1,136 @@
+category: review_judgment
+tasks:
+  - id: rev_judge_001
+    name: "code review"
+    description: "Review a code snippet for bugs and improvements"
+    variants:
+      - id: direct
+        prompt: |
+          Review this Python function for bugs, security issues, and improvements:
+
+          ```python
+          def process_user_input(data):
+              query = f"SELECT * FROM users WHERE name = '{data['name']}'"
+              result = db.execute(query)
+              user = result[0]
+              return {"name": user.name, "email": user.email, "password": user.password}
+          ```
+
+          List each issue with severity (critical/major/minor) and a fix.
+      - id: cot
+        prompt: |
+          Think carefully about security, error handling, and data exposure. Then review this Python function:
+
+          ```python
+          def process_user_input(data):
+              query = f"SELECT * FROM users WHERE name = '{data['name']}'"
+              result = db.execute(query)
+              user = result[0]
+              return {"name": user.name, "email": user.email, "password": user.password}
+          ```
+
+          List each issue with severity and fix.
+    rubric:
+      - name: bug_detection
+        weight: 3
+        description: "Identifies SQL injection, password exposure, missing error handling, KeyError risk"
+      - name: severity_accuracy
+        weight: 2
+        description: "Correctly classifies severity — SQL injection is critical, not minor"
+      - name: fix_quality
+        weight: 1
+        description: "Suggested fixes are correct and practical"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: rev_judge_002
+    name: "architecture decision"
+    description: "Evaluate a technical architecture choice"
+    variants:
+      - id: direct
+        prompt: "A team is building a real-time chat app for 10K concurrent users. They're debating: (A) WebSockets with Redis pub/sub, (B) Server-Sent Events with PostgreSQL LISTEN/NOTIFY, (C) Long polling with a message queue. Evaluate each option's pros and cons for this specific use case. Recommend one with reasoning."
+      - id: minimal
+        prompt: "Real-time chat, 10K concurrent users. Compare: WebSockets+Redis, SSE+Postgres LISTEN/NOTIFY, long polling+message queue. Recommend one."
+    rubric:
+      - name: analysis_depth
+        weight: 3
+        description: "Covers scalability, complexity, latency, failure modes for each option"
+      - name: recommendation_quality
+        weight: 2
+        description: "Recommendation matches the specific constraints (10K users, real-time)"
+      - name: tradeoff_honesty
+        weight: 1
+        description: "Acknowledges downsides of recommended option, doesn't oversell"
+    max_score: 5
+    timeout_seconds: 45
+
+  - id: rev_judge_003
+    name: "PR review simulation"
+    description: "Review a pull request diff"
+    variants:
+      - id: direct
+        prompt: |
+          Review this PR diff. The PR description says "Add rate limiting to API endpoints."
+
+          ```diff
+          +from time import time
+          +
+          +rate_limits = {}
+          +
+          +def check_rate_limit(user_id, max_requests=100, window=60):
+          +    now = time()
+          +    if user_id not in rate_limits:
+          +        rate_limits[user_id] = []
+          +    rate_limits[user_id] = [t for t in rate_limits[user_id] if now - t < window]
+          +    if len(rate_limits[user_id]) >= max_requests:
+          +        return False
+          +    rate_limits[user_id].append(now)
+          +    return True
+
+          @app.route("/api/data")
+          def get_data():
+          +    if not check_rate_limit(request.user_id):
+          +        return jsonify({"error": "rate limited"}), 429
+              return jsonify(fetch_data())
+          ```
+
+          Give specific, actionable feedback. What's good? What needs to change before merge?
+    rubric:
+      - name: issue_identification
+        weight: 3
+        description: "Catches memory leak (unbounded dict), no persistence across restarts, thread safety, missing cleanup"
+      - name: positive_feedback
+        weight: 1
+        description: "Acknowledges what's done well (sliding window approach, clean integration)"
+      - name: actionability
+        weight: 2
+        description: "Feedback is specific and actionable, not vague 'consider improvements'"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: rev_judge_004
+    name: "error message quality"
+    description: "Evaluate and improve error messages"
+    variants:
+      - id: direct
+        prompt: |
+          Evaluate these error messages and rewrite each one to be more helpful:
+
+          1. "Error: Invalid input"
+          2. "Something went wrong. Please try again."
+          3. "TypeError: Cannot read property 'name' of undefined"
+          4. "Error 500"
+
+          For each: explain what's wrong with the original, then provide an improved version that helps the user understand what happened and what to do next.
+    rubric:
+      - name: diagnosis_quality
+        weight: 2
+        description: "Correctly identifies what's wrong with each original message"
+      - name: improvement_quality
+        weight: 3
+        description: "Rewritten messages are specific, actionable, and user-friendly"
+      - name: user_empathy
+        weight: 1
+        description: "Tone is helpful, not condescending or overly technical"
+    max_score: 5
+    timeout_seconds: 30

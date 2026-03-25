@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+# gen-loop — Run an agent in a generative loop on a repo
+#
+# Usage:
+#   gen-loop <agent> <repo-path> [focus]
+#
+# Agents:
+#   claude   — Claude Code (--print mode, Anthropic subscription)
+#   codex    — OpenAI Codex CLI (exec mode, OpenAI Pro subscription)
+#   gemini   — Gemini CLI (--prompt mode, Google subscription)
+#
+# Examples:
+#   gen-loop codex ~/projects/muffinpanrecipes
+#   gen-loop gemini ~/projects/ai-memory "focus on test coverage"
+#   gen-loop claude ~/projects/data-vault-factory "refactor the pipeline module"
+#
+# Philosophy: Take small bites, don't stop. Each cycle picks ONE thing,
+# fixes it completely, commits, then picks the next thing.
+
+set -o pipefail
+
+AGENT="${1:-}"
+REPO="${2:-}"
+FOCUS="${3:-}"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+usage() {
+    echo "Usage: gen-loop <agent> <repo-path> [focus]"
+    echo ""
+    echo "Agents: claude, codex, gemini"
+    echo ""
+    echo "Examples:"
+    echo "  gen-loop codex ~/projects/muffinpanrecipes"
+    echo "  gen-loop gemini ~/projects/ai-memory"
+    echo "  gen-loop claude ~/projects/data-vault-factory \"refactor pipelines\""
+    exit 1
+}
+
+if [ -z "$AGENT" ] || [ -z "$REPO" ]; then
+    usage
+fi
+
+# Expand ~ and resolve path
+REPO="${REPO/#\~/$HOME}"
+if [ ! -d "$REPO" ]; then
+    echo -e "${RED}Error: $REPO is not a directory${NC}"
+    exit 1
+fi
+
+REPO_NAME=$(basename "$REPO")
+
+# Build the prompt
+BASE_PROMPT="You are working in the $REPO_NAME repository. Your job is to make this codebase better, one small bite at a time.
+
+SETUP (do this FIRST before any work):
+- Check which branch you are on with git branch
+- You MUST be on a feature branch, NEVER work on main
+- If you are on main, create and switch to a branch: git checkout -b gen-loop-\$(date +%Y%m%d-%H%M%S)
+- If you are already on a non-main branch, stay on it
+
+RULES:
+1. Pick ONE concrete improvement (a bug, a TODO, a failing test, a code smell, a missing test, a performance issue, dead code, inconsistency)
+2. Fix it COMPLETELY — don't leave half-done work
+3. Run tests if they exist to make sure you didn't break anything
+4. Commit your work with a clear message
+5. Then pick the NEXT thing and repeat
+6. Take SMALL BITES — don't refactor 10 files at once. One function, one test, one fix per cycle.
+7. If you run out of obvious fixes, get creative: add a test for an untested path, improve error messages, simplify complex logic, update outdated comments
+8. After every 5 commits, pause and look for PATTERNS in what you've been fixing. If you see a systemic issue (same bug in 12 places, duplicated code, inconsistent error handling), fix it systematically but still in small commits.
+9. Stop after 20 commits or when you genuinely can't find anything useful to improve. Don't make changes for the sake of changes.
+10. NEVER push to remote. Only commit locally.
+
+ERROR HANDLING:
+- Missing credentials or env vars: note the issue in a file called GEN-LOOP-BLOCKERS.md and move on to something else. Do NOT stop working.
+- Failing tests that you didn't cause: note them in GEN-LOOP-BLOCKERS.md and move on. Fix what you can.
+- If the same error happens 3 times: stop trying that path, note it, move on.
+- If you are genuinely stuck on everything: write a summary to GEN-LOOP-BLOCKERS.md and stop."
+
+if [ -n "$FOCUS" ]; then
+    BASE_PROMPT="$BASE_PROMPT
+
+FOCUS AREA: $FOCUS
+Prioritize improvements related to this focus, but don't ignore obvious bugs or broken tests along the way."
+fi
+
+echo -e "${CYAN}--- gen-loop: $AGENT → $REPO_NAME ---${NC}"
+if [ -n "$FOCUS" ]; then
+    echo -e "${YELLOW}  Focus: $FOCUS${NC}"
+fi
+echo ""
+
+# Count commits before
+COMMITS_BEFORE=$(cd "$REPO" && git rev-list --count HEAD 2>/dev/null || echo "0")
+
+case "$AGENT" in
+    claude)
+        echo -e "${GREEN}Starting Claude Code in headless mode...${NC}"
+        echo -e "${YELLOW}(Ctrl+C to stop)${NC}"
+        echo ""
+        cd "$REPO" && claude -p "$BASE_PROMPT" --permission-mode bypassPermissions
+        ;;
+    codex)
+        echo -e "${GREEN}Starting Codex in exec mode...${NC}"
+        echo -e "${YELLOW}(Ctrl+C to stop)${NC}"
+        echo ""
+        cd "$REPO" && codex exec "$BASE_PROMPT"
+        ;;
+    gemini)
+        echo -e "${GREEN}Starting Gemini in headless mode...${NC}"
+        echo -e "${YELLOW}(Ctrl+C to stop)${NC}"
+        echo ""
+        cd "$REPO" && gemini -p "$BASE_PROMPT" --yolo
+        ;;
+    *)
+        echo -e "${RED}Unknown agent: $AGENT${NC}"
+        echo "Valid agents: claude, codex, gemini"
+        exit 1
+        ;;
+esac
+
+# Count commits after
+COMMITS_AFTER=$(cd "$REPO" && git rev-list --count HEAD 2>/dev/null || echo "0")
+NEW_COMMITS=$((COMMITS_AFTER - COMMITS_BEFORE))
+
+echo ""
+echo -e "${CYAN}------------------------------------------------${NC}"
+echo -e "${CYAN}  gen-loop complete${NC}"
+echo -e "${GREEN}  New commits: $NEW_COMMITS${NC}"
+if [ "$NEW_COMMITS" -gt 0 ]; then
+    echo -e "${GREEN}  Recent work:${NC}"
+    cd "$REPO" && git log --oneline -"$NEW_COMMITS"
+fi
+echo -e "${CYAN}------------------------------------------------${NC}"
