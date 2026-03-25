@@ -1,0 +1,87 @@
+category: code_generation
+tasks:
+  - id: code_gen_001
+    name: "fibonacci function"
+    description: "Generate a clean Python fibonacci function"
+    variants:
+      - id: direct
+        prompt: "Write a Python function fibonacci(n) that returns the nth Fibonacci number. Handle edge cases."
+      - id: cot
+        prompt: "Think step by step, then write a Python function fibonacci(n) that returns the nth Fibonacci number. Handle edge cases."
+    rubric:
+      - name: correctness
+        weight: 3
+        description: "Returns correct values for n=0,1,2,10"
+      - name: edge_cases
+        weight: 2
+        description: "Handles n<0, n=0, n=1"
+      - name: readability
+        weight: 1
+        description: "Clean, idiomatic Python"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: code_gen_002
+    name: "REST endpoint"
+    description: "Generate a FastAPI endpoint with validation"
+    variants:
+      - id: direct
+        prompt: "Write a FastAPI POST endpoint at /users that accepts JSON with fields name (str, required), email (str, required), age (int, optional). Validate email format. Return 201 with the created user object including an auto-generated UUID id."
+      - id: cot
+        prompt: "Think step by step about input validation and response format, then write a FastAPI POST endpoint at /users that accepts JSON with fields name (str, required), email (str, required), age (int, optional). Validate email format. Return 201 with the created user."
+      - id: minimal
+        prompt: "FastAPI POST /users endpoint. Fields: name, email (validated), age (optional). Return 201 + user with UUID id."
+    rubric:
+      - name: correctness
+        weight: 3
+        description: "Working endpoint with proper status code and response"
+      - name: validation
+        weight: 2
+        description: "Email validation, required field handling"
+      - name: structure
+        weight: 1
+        description: "Proper use of Pydantic models, type hints"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: code_gen_003
+    name: "SQL query builder"
+    description: "Write a parameterized SQL query builder"
+    variants:
+      - id: direct
+        prompt: "Write a Python function build_query(table: str, filters: dict[str, Any], order_by: str | None = None, limit: int | None = None) that returns a tuple of (sql_string, params_list) for a SELECT * query. Use parameterized queries (? placeholders) to prevent SQL injection."
+      - id: cot
+        prompt: "Think about SQL injection prevention and edge cases, then write a Python function build_query(table: str, filters: dict, order_by: str | None, limit: int | None) that returns (sql_string, params_list) for a parameterized SELECT query."
+    rubric:
+      - name: correctness
+        weight: 3
+        description: "Generates valid SQL with proper WHERE, ORDER BY, LIMIT clauses"
+      - name: security
+        weight: 3
+        description: "Uses parameterized queries, no string interpolation of values"
+      - name: edge_cases
+        weight: 1
+        description: "Handles empty filters, None values"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: code_gen_004
+    name: "async retry decorator"
+    description: "Write an async retry decorator with exponential backoff"
+    variants:
+      - id: direct
+        prompt: "Write a Python async decorator @retry(max_attempts=3, backoff_factor=2.0, exceptions=(Exception,)) that retries the decorated async function with exponential backoff. Log each retry attempt. Raise the last exception if all attempts fail."
+      - id: minimal
+        prompt: "Async Python retry decorator with exponential backoff. Configurable max_attempts, backoff_factor, exception types."
+    rubric:
+      - name: correctness
+        weight: 3
+        description: "Properly retries, respects max_attempts, uses exponential backoff"
+      - name: async_handling
+        weight: 2
+        description: "Correctly handles async functions, uses asyncio.sleep"
+      - name: configurability
+        weight: 1
+        description: "Parameters work as specified, sensible defaults"
+    max_score: 5
+    timeout_seconds: 30

@@ -1,0 +1,164 @@
+category: diagnosis_debugging
+tasks:
+  - id: diag_debug_001
+    name: "race condition diagnosis"
+    description: "Identify a race condition in async code"
+    variants:
+      - id: direct
+        prompt: |
+          This async Python code has a bug that causes intermittent failures. Diagnose the issue and provide a fix.
+
+          ```python
+          balance = 0
+
+          async def deposit(amount):
+              global balance
+              current = balance
+              await asyncio.sleep(0.01)  # simulate I/O
+              balance = current + amount
+
+          async def main():
+              await asyncio.gather(deposit(100), deposit(100))
+              print(f"Balance: {balance}")  # Sometimes prints 100 instead of 200
+          ```
+      - id: cot
+        prompt: |
+          Think carefully about async execution order. Then diagnose why this code sometimes prints 100 instead of 200, and provide a fix:
+
+          ```python
+          balance = 0
+
+          async def deposit(amount):
+              global balance
+              current = balance
+              await asyncio.sleep(0.01)
+              balance = current + amount
+
+          async def main():
+              await asyncio.gather(deposit(100), deposit(100))
+              print(f"Balance: {balance}")
+          ```
+    rubric:
+      - name: diagnosis
+        weight: 3
+        description: "Correctly identifies the read-modify-write race condition across the await point"
+      - name: fix_quality
+        weight: 2
+        description: "Fix uses asyncio.Lock or atomic operation, not just removing the sleep"
+      - name: explanation
+        weight: 1
+        description: "Explains WHY it happens, not just WHAT to change"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: diag_debug_002
+    name: "memory leak identification"
+    description: "Spot a memory leak in a web server"
+    variants:
+      - id: direct
+        prompt: |
+          This Flask app's memory usage grows over time. Find the memory leak and fix it.
+
+          ```python
+          from flask import Flask, request
+          import uuid
+
+          app = Flask(__name__)
+          request_log = []
+
+          @app.route("/api/process", methods=["POST"])
+          def process():
+              request_id = str(uuid.uuid4())
+              request_log.append({
+                  "id": request_id,
+                  "data": request.get_json(),
+                  "timestamp": time.time()
+              })
+              result = heavy_computation(request.get_json())
+              return jsonify({"id": request_id, "result": result})
+          ```
+      - id: minimal
+        prompt: "Flask app memory grows over time. Find the leak: request_log = [] at module level, every request appends to it. Fix it."
+    rubric:
+      - name: identification
+        weight: 3
+        description: "Identifies unbounded list growth as the root cause"
+      - name: fix_completeness
+        weight: 2
+        description: "Provides practical fix — bounded deque, external storage, or periodic cleanup"
+      - name: production_awareness
+        weight: 1
+        description: "Mentions production concerns: log rotation, monitoring, external logging"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: diag_debug_003
+    name: "stack trace interpretation"
+    description: "Interpret a real-world stack trace"
+    variants:
+      - id: direct
+        prompt: |
+          Interpret this error and explain the root cause. What should the developer fix?
+
+          ```
+          Traceback (most recent call last):
+            File "app/api/views.py", line 45, in create_user
+              user = User.objects.create(**validated_data)
+            File "django/db/models/manager.py", line 85, in manager_method
+              return getattr(self.get_queryset(), name)(*args, **kwargs)
+            File "django/db/models/query.py", line 453, in create
+              obj.save(force_insert=True, using=self.db)
+            File "app/models/user.py", line 28, in save
+              self.email = self.email.lower()
+          AttributeError: 'NoneType' object has no attribute 'lower'
+          ```
+      - id: cot
+        prompt: "Think about what each frame in this Django stack trace tells you, then explain the root cause and fix for: AttributeError in User.save() — self.email is None when calling .lower()"
+    rubric:
+      - name: root_cause
+        weight: 3
+        description: "Identifies that email is None when passed to create, and save() doesn't guard against it"
+      - name: fix_approach
+        weight: 2
+        description: "Suggests proper fix: validate email before create, or guard in save with 'if self.email'"
+      - name: trace_reading
+        weight: 1
+        description: "Demonstrates understanding of the full call chain, not just the last line"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: diag_debug_004
+    name: "performance diagnosis"
+    description: "Identify N+1 query problem"
+    variants:
+      - id: direct
+        prompt: |
+          This Django view is slow when there are many posts. Diagnose the performance issue and fix it.
+
+          ```python
+          def list_posts(request):
+              posts = Post.objects.all()
+              result = []
+              for post in posts:
+                  result.append({
+                      "title": post.title,
+                      "author_name": post.author.name,
+                      "comment_count": post.comments.count(),
+                      "tags": [tag.name for tag in post.tags.all()]
+                  })
+              return JsonResponse({"posts": result})
+          ```
+      - id: cot
+        prompt: "Think about how many database queries this Django view executes for N posts. Then diagnose and fix the performance issue in this list_posts view that queries Post, Author, Comments, and Tags."
+    rubric:
+      - name: diagnosis
+        weight: 3
+        description: "Identifies N+1 queries for author, comments, and tags"
+      - name: fix_quality
+        weight: 2
+        description: "Uses select_related for author, prefetch_related for tags, annotate for count"
+      - name: explanation
+        weight: 1
+        description: "Explains the query count: 1 + N + N + N vs optimized count"
+    max_score: 5
+    timeout_seconds: 30

@@ -24,12 +24,15 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 
 | Directory | Files | Description |
 | :--- | :---: | :--- |
-| [agent-hub/](agent-hub/00_Index_agent-hub.md) | 13 | Autonomous Floor Manager for multi-agent task pipelines |
+| [agent-hub/](agent-hub/00_Index_agent-hub.md) | 12 | Autonomous Floor Manager for multi-agent task pipelines |
+| [agent-news/](agent-news/) | 1 | No description available. |
 | [agent-skills-library/](agent-skills-library/) | 0 | No description available. |
 | [claude-cli/](claude-cli/README.md) | 3 | Command-line interface for Claude API |
 | [claude-mcp-go/](claude-mcp-go/README.md) | 4 | Go MCP server for Claude integration |
 | [governance/](governance/README.md) | 5 | Pre-commit hook system for code quality |
 | [integrity-warden/](integrity-warden/README.md) | 6 | Security and compliance auditing tools |
+| [model-bench/](model-bench/README.md) | 3 | Benchmark cheap/free models against worker tasks. Scores with Opus judge. |
+| [multi-layer-delegation/](multi-layer-delegation/) | 1 | No description available. |
 | [ollama-mcp-go/](ollama-mcp-go/README.md) | 4 | Go MCP server for local Ollama models |
 | [pdf-converter/](pdf-converter/README.md) | 3 | PDF processing utilities |
 | [route/](route/README.md) | 6 | A shared tool that reads session data from Claude Code, Codex CLI, and Gemini CLI, applies shadow pr... |
@@ -74,8 +77,8 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 | [agent-hub/registry-entry.json](agent-hub/registry-entry.json) | No description available. |
 | [agent-hub/requirements.txt](agent-hub/requirements.txt) | No description available. |
 | [agent-hub/skill.json](agent-hub/skill.json) | No description available. |
-| [agent-hub/test_failures.txt](agent-hub/test_failures.txt) | No description available. |
 | [agent-hub/uv.lock](agent-hub/uv.lock) | No description available. |
+| [agent-news/agent_news.py](agent-news/agent_news.py) | No description available. |
 | [agent-skills-library/references/building-skills-for-claude.md](agent-skills-library/references/building-skills-for-claude.md) | **Source:** `The-Complete-Guide-to-Building-Skill-for-Claude.pdf` |
 | [claude-cli/README.md](claude-cli/README.md) | Simple command-line interface for chatting with Claude via the Anthropic API. |
 | [claude-cli/claude-cli.py](claude-cli/claude-cli.py) | No description available. |
@@ -86,6 +89,8 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 | [claude-mcp-go/go.mod](claude-mcp-go/go.mod) | No description available. |
 | [claude-mcp-go/go.sum](claude-mcp-go/go.sum) | No description available. |
 | [ensure_grepai.py](ensure_grepai.py) | No description available. |
+| [gen-loop](gen-loop) | No description available. |
+| [github-app-token.py](github-app-token.py) | No description available. |
 | [governance/COMPLETION_SUMMARY.md](governance/COMPLETION_SUMMARY.md) | _tools/governance/ |
 | [governance/README.md](governance/README.md) | A standalone, portable pre-commit hook system for enforcing code quality and security across project... |
 | [governance/governance-check.sh](governance/governance-check.sh) | governance-check.sh |
@@ -100,6 +105,44 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 | [integrity-warden/integrity_warden.py](integrity-warden/integrity_warden.py) | No description available. |
 | [integrity-warden/remediate_renames.py](integrity-warden/remediate_renames.py) | No description available. |
 | [integrity-warden/rename_indices.py](integrity-warden/rename_indices.py) | No description available. |
+| [local-model-learnings.md](local-model-learnings.md) | purpose: Operational knowledge for local Ollama models on Mac Mini |
+| [model-bench/README.md](model-bench/README.md) | Benchmark cheap/free models against worker tasks. Scores with Opus judge. |
+| [model-bench/model_bench/__init__.py](model-bench/model_bench/__init__.py) | model-bench: Worker model benchmarking tool. |
+| [model-bench/model_bench/caller.py](model-bench/model_bench/caller.py) | Calls one model with one prompt. LiteLLM for cloud, httpx for Ollama. |
+| [model-bench/model_bench/cli.py](model-bench/model_bench/cli.py) | Typer CLI: run, results, models, estimate. |
+| [model-bench/model_bench/judge.py](model-bench/model_bench/judge.py) | Sends model responses to Opus for rubric-based 1-5 scoring. |
+| [model-bench/model_bench/registry.py](model-bench/model_bench/registry.py) | Model registry — which models to benchmark, pricing, and judge config. |
+| [model-bench/model_bench/reporter.py](model-bench/model_bench/reporter.py) | Renders matrix as terminal table (rich) or markdown. |
+| [model-bench/model_bench/runner.py](model-bench/model_bench/runner.py) | Orchestrates: load tasks → call models → judge → score → save. |
+| [model-bench/model_bench/scorer.py](model-bench/model_bench/scorer.py) | Aggregates scores into comparison matrix. Pure math, no I/O. |
+| [model-bench/pyproject.toml](model-bench/pyproject.toml) | No description available. |
+| [model-bench/results/run_2026-02-26_19-59-40.json](model-bench/results/run_2026-02-26_19-59-40.json) | No description available. |
+| [model-bench/results/run_2026-02-26_19-59-40.md](model-bench/results/run_2026-02-26_19-59-40.md) | *Generated 2026-02-27 00:59 UTC* |
+| [model-bench/results/run_2026-02-26_20-02-37.json](model-bench/results/run_2026-02-26_20-02-37.json) | No description available. |
+| [model-bench/results/run_2026-02-26_20-02-37.md](model-bench/results/run_2026-02-26_20-02-37.md) | *Generated 2026-02-27 01:02 UTC* |
+| [model-bench/results/run_2026-02-26_21-13-33.json](model-bench/results/run_2026-02-26_21-13-33.json) | No description available. |
+| [model-bench/results/run_2026-02-26_21-13-33.md](model-bench/results/run_2026-02-26_21-13-33.md) | *Generated 2026-02-27 02:13 UTC* |
+| [model-bench/results/run_2026-02-26_21-46-19.json](model-bench/results/run_2026-02-26_21-46-19.json) | No description available. |
+| [model-bench/results/run_2026-02-26_21-46-19.md](model-bench/results/run_2026-02-26_21-46-19.md) | *Generated 2026-02-27 02:46 UTC* |
+| [model-bench/tasks/code_generation.yaml](model-bench/tasks/code_generation.yaml) | No description available. |
+| [model-bench/tasks/diagnosis_debugging.yaml](model-bench/tasks/diagnosis_debugging.yaml) | No description available. |
+| [model-bench/tasks/dialogue_creative.yaml](model-bench/tasks/dialogue_creative.yaml) | No description available. |
+| [model-bench/tasks/review_judgment.yaml](model-bench/tasks/review_judgment.yaml) | No description available. |
+| [model-bench/tasks/summarization.yaml](model-bench/tasks/summarization.yaml) | No description available. |
+| [model-bench/uv.lock](model-bench/uv.lock) | No description available. |
+| [morning-briefing.sh](morning-briefing.sh) | morning-briefing.sh — Quick status of all projects across both machines |
+| [multi-layer-agent-delegation-architecture.md](multi-layer-agent-delegation-architecture.md) | Multi-Layer Agent Delegation |
+| [multi-layer-delegation/adapters/__init__.py](multi-layer-delegation/adapters/__init__.py) | Empty file. |
+| [multi-layer-delegation/adapters/claude_code.py](multi-layer-delegation/adapters/claude_code.py) | No description available. |
+| [multi-layer-delegation/adapters/floor_manager.py](multi-layer-delegation/adapters/floor_manager.py) | No description available. |
+| [multi-layer-delegation/adapters/ssh_transport.py](multi-layer-delegation/adapters/ssh_transport.py) | No description available. |
+| [multi-layer-delegation/orchestrate.py](multi-layer-delegation/orchestrate.py) | No description available. |
+| [multi-layer-delegation/prompts/floor_manager.md](multi-layer-delegation/prompts/floor_manager.md) | You are a Floor Manager in a multi-layer agent delegation tree. You receive a Task Envelope from the... |
+| [multi-layer-delegation/prompts/worker.md](multi-layer-delegation/prompts/worker.md) | You are a Worker in a multi-layer agent delegation tree. You receive a single, well-scoped task and ... |
+| [multi-layer-delegation/schemas/result_envelope.schema.json](multi-layer-delegation/schemas/result_envelope.schema.json) | No description available. |
+| [multi-layer-delegation/schemas/task_envelope.schema.json](multi-layer-delegation/schemas/task_envelope.schema.json) | No description available. |
+| [oc-auth-watchdog.sh](oc-auth-watchdog.sh) | oc-auth-watchdog.sh - OpenClaw Auth Watchdog |
+| [oc-monitor.sh](oc-monitor.sh) | oc-monitor.sh - Comprehensive OpenClaw Status Monitor |
 | [ollama-mcp-go/README.md](ollama-mcp-go/README.md) | `ollama-mcp-go` is a Go library that provides tools for interacting with MCP (Model Configuration Pr... |
 | [ollama-mcp-go/bin/server](ollama-mcp-go/bin/server) | No description available. |
 | [ollama-mcp-go/go.mod](ollama-mcp-go/go.mod) | No description available. |
@@ -108,6 +151,7 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 | [pdf-converter/README.md](pdf-converter/README.md) | This directory contains two Python scripts designed to automate PDF processing. The `cleanup_convert... |
 | [pdf-converter/cleanup_converted_pdfs.py](pdf-converter/cleanup_converted_pdfs.py) | No description available. |
 | [pdf-converter/pdf_to_markdown_converter.py](pdf-converter/pdf_to_markdown_converter.py) | No description available. |
+| [pr-monitor.sh](pr-monitor.sh) | pr-monitor.sh — check all open PRs for failed reviews, alert on Slack if found |
 | [route/README.md](route/README.md) | A shared tool that reads session data from Claude Code, Codex CLI, and Gemini CLI, applies shadow pr... |
 | [route/claude_reader.py](route/claude_reader.py) | No description available. |
 | [route/codex_reader.py](route/codex_reader.py) | No description available. |
@@ -119,9 +163,22 @@ Builder utilities and shared infrastructure tools that power the AI-assisted dev
 | [ssh_agent/agent_log.txt](ssh_agent/agent_log.txt) | No description available. |
 | [ssh_agent/mcp_config.json](ssh_agent/mcp_config.json) | No description available. |
 | [ssh_agent/queue/requests.jsonl](ssh_agent/queue/requests.jsonl) | No description available. |
-| [ssh_agent/queue/results.jsonl](ssh_agent/queue/results.jsonl) | No description available. |
+| [ssh_agent/queue/results.jsonl](ssh_agent/queue/results.jsonl) | Empty file. |
 | [ssh_agent/requirements.txt](ssh_agent/requirements.txt) | No description available. |
 | [ssh_agent/ssh_hosts.yaml](ssh_agent/ssh_hosts.yaml) | No description available. |
 | [ssh_agent/start_agent.sh](ssh_agent/start_agent.sh) | Start SSH Agent |
 
 <!-- LIBRARIAN-INDEX-END -->
+
+## Recent Activity
+
+- 2026-03-19: feat: Add GitHub App token generator for agent identities
+- 2026-03-07: feat: add agent-news prototype for auditing tool updates
+- 2026-02-26: chore: Remove librarian-mcp (previously trashed)
+- 2026-02-26: docs: Update tools index
+- 2026-02-26: docs: Add building skills for Claude reference doc
+- 2026-02-26: feat: Add route CLI tool for AI usage data and shadow pricing
+- 2026-02-26: feat: Add grepai shell wrapper for semantic search aliasing
+- 2026-02-26: chore: Update agent-hub runtime data files
+- 2026-02-26: feat: Agent Hub listener, watchdog updates, and new contract tests
+- 2026-02-26: fix: Add system prompt, native tool defs, and retry nudge to worker dispatch

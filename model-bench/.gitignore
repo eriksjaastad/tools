@@ -1,0 +1,7 @@
+.env
+results/*.json
+results/*.md
+!results/.gitkeep
+__pycache__/
+*.pyc
+.venv/
