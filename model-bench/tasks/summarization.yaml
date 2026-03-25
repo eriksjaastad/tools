@@ -1,0 +1,114 @@
+category: summarization
+tasks:
+  - id: summ_001
+    name: "technical doc summary"
+    description: "Summarize a technical document"
+    variants:
+      - id: direct
+        prompt: |
+          Summarize this technical design in 3-4 bullet points for a busy engineering manager:
+
+          "We propose migrating our monolithic authentication service to a distributed architecture using OAuth 2.0 with PKCE flow. The current system handles 50K daily logins through a single PostgreSQL instance with session-based auth. We'll introduce Redis for session caching, split the auth service into three microservices (identity, token management, and session), and implement JWT-based stateless authentication for inter-service communication. Migration will be phased over 3 sprints: Sprint 1 deploys the token service alongside the monolith, Sprint 2 migrates session management to Redis, Sprint 3 decommissions the old session table. Risk: temporary increase in latency during dual-write phase. Rollback plan: feature flags on each service allow instant revert to monolith paths."
+      - id: minimal
+        prompt: "3-4 bullet summary for an engineering manager. Topic: Auth monolith → microservices migration (OAuth2+PKCE, Redis sessions, JWT inter-service, 3-sprint rollout, feature flag rollback)."
+    rubric:
+      - name: key_points
+        weight: 3
+        description: "Captures the what (microservice split), why (scale), how (3 sprints), and risks"
+      - name: audience_fit
+        weight: 2
+        description: "Right level of detail for an engineering manager — not too deep, not too shallow"
+      - name: conciseness
+        weight: 1
+        description: "3-4 bullets, no fluff, every word earns its place"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: summ_002
+    name: "error log summary"
+    description: "Summarize patterns in error logs"
+    variants:
+      - id: direct
+        prompt: |
+          Analyze these error logs and summarize the pattern. What's the root cause and recommended action?
+
+          ```
+          2026-02-26 03:14:22 ERROR [worker-7] ConnectionPool exhausted, waited 30s — timeout
+          2026-02-26 03:14:23 ERROR [worker-3] ConnectionPool exhausted, waited 30s — timeout
+          2026-02-26 03:14:25 WARN  [worker-1] Connection acquired after 28s wait
+          2026-02-26 03:15:01 ERROR [worker-5] ConnectionPool exhausted, waited 30s — timeout
+          2026-02-26 03:15:02 INFO  [monitor] Active connections: 20/20, waiting: 12
+          2026-02-26 03:15:15 WARN  [worker-2] Query took 45s: SELECT * FROM orders JOIN order_items...
+          2026-02-26 03:15:30 ERROR [worker-9] ConnectionPool exhausted, waited 30s — timeout
+          2026-02-26 03:16:01 INFO  [monitor] Active connections: 20/20, waiting: 8
+          2026-02-26 03:16:05 WARN  [worker-6] Query took 52s: SELECT * FROM orders JOIN order_items...
+          ```
+      - id: cot
+        prompt: "Analyze these error logs step by step. Look at timestamps, error types, and the monitor output. Then summarize the pattern, root cause, and recommended action."
+    rubric:
+      - name: pattern_recognition
+        weight: 3
+        description: "Identifies slow query blocking all connections, causing pool exhaustion cascade"
+      - name: root_cause
+        weight: 2
+        description: "Points to the orders JOIN query as the bottleneck, not just 'pool too small'"
+      - name: action_items
+        weight: 1
+        description: "Recommends specific actions: optimize query, increase pool size, add query timeout"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: summ_003
+    name: "meeting notes extraction"
+    description: "Extract action items from meeting notes"
+    variants:
+      - id: direct
+        prompt: |
+          Extract action items with owners and deadlines from these meeting notes:
+
+          "Sprint planning for auth migration. Sarah mentioned the token service is 80% done but needs load testing before merge — she'll finish by Friday. Mike raised concerns about the Redis cluster sizing, said he'd check our peak session counts and report back by Wednesday. Team agreed to pair on the migration script next Monday — Lisa and Tom will handle that. Open question: do we need a separate oncall rotation for the new services? Jake will draft a proposal by end of next week. Sarah also noted we need to update the runbook before Sprint 2 starts."
+      - id: minimal
+        prompt: "Extract action items (who, what, when) from sprint planning notes about auth migration. Multiple people, multiple deadlines."
+    rubric:
+      - name: completeness
+        weight: 3
+        description: "Captures all 5 action items (Sarah-load test, Mike-Redis, Lisa+Tom-migration, Jake-oncall, Sarah-runbook)"
+      - name: structure
+        weight: 2
+        description: "Clear format with owner, action, and deadline for each"
+      - name: accuracy
+        weight: 1
+        description: "Deadlines and owners are correct, no hallucinated details"
+    max_score: 5
+    timeout_seconds: 30
+
+  - id: summ_004
+    name: "changelog generation"
+    description: "Generate a user-facing changelog from commit messages"
+    variants:
+      - id: direct
+        prompt: |
+          Generate a user-facing changelog from these commits. Group by type, write for end users (not developers):
+
+          - fix: resolve crash when uploading files > 100MB (#1234)
+          - feat: add dark mode toggle in settings (#1235)
+          - fix: correct timezone display for Australian users (#1236)
+          - feat: export reports as PDF (#1237)
+          - chore: upgrade React to v19 (#1238)
+          - fix: prevent duplicate email notifications (#1239)
+          - feat: add keyboard shortcuts for common actions (#1240)
+          - docs: update API documentation (#1241)
+      - id: cot
+        prompt: "Think about what end users care about vs what's internal/developer-only. Then generate a user-facing changelog from these 8 commits, grouped by type. Skip internal changes."
+    rubric:
+      - name: user_focus
+        weight: 3
+        description: "Translates developer language to user language, skips internal changes (chore, docs)"
+      - name: grouping
+        weight: 1
+        description: "Logical grouping (New Features, Bug Fixes) with clear headers"
+      - name: clarity
+        weight: 2
+        description: "Each item is a clear, one-line description a non-technical user would understand"
+    max_score: 5
+    timeout_seconds: 30
