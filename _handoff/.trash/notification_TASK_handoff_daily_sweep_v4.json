@@ -1,0 +1,14 @@
+{
+  "task_id": "TASK_handoff_daily_sweep_v4",
+  "timestamp": "2026-02-26T18:37:28.164323",
+  "status": "ready_for_review",
+  "validation": {
+    "valid": true,
+    "draft_count": 1,
+    "total_bytes": 34,
+    "issues": [],
+    "drafts": [
+      "_handoff/drafts/example.txt.TASK_handoff_daily_sweep_v4.draft"
+    ]
+  }
+}
