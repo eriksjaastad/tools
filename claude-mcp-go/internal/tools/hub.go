@@ -44,6 +44,9 @@ func NewMessageHub() *MessageHub {
 	// Check for environment variable first
 	stateDir := os.Getenv("HUB_STATE_DIR")
 	if stateDir == "" {
+		stateDir = os.Getenv("HANDOFF_DIR")
+	}
+	if stateDir == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
 			cwd = "."

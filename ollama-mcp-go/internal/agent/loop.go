@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -107,7 +108,11 @@ func (a *AgentLoop) Run(ctx context.Context, input AgentLoopInput) (AgentLoopRes
 								// Preserve relative path structure using __ separator
 								// so drafts can be mapped back to the correct project location.
 								safeName := strings.ReplaceAll(filepath.Clean(path), string(filepath.Separator), "__")
-								draftPath := filepath.Join("agent-hub", "_handoff", "drafts", fmt.Sprintf("%s.%s.draft", safeName, input.TaskID))
+								handoffDir := os.Getenv("HANDOFF_DIR")
+							if handoffDir == "" {
+								handoffDir = "_handoff"
+							}
+							draftPath := filepath.Join(handoffDir, "drafts", fmt.Sprintf("%s.%s.draft", safeName, input.TaskID))
 								raw["path"] = draftPath
 								logger.Info("Redirecting tool call to draft", "tool", tc.Name, "original", path, "redirect", draftPath)
 							}

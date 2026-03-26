@@ -76,7 +76,10 @@ func RegisterClaudeTools(s *server.MCPServer) {
 		contractPath, _ := args["contract_path"].(string)
 		reportDir, ok := args["report_dir"].(string)
 		if !ok || reportDir == "" {
-			reportDir = "_handoff"
+			reportDir = os.Getenv("HANDOFF_DIR")
+			if reportDir == "" {
+				reportDir = "_handoff"
+			}
 		}
 		timeoutSeconds, ok := args["timeout_seconds"].(float64)
 		if !ok {

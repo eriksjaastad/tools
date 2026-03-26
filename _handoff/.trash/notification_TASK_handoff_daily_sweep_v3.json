@@ -1,0 +1,14 @@
+{
+  "task_id": "TASK_handoff_daily_sweep_v3",
+  "timestamp": "2026-02-26T18:18:30.472011",
+  "status": "needs_attention",
+  "validation": {
+    "valid": false,
+    "draft_count": 0,
+    "total_bytes": 0,
+    "issues": [
+      "No draft files found for task TASK_handoff_daily_sweep_v3"
+    ],
+    "drafts": []
+  }
+}
