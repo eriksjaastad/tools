@@ -149,7 +149,13 @@ jobs:
               "- Inverse test analysis: what do tests NOT check?" \
               "- Scope creep: did the PR add unrequested features?" \
               "- Database safety: any DELETE/DROP/CASCADE without backup?" \
-              "- Silent failures: any return [] without logging?" \
+              "- Silent failures in BUSINESS LOGIC: any return [] or bare except in database ops, API calls, payment processing, or data pipelines without logging? (Tier 1 — blocks merge)" \
+              "- Silent fallbacks in UI/DISPLAY code: formatters, template helpers, and display logic that return a safe default on parse failure are ACCEPTABLE without logging. (Tier 2 — note but do NOT block)" \
+              "" \
+              "### Severity Guide" \
+              "- Tier 1 (blocking): Security issues, data loss risk, silent failures in business logic, hardcoded secrets, broken tests" \
+              "- Tier 2 (non-blocking): Missing logging in display helpers, minor style issues, optional test coverage for UI code, documentation gaps" \
+              "- Only Tier 1 issues should result in REQUEST_CHANGES. Tier 2 issues should be noted but NOT block the PR." \
               "" \
               "## Output Format" \
               "" \
@@ -157,8 +163,8 @@ jobs:
               "VERDICT: APPROVE" \
               "VERDICT: REQUEST_CHANGES" \
               "" \
-              "Use APPROVE only if there are zero Tier 1 (blocking) issues." \
-              "Use REQUEST_CHANGES if there are any Tier 1 issues." \
+              "Use APPROVE if there are zero Tier 1 (blocking) issues, even if Tier 2 nits exist." \
+              "Use REQUEST_CHANGES ONLY for Tier 1 issues." \
               "" \
               "Then provide:" \
               "1. Gate 0 results (PASS/FAIL per check)" \
