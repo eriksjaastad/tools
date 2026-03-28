@@ -2,11 +2,13 @@
 set -euo pipefail
 
 if [[ "${MODEL_HEALTH_INNER:-0}" != "1" ]]; then
-  exec doppler run --project openclaw --config dev -- env MODEL_HEALTH_INNER=1 /bin/bash "$0" "$@"
+  exec doppler run --project synth-insight-labs --config dev -- env MODEL_HEALTH_INNER=1 /bin/bash "$0" "$@"
 fi
 
 export PATH="${PATH:+$PATH:}/usr/bin:/bin:/opt/homebrew/bin"
-STATE_FILE="$HOME/.openclaw/workspace/model_health.json"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
+mkdir -p "$STATE_DIR"
+STATE_FILE="$STATE_DIR/model_health.json"
 TMP_STATE="$(mktemp)"
 CHECKED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 STATUS_LINES=""
