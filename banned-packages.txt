@@ -1,0 +1,8 @@
+# Banned Python Packages
+# Format: package_name>=version # reason
+# Or:     package_name # reason (bans all versions)
+#
+# Checked by package-audit.sh before any pip/uv install.
+# Maintained in _tools/ repo — add entries as threats emerge.
+
+litellm>=1.82.8 # supply chain compromise March 2026 — malicious payload in PyPI release
