@@ -102,7 +102,7 @@
         },
         "runtime_hint": {
           "type": "string",
-          "enum": ["claude_code", "openclaw", "gemini_cli", "subprocess", "http"],
+          "enum": ["claude_code", "gemini_cli", "subprocess", "http"],
           "description": "Suggested runtime adapter. The orchestrator may override."
         }
       },

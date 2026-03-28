@@ -6,7 +6,7 @@ set -uo pipefail
 
 PROJECTS_ROOT="${PROJECTS_ROOT:-$HOME/projects}"
 MINI_HOST="eriksjaastad@eriks-mac-mini.local"
-MINI_PROJECTS="$HOME/.openclaw/workspace/projects"
+MINI_PROJECTS="$HOME/projects"
 PT_CLI="$PROJECTS_ROOT/project-tracker/pt"
 HOURS_RECENT=48
 

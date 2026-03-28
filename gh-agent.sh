@@ -7,7 +7,7 @@ if [ "$#" -lt 1 ]; then
   echo "   or: $0 --auto <gh args...>" >&2
   echo "   or: $0 --auto -- git <args...>" >&2
   echo "" >&2
-  echo "Identities: claude, antigravity, codex, openclaw, gemini," >&2
+  echo "Identities: claude, antigravity, codex, gemini," >&2
   echo "  ai-memory, smart-invoice-workflow, hypocrisynow," >&2
   echo "  project-tracker, tax-organizer, _tools, muffinpanrecipes" >&2
   exit 1
