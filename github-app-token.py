@@ -40,9 +40,8 @@ IDENTITY_MAP = {
     # Agent identities (legacy — still work)
     "claude": ("CLAUDE", "synth-insight-labs", "claude-opus-erik[bot]"),
     "gemini": ("GEMINI", "synth-insight-labs", "gemini-cli-erik[bot]"),
-    "openclaw": ("OPENCLAW", "openclaw", "openclaw-ceo-erik[bot]"),
     "antigravity": ("ANTIGRAVITY", "synth-insight-labs", "antigravity-ide-erik[bot]"),
-    "codex": ("CODEX", "openclaw", "codex-mini-erik[bot]"),
+    "codex": ("CODEX", "synth-insight-labs", "codex-mini-erik[bot]"),
     # Project identities (new — per-project bots)
     "ai-memory": ("AI_MEMORY", "synth-insight-labs", "ai-memory-manager[bot]"),
     "smart-invoice-workflow": ("SMART_INVOICE_WORKFLOW", "synth-insight-labs", "siw-manager[bot]"),

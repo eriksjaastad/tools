@@ -25,16 +25,6 @@ AGENTS = {
         ],
         "project": "_tools"
     },
-    "openclaw": {
-        "version_cmd": "codex --version",
-        "latest_v": "2026.3.2",
-        "features": [
-            "Unified 'sendPayload' Adapter for cross-platform messaging.",
-            "External Secrets Management encrypted vault.",
-            "Reliable Cron & Background Tasks overhaul."
-        ],
-        "project": "_tools"
-    }
 }
 
 PT_CLI = "/Users/eriksjaastad/projects/project-tracker/pt"
