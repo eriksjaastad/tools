@@ -73,7 +73,13 @@ def parse_transactions(csv_path, months=None):
     with open(csv_path) as f:
         reader = csv.DictReader(f)
         for row in reader:
-            amount = float(row["Amount"]) if row["Amount"] else 0
+            if not row["Amount"]:
+                continue
+            try:
+                amount = float(row["Amount"])
+            except ValueError:
+                print(f"Warning: skipping row with invalid amount: {row['Date']} {row['Merchant']} '{row['Amount']}'", file=sys.stderr)
+                continue
             if amount >= 0:
                 continue
 
@@ -121,7 +127,8 @@ def build_report(charges):
 def print_report(charges, by_category, by_subcategory, by_month):
     """Print formatted spending report."""
     total = sum(by_category.values())
-    date_range = f"{charges[-1]['date']} to {charges[0]['date']}" if charges else "N/A"
+    sorted_dates = sorted(c["date"] for c in charges)
+    date_range = f"{sorted_dates[0]} to {sorted_dates[-1]}" if charges else "N/A"
 
     print(f"\n{'='*60}")
     print(f"  CFO SPENDING REPORT — Tech & Infrastructure")
@@ -175,7 +182,11 @@ def main():
 
     for i, arg in enumerate(sys.argv):
         if arg == "--months" and i + 1 < len(sys.argv):
-            months = int(sys.argv[i + 1])
+            try:
+                months = int(sys.argv[i + 1])
+            except ValueError:
+                print(f"Error: --months requires an integer, got '{sys.argv[i + 1]}'", file=sys.stderr)
+                sys.exit(1)
 
     if not Path(csv_path).exists():
         print(f"Error: {csv_path} not found", file=sys.stderr)
