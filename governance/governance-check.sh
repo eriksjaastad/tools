@@ -52,6 +52,7 @@ OVERALL_STATUS=0
 VALIDATORS=(
     "secrets-scanner.py"
     "absolute-path-check.py"
+    "api-wrapper-check.py"
 )
 
 # Additional ecosystem-level validators (not file-based)
