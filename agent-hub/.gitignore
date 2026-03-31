@@ -1,5 +1,0 @@
-# Ignore handoff contents but keep directory structure
-_handoff/*
-!_handoff/drafts/
-!_handoff/.gitignore
-.vscode/
