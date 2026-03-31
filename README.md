@@ -52,6 +52,18 @@ One file to update, all 24 repos inherit changes. The commit status API integrat
 
 ---
 
+## Local Pre-Commit Hooks (`governance/`)
+
+Runs validators at `git commit` time — secrets, hardcoded paths, naked API calls, agent config sync. Unlike the CI workflow above (which propagates automatically via `@main` ref), these must be installed per repo:
+
+```bash
+_tools/governance/install-hooks.sh ~/projects/<project-name>
+```
+
+Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo already has one.
+
+---
+
 ## Active Tools
 
 ### 🤖 AI Router (`ai_router/`)
