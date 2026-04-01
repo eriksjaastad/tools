@@ -359,7 +359,7 @@ jobs:
           echo "Tests passed + review approved. Auto-merging PR #${PR_NUMBER}..."
           gh pr merge "${PR_NUMBER}" \
             --repo "${REPO}" \
-            --squash \
+            --merge \
             --delete-branch
           echo "PR #${PR_NUMBER} merged and branch deleted."
 
