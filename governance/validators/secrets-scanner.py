@@ -89,6 +89,10 @@ def scan_for_secrets(content: str) -> list[dict]:
     for pattern, secret_type, description in SECRET_PATTERNS:
         matches = re.findall(pattern, content)
         for match in matches:
+            # Skip false positives: repeated single character (e.g. ========)
+            if len(set(match.strip())) <= 2:
+                continue
+
             # Mask the secret for logging (show first 8 and last 4 chars)
             if len(match) > 16:
                 masked = match[:8] + "..." + match[-4:]
