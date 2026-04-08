@@ -23,19 +23,26 @@ def get_api_key() -> Optional[str]:
         return None
     return api_key
 
+try:
+    from api_trust_tracker import track
+except ImportError:
+    track = lambda resp, *a, **kw: resp
+
+
 def claude_chat(message: str, api_key: str) -> str:
     """Send a message to Claude via API."""
     try:
         import anthropic
-        
+
         client = anthropic.Anthropic(api_key=api_key)
-        
+
         response = client.messages.create(
             model="claude-3-5-sonnet-20241022",
             max_tokens=1000,
             messages=[{"role": "user", "content": message}]
         )
-        
+        track(response, "anthropic", project="claude-cli", caller="claude_chat")
+
         return response.content[0].text
         
     except ImportError:

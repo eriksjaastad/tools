@@ -8,7 +8,7 @@
 API Wrapper Enforcement — Standalone Git Hook Validator
 
 Catches raw API client calls that bypass the cost tracking wrapper.
-Every API call must go through the ai-cost-tracker wrapper so we
+Every API call must go through the api-trust-tracker wrapper so we
 have visibility into spend.
 
 Exit codes:
@@ -48,13 +48,13 @@ RAW_API_PATTERNS = [
 
 # Wrapper import patterns — if any of these appear in the file, it's using the wrapper
 WRAPPER_INDICATORS = [
+    r'from\s+api_trust_tracker\s+import',
+    r'import\s+api_trust_tracker',
     r'from\s+ai_cost_tracker\s+import',
     r'import\s+ai_cost_tracker',
-    r'from\s+api_cost_tracker\s+import',
-    r'import\s+api_cost_tracker',
     r'from\s+\.?tracker\s+import\s+track',
-    r'require\s*\(\s*[\'"]ai[_-]cost[_-]tracker[\'"]\s*\)',
-    r'import\s+.*from\s+[\'"]ai[_-]cost[_-]tracker[\'"]',
+    r'require\s*\(\s*[\'"]api[_-]trust[_-]tracker[\'"]\s*\)',
+    r'import\s+.*from\s+[\'"]api[_-]trust[_-]tracker[\'"]',
     r'\btrack\s*\(\s*resp',          # track(resp, ...) call pattern
     r'\btrack\s*\(\s*response',      # track(response, ...) call pattern
 ]
@@ -77,6 +77,7 @@ SKIP_PATH_PATTERNS = [
     r'node_modules/',                   # Dependencies
     r'\.venv/',                         # Virtual environments
     r'site-packages/',                  # Installed packages
+    r'doc_audit',                       # Offline batch audit scripts (Gemini)
 ]
 
 
@@ -178,7 +179,7 @@ def main():
 
         print("Every API call must go through the cost tracking wrapper:", file=sys.stderr)
         print("", file=sys.stderr)
-        print("  from ai_cost_tracker import track", file=sys.stderr)
+        print("  from api_trust_tracker import track", file=sys.stderr)
         print("", file=sys.stderr)
         print("  resp = client.messages.create(model=..., ...)", file=sys.stderr)
         print('  track(resp, "anthropic", project="your-project")', file=sys.stderr)
