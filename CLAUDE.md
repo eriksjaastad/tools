@@ -5,6 +5,11 @@
 Run `pt info -p _tools` for tech stack, env vars, infrastructure, and project-specific reference data.
 Run `pt memory search "_tools"` before starting work for prior decisions and context.
 
+## Session Continuity
+
+If `PROGRESS.md` exists in the project root, read it FIRST before doing anything else. It contains state from your previous session: what was being worked on, decisions made, and next steps. After reading, update or delete it as appropriate — stale PROGRESS.md files are worse than none.
+
+
 ## What Is This Directory?
 
 `_tools/` is shared infrastructure used across all projects. Key subdirectories:
