@@ -50,6 +50,8 @@ IDENTITY_MAP = {
     "tax-organizer": ("TAX_ORGANIZER", "synth-insight-labs", "tax-organizer-manager[bot]"),
     "_tools": ("TOOLS", "synth-insight-labs", "tools-manager[bot]"),
     "muffinpanrecipes": ("MUFFINPANRECIPES", "synth-insight-labs", "muffinpanrecipes-manager[bot]"),
+    "synth-insight-labs": ("SYNTHINSIGHTLABS", "synth-insight-labs", "synth-insight-labs-manager[bot]"),
+    "cortana-personal-ai": ("CORTANA_PERSONAL_AI", "synth-insight-labs", "cortana-personal-ai-manager[bot]"),
 }
 
 # Map project directory names to identity keys for auto-detection
@@ -61,6 +63,8 @@ PROJECT_DIR_MAP = {
     "tax-organizer": "tax-organizer",
     "_tools": "_tools",
     "muffinpanrecipes": "muffinpanrecipes",
+    "synth-insight-labs": "synth-insight-labs",
+    "cortana-personal-ai": "cortana-personal-ai",
 }
 
 

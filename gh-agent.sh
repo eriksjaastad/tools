@@ -57,9 +57,10 @@ if [ "${1:-}" = "--" ]; then
     echo "Usage: $0 <agent> -- git <subcommand> [args...]" >&2
     exit 1
   fi
-  git_subcommand="$2"
+  shift  # drop the literal 'git'
+  git_subcommand="$1"
   case "$git_subcommand" in
-    add|commit|push|status|log|rev-parse)
+    add|commit|push|status|log|rev-parse|fetch|pull)
       ;;
     *)
       echo "Git subcommand not allowed: $git_subcommand" >&2
@@ -67,7 +68,14 @@ if [ "${1:-}" = "--" ]; then
       ;;
   esac
   echo "[$identity] git $git_subcommand" >&2
-  exec "$@"
+  # Inject a credential helper that serves GH_TOKEN for https github auth.
+  # The first empty assignment clears any inherited helper (osxkeychain, etc.)
+  # so we don't mix our App token with a cached personal token. The second
+  # echoes username/password only on 'get' — store/erase are no-ops.
+  exec git \
+    -c credential.helper= \
+    -c 'credential.helper=!f() { test "$1" = get && printf "username=x-access-token\npassword=%s\n" "$GH_TOKEN"; }; f' \
+    "$@"
 fi
 
 exec gh "$@"
