@@ -1,9 +1,7 @@
 name: Claude Code Review
 
 on:
-  pull_request:
-    types: [opened, synchronize]
-
+  workflow_dispatch:
 permissions:
   contents: write
   pull-requests: write
