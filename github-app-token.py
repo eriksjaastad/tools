@@ -51,7 +51,9 @@ IDENTITY_MAP = {
     "_tools": ("TOOLS", "synth-insight-labs", "tools-manager[bot]"),
     "muffinpanrecipes": ("MUFFINPANRECIPES", "synth-insight-labs", "muffinpanrecipes-manager[bot]"),
     "synth-insight-labs": ("SYNTHINSIGHTLABS", "synth-insight-labs", "synth-insight-labs-manager[bot]"),
-    "cortana-personal-ai": ("CORTANA_PERSONAL_AI", "synth-insight-labs", "cortana-personal-ai-manager[bot]"),
+    # Empty suffix → read un-prefixed GITHUB_APP_* keys from the project's
+    # own Doppler config. Preferred pattern for new projects going forward.
+    "cortana-personal-ai": ("", "cortana-personal-ai", "cortana-personal-ai-manager[bot]"),
 }
 
 # Map project directory names to identity keys for auto-detection
@@ -98,9 +100,13 @@ def generate_token(identity: str) -> str:
         sys.exit(1)
     suffix, project, _botname = entry
 
-    app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
-    installation_id = doppler_get(f"GITHUB_APP_INSTALLATION_ID_{suffix}", project)
-    private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
+    # Legacy identities store everything in synth-insight-labs/dev with a
+    # per-bot suffix (e.g. GITHUB_APP_ID_AI_MEMORY). New identities use an
+    # empty suffix and keep their secrets in their own Doppler project.
+    key_suffix = f"_{suffix}" if suffix else ""
+    app_id = doppler_get(f"GITHUB_APP_ID{key_suffix}", project)
+    installation_id = doppler_get(f"GITHUB_APP_INSTALLATION_ID{key_suffix}", project)
+    private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY{key_suffix}", project)
 
     # Generate JWT
     now = int(time.time())
