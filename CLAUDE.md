@@ -39,7 +39,7 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 ## Code Review Standards
 
-Reviews must follow `Documents/REVIEWS_AND_GOVERNANCE_PROTOCOL.md`. Key checks:
+Reviews follow the portfolio-wide protocol at `~/projects/project-scaffolding/REVIEWS_AND_GOVERNANCE_PROTOCOL.md` (canonical source — do not fork). Key checks:
 
 | ID | Check |
 |----|-------|
@@ -48,13 +48,11 @@ Reviews must follow `Documents/REVIEWS_AND_GOVERNANCE_PROTOCOL.md`. Key checks:
 | M3 | No API keys in code |
 | H1 | Subprocess uses `check=True` and `timeout` |
 
-Review documents: `CODE_REVIEW_{REVIEWER_NAME}_{VERSION}.md`
+M1-M3 are enforced by governance validators in `governance/`. H1 is manual.
 
 ## Definition of Done
 
-```markdown
 - [ ] M1-M3 robot checks pass
-- [ ] Tests pass: `pytest tests/`
+- [ ] Tests pass for any touched component with a suite (e.g. `pytest integrity-warden/tests/` when editing integrity-warden; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed
-```
