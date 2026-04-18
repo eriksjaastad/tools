@@ -15,7 +15,8 @@ SCANNER_PATH = os.path.normpath(os.path.join(HERE, "..", "secrets-scanner.py"))
 
 def _load():
     spec = importlib.util.spec_from_file_location("secrets_scanner", SCANNER_PATH)
-    assert spec is not None and spec.loader is not None
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load secrets scanner from {SCANNER_PATH}")
     mod = importlib.util.module_from_spec(spec)
     sys.modules["secrets_scanner"] = mod
     spec.loader.exec_module(mod)
