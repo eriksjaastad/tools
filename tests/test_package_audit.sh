@@ -15,7 +15,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AUDIT="$REPO_ROOT/package-audit.sh"
 
 TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+# Per project rule: never use rm; use trash (auto-empties from /tmp eventually).
+trap 'trash "$TMP" >/dev/null 2>&1 || true' EXIT
 
 # Fake python3 that exits 42 — lets us detect when exec runs.
 cat > "$TMP/python3" <<'EOF'
