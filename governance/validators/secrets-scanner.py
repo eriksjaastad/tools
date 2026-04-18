@@ -60,13 +60,16 @@ SECRET_PATTERNS = [
     (r"(?i)secret[_-]?key\s*[=:]\s*['\"][a-zA-Z0-9_\-]{20,}['\"]", "Generic Secret Key Assignment", "secret_key = '...'"),
 ]
 
-# Files/patterns to skip (env templates, documentation, etc.)
+# Files/patterns to skip (env templates, documentation, test fixtures, etc.)
 SKIP_PATTERNS = [
     r"\.env\.example$",
     r"\.env\.template$",
     r"\.env\.sample$",
     r"README\.md$",
     r"\.md$",  # Skip all markdown - usually documentation
+    r"tests?/",  # Skip test directories - test fixtures use fake credentials
+    r"test_[^/]+\.py$",  # Skip test files by naming convention
+    r"_test\.py$",  # Skip test files (alternate convention)
 ]
 
 
