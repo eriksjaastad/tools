@@ -1,0 +1,101 @@
+name: Auto-merge on green (reusable)
+
+# Reusable workflow: label check + optional tests + merge-on-green.
+# No AI review on GitHub — code review is done locally.
+#
+# Each caller passes its own test_command (shell). If omitted, the test
+# job is a no-op and auto-merge fires after label check alone.
+#
+# Example caller (~/.github/workflows/pr.yml in any repo):
+#
+#     name: PR
+#     on:
+#       pull_request:
+#         types: [opened, reopened, labeled, unlabeled, synchronize]
+#     permissions:
+#       contents: write
+#       pull-requests: write
+#     jobs:
+#       pr:
+#         uses: eriksjaastad/tools/.github/workflows/auto-merge-on-tests.yml@main
+#         with:
+#           test_command: |
+#             uv sync --extra test
+#             uv run -m pytest -m "not slow" --tb=short -q
+
+on:
+  workflow_call:
+    inputs:
+      test_command:
+        description: "Shell command(s) that run the repo's fast tests. Leave empty to skip the test job."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a type label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          TYPES="feature enhancement bug chore refactor docs test hotfix security perf ci"
+          for type in $TYPES; do
+            if echo "$LABELS" | grep -qx "$type"; then
+              echo "Found type label: $type"
+              exit 0
+            fi
+          done
+          echo "::error::PR #${PR_NUMBER} is missing a type label"
+          echo "Valid: $TYPES"
+          exit 1
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Skip test step (no test_command provided)
+        if: inputs.test_command == ''
+        run: echo "No test_command provided. Skipping tests — auto-merge will fire after label check."
+      - name: Run tests
+        if: inputs.test_command != ''
+        shell: bash
+        run: ${{ inputs.test_command }}
+
+  auto-merge:
+    needs: [check-label, test]
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Merge on green
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Label present + tests green. Merging PR #${PR_NUMBER}..."
+          gh pr merge "$PR_NUMBER" \
+            --repo "$REPO" \
+            --merge \
+            --delete-branch
+          echo "PR #${PR_NUMBER} merged and branch deleted."
