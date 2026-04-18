@@ -5,7 +5,7 @@ from pathlib import Path
 INDEX_RENAMES = {
     "00_Index_trading-copilot.md": "00_Index_trading-copilot.md",
     "00_Index_tax-organizer.md": "00_Index_tax-organizer.md",
-    "00_Index_ai-usage-billing-tracker.md": "00_Index_ai-usage-billing-tracker.md",
+
     "00_Index_ai-model-scratch-build.md": "00_Index_ai-model-scratch-build.md",
     "00_Index_smart-invoice-workflow.md": "00_Index_smart-invoice-workflow.md",
     "00_Index_land-tracker.md": "00_Index_land-tracker.md",

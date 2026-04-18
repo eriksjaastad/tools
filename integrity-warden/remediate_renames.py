@@ -23,10 +23,6 @@ REPLACEMENTS = [
     (r"3d-pose-factory", "3d-pose-factory"),
     (r"3d-pose-factory", "3d-pose-factory"),
     
-    (r"ai-usage-billing-tracker", "ai-usage-billing-tracker"),
-    (r"ai-usage-billing-tracker", "ai-usage-billing-tracker"),
-    (r"ai-usage-billing-tracker", "ai-usage-billing-tracker"),
-    
     (r"automation-consulting", "automation-consulting"),
     (r"automation-consulting", "automation-consulting"),
     
@@ -66,7 +62,7 @@ REPLACEMENTS = [
     # Index files
     (r"00_Index_trading-copilot", "00_Index_trading-copilot"),
     (r"00_Index_tax-organizer", "00_Index_tax-organizer"),
-    (r"00_Index_ai-usage-billing-tracker", "00_Index_ai-usage-billing-tracker"),
+
     (r"00_Index_ai-model-scratch-build", "00_Index_ai-model-scratch-build"),
     (r"00_Index_smart-invoice-workflow", "00_Index_smart-invoice-workflow"),
     (r"00_Index_land-tracker", "00_Index_land-tracker"),
