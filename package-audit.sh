@@ -103,9 +103,15 @@ case "$cmd_basename" in
         esac
         ;;
     python|python3|python3.*)
-        # "python -m pip install pkg1 pkg2" — skip "python -m pip install"
+        # "python -m pip install pkg1 pkg2" — only audit the install subcommand.
+        # `pip show`, `pip list`, etc. are read-only and pass through unchanged.
         if [[ "${cmd_args[1]:-}" == "-m" && "${cmd_args[2]:-}" =~ ^pip ]]; then
-            pkg_start=4
+            if [[ "${cmd_args[3]:-}" == "install" ]]; then
+                pkg_start=4
+            else
+                # Not an install (e.g. show, list, freeze) — not our concern.
+                exec "$@"
+            fi
         else
             echo -e "${RED}Unsupported python command (expected -m pip install)${NC}" >&2
             exit 1
