@@ -79,7 +79,10 @@ check_banned() {
 cmd_args=("$@")
 pkg_start=0
 
-case "${cmd_args[0]}" in
+# Support full paths like /path/to/venv/bin/pip
+cmd_basename="$(basename "${cmd_args[0]}")"
+
+case "$cmd_basename" in
     pip|pip3)
         pkg_start=2
         ;;
@@ -89,6 +92,8 @@ case "${cmd_args[0]}" in
                 pkg_start=2
                 ;;
             pip)
+                # "uv pip install [--python /path] pkg1 pkg2"
+                # Skip flags and their values to find packages
                 pkg_start=3
                 ;;
             *)
@@ -97,8 +102,17 @@ case "${cmd_args[0]}" in
                 ;;
         esac
         ;;
+    python|python3|python3.*)
+        # "python -m pip install pkg1 pkg2" — skip "python -m pip install"
+        if [[ "${cmd_args[1]:-}" == "-m" && "${cmd_args[2]:-}" =~ ^pip ]]; then
+            pkg_start=4
+        else
+            echo -e "${RED}Unsupported python command (expected -m pip install)${NC}" >&2
+            exit 1
+        fi
+        ;;
     *)
-        echo -e "${RED}Unsupported package manager: ${cmd_args[0]}${NC}" >&2
+        echo -e "${RED}Unsupported package manager: ${cmd_args[0]} (basename: $cmd_basename)${NC}" >&2
         exit 1
         ;;
 esac
