@@ -196,3 +196,5 @@ ssh_agent/queue/
 pdf_converter_env/
 # Ensure PDF converter logs are ignored (specifically for line 198)
 pdf-converter/logs/
+# Claude Code harness state (plan-mode artifacts, worktree workspace)
+.claude/

@@ -102,42 +102,6 @@ python -c "from playwright.sync_api import sync_playwright; print('OK')"
 
 ---
 
-### 6. ai-usage-billing-tracker - CRITICAL: Python 3.14 incompatibility
-
-The `greenlet` dependency fails to build on Python 3.14. Need to use Python 3.11 or 3.12.
-
-```bash
-cd ../../ai-usage-billing-tracker
-
-# Check current Python version
-python --version
-
-# If 3.14, need to create venv with older Python
-# First, check if pyenv or another Python is available
-which python3.12 || which python3.11
-
-# Remove old venv and recreate with compatible Python
-rm -rf venv
-python3.12 -m venv venv  # or python3.11
-source venv/bin/activate
-
-# Reinstall deps
-pip install -r requirements.txt
-
-# Verify greenlet installs
-pip list | grep greenlet
-```
-
-If Python 3.11/3.12 not available:
-```bash
-# Install via pyenv
-pyenv install 3.12.0
-pyenv local 3.12.0
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
 ---
 
 ## Report Results
@@ -163,7 +127,7 @@ For national-cattle-brands, add note that playwright is now installed.
 | 3 | portfolio-ai | esbuild/vite | FIXED | Updated Vite to 7.3.1 |
 | 4 | tax-organizer | esbuild/vite | FIXED | Updated Vite to 7.3.1 |
 | 5 | national-cattle-brands | playwright | FIXED | Browsers installed |
-| 6 | ai-usage-billing-tracker | Python 3.14/greenlet | FIXED | Recreated venv with Py3.11 |
+| 6 | ai-usage-billing-tracker | Python 3.14/greenlet | DELETED | Project removed 2026-04-10 |
 | 7 | 4 projects | .env.example missing | FIXED | Created examples for billing, cortana, holoscape, trading |
 | 8 | cortana-personal-ai | load_dotenv() missing | FIXED | Added to core scripts |
 
@@ -176,13 +140,6 @@ If any can't be fixed (breaking changes, etc.), document why and what version is
 ### 7. Create missing .env.example files
 
 Four projects have `.env` but no `.env.example`. Create the example file for each:
-
-**ai-usage-billing-tracker:**
-```bash
-cd ../../ai-usage-billing-tracker
-cat .env | sed 's/=.*/=/' > .env.example
-cat .env.example  # Verify it has variable names only
-```
 
 **cortana-personal-ai:**
 ```bash
@@ -256,7 +213,6 @@ python -c "from scripts.core.personal_ai_listener import *; print('OK')"
 ## Related Documentation
 
 - [LOCAL_MODEL_LEARNINGS](../../writing/Documents/reference/LOCAL_MODEL_LEARNINGS.md) - local AI
-- [ai-usage-billing-tracker/README](../../ai-model-scratch-build/README.md) - AI Billing Tracker
 - [cortana-personal-ai/README](../../ai-model-scratch-build/README.md) - Cortana AI
 - [flo-fi/README](../../ai-model-scratch-build/README.md) - Flo-Fi
 - [holoscape/README](../../ai-model-scratch-build/README.md) - Holoscape
