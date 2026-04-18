@@ -67,7 +67,7 @@ SKIP_PATTERNS = [
     r"\.env\.sample$",
     r"README\.md$",
     r"\.md$",  # Skip all markdown - usually documentation
-    r"tests?/",  # Skip test directories - test fixtures use fake credentials
+    r"(?:^|/)tests?/",  # Skip test directories (anchored so `manifests/` doesn't match)
     r"test_[^/]+\.py$",  # Skip test files by naming convention
     r"_test\.py$",  # Skip test files (alternate convention)
 ]
