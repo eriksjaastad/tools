@@ -4,7 +4,6 @@ Generate a GitHub App installation token for any registered agent or project.
 
 Usage (agent-based):
     uv run --with PyJWT --with cryptography _tools/github-app-token.py claude
-    uv run --with PyJWT --with cryptography _tools/github-app-token.py antigravity
 
 Usage (project-based):
     uv run --with PyJWT --with cryptography _tools/github-app-token.py ai-memory
@@ -40,7 +39,6 @@ IDENTITY_MAP = {
     # Agent identities (legacy — still work)
     "claude": ("CLAUDE", "synth-insight-labs", "claude-opus-erik[bot]"),
     "gemini": ("GEMINI", "synth-insight-labs", "gemini-cli-erik[bot]"),
-    "antigravity": ("ANTIGRAVITY", "synth-insight-labs", "antigravity-ide-erik[bot]"),
     "codex": ("CODEX", "synth-insight-labs", "codex-mini-erik[bot]"),
     # Project identities (new — per-project bots)
     "ai-memory": ("AI_MEMORY", "synth-insight-labs", "ai-memory-manager[bot]"),
@@ -144,6 +142,38 @@ def get_botname(identity: str) -> str:
     return entry[2]
 
 
+def get_bot_email(identity: str) -> str:
+    """
+    Return the bot's GitHub noreply email, e.g.
+    "271073502+project-tracker-manager[bot]@users.noreply.github.com".
+
+    Queries the GitHub API once with a freshly-minted token for the bot's
+    numeric user ID. The caller is expected to hit this rarely (set-repo-
+    bot-identity.sh uses it once per repo at setup time).
+    """
+    botname = get_botname(identity)  # e.g. "project-tracker-manager[bot]"
+    login = botname.removesuffix("[bot]")  # GitHub API login form
+    token = generate_token(identity)
+    req = urllib.request.Request(
+        f"https://api.github.com/users/{login}%5Bbot%5D",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+            return f"{data['id']}+{botname}@users.noreply.github.com"
+    except urllib.error.HTTPError as e:
+        print(
+            f"Error: GitHub API /users/{login}[bot] returned {e.code}: "
+            f"{e.read().decode()}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate GitHub App installation token")
     parser.add_argument("identity", nargs="?", default=None,
@@ -154,6 +184,10 @@ def main():
                         help="Verify token by calling /app endpoint")
     parser.add_argument("--botname", action="store_true",
                         help="Print the bot display name instead of a token")
+    parser.add_argument("--email", action="store_true",
+                        help="Print the bot's GitHub noreply email "
+                             "(<user-id>+<botname>@users.noreply.github.com). "
+                             "Makes one API call to resolve the numeric user ID.")
     args = parser.parse_args()
 
     # Resolve identity
@@ -171,6 +205,10 @@ def main():
 
     if args.botname:
         print(get_botname(identity))
+        return
+
+    if args.email:
+        print(get_bot_email(identity))
         return
 
     if args.verify:
