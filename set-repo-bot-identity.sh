@@ -61,7 +61,14 @@ HELPER="!f() { echo username=x-access-token; echo \"password=\$(uv run --with Py
 
 git config --local user.name "$BOTNAME"
 git config --local user.email "$EMAIL"
-git config --local credential.helper "$HELPER"
+
+# Reset credential.helper list then add ours. The empty-string entry tells git
+# to clear any inherited helpers (e.g. system-wide osxkeychain from Xcode's
+# git-core/gitconfig) — without this, osxkeychain answers first with Erik's
+# cached personal credentials, and our bot helper never runs at push time.
+git config --local --unset-all credential.helper || true
+git config --local --add credential.helper ""
+git config --local --add credential.helper "$HELPER"
 
 REPO_NAME=$(basename "$(git rev-parse --show-toplevel)")
 echo "✓ ${REPO_NAME}: identity set to ${BOTNAME}"
