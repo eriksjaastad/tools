@@ -42,7 +42,7 @@ IDENTITY_MAP = {
     "codex": ("CODEX", "synth-insight-labs", "codex-mini-erik[bot]"),
     # Project identities (new — per-project bots)
     "ai-memory": ("AI_MEMORY", "synth-insight-labs", "ai-memory-manager[bot]"),
-    "smart-invoice-workflow": ("SMART_INVOICE_WORKFLOW", "synth-insight-labs", "siw-manager[bot]"),
+    "smart-invoice-workflow": ("SMART_INVOICE_WORKFLOW", "synth-insight-labs", "smart-invoice-workflow-manager[bot]"),
     "hypocrisynow": ("HYPOCRISYNOW", "synth-insight-labs", "hypocrisynow-manager[bot]"),
     "project-tracker": ("PROJECT_TRACKER", "synth-insight-labs", "project-tracker-manager[bot]"),
     "tax-organizer": ("TAX_ORGANIZER", "synth-insight-labs", "tax-organizer-manager[bot]"),
@@ -213,8 +213,11 @@ def main():
 
     if args.verify:
         suffix, project, _botname = IDENTITY_MAP[identity]
-        app_id = doppler_get(f"GITHUB_APP_ID_{suffix}", project)
-        private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY_{suffix}", project)
+        # Match generate_token's key-naming convention: empty suffix → bare
+        # key (`GITHUB_APP_ID`); non-empty suffix → `GITHUB_APP_ID_<SUFFIX>`.
+        key_suffix = f"_{suffix}" if suffix else ""
+        app_id = doppler_get(f"GITHUB_APP_ID{key_suffix}", project)
+        private_key = doppler_get(f"GITHUB_APP_PRIVATE_KEY{key_suffix}", project)
         now = int(time.time())
         encoded_jwt = jwt.encode({"iat": now, "exp": now + 300, "iss": str(app_id)},
                                   private_key, algorithm="RS256")
