@@ -21,28 +21,24 @@ shift
 
 # Auto-detect: try project-based identity from cwd, fall back to claude
 if [ "$identity" = "--auto" ]; then
-  identity=$(UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
-    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" --auto --botname 2>/dev/null | head -1)
+  identity=$(uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" --auto --botname 2>/dev/null | head -1)
   if [ -z "$identity" ]; then
     echo "Auto-detect failed, falling back to claude" >&2
     identity="claude"
   fi
   # We got the botname, now get the token using auto
   export GH_TOKEN="$(
-    UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
-    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" --auto 2>/dev/null
+    uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" --auto 2>/dev/null
   )"
   botname="$identity"
 else
   # Get botname from the token script
-  botname=$(UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
-    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" "$identity" --botname 2>/dev/null)
+  botname=$(uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" "$identity" --botname 2>/dev/null)
   if [ -z "$botname" ]; then
     botname="${identity}[bot]"
   fi
   export GH_TOKEN="$(
-    UV_CACHE_DIR="${UV_CACHE_DIR:-/tmp/uv-cache}" \
-    uv run --with PyJWT --with cryptography "$TOKEN_SCRIPT" "$identity"
+    uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" "$identity"
   )"
 fi
 
