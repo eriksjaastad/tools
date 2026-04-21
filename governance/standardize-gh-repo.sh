@@ -14,7 +14,8 @@
 #                            refactor docs test hotfix security perf ci)
 #   branch protection on main:
 #     - require PR before merge
-#     - require status checks: claude-review (when present), check-label (when present)
+#     - require status checks: check-label (when the pr-label-check
+#       workflow is wired up in the repo)
 #     - no human-review requirement
 #
 # Usage:
@@ -50,7 +51,7 @@ CANONICAL_LABELS=(
   "ci:#1D76DB"
 )
 
-REQUIRED_CHECKS=("claude-review" "check-label")
+REQUIRED_CHECKS=("check-label")
 
 usage() {
   sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
@@ -179,7 +180,7 @@ check_repo() {
   done
 
   if [[ ${#PRESENT_CHECKS[@]} -eq 0 ]]; then
-    changes+=("WARNING: no claude-review/check-label workflow installed — protection enforced with empty contexts; install reusable workflow")
+    changes+=("WARNING: no check-label workflow installed — protection enforced with empty contexts; copy .github/workflows/pr-label-check.yml from the tools repo")
   fi
 
   local has_main
