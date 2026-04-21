@@ -4,51 +4,35 @@ Builder utilities and helper scripts for working across all projects.
 
 ---
 
-## CI Review System (Reusable Workflow)
+## Code Review
 
-**This repo hosts the centralized code review workflow used by all 24 projects.**
+Code review runs **locally**, before push, via the `code-reviewer` Claude
+subagent invoked by the `~/.claude/skills/pr/SKILL.md` workflow. The local
+PreToolUse hook `pre-pr-review.py` blocks `git push` and `gh/gha pr create`
+unless the run prepends `CLAUDE_PR_REVIEW_PASSED=1` (or, with explicit user
+confirmation, `CLAUDE_PR_REVIEW_SKIPPED=1`).
 
-The reusable workflow lives at `.github/workflows/claude-review-reusable.yml`. Every repo calls it with a thin ~15-line wrapper:
+The previous GitHub-Actions-based reusable review workflow
+(`claude-review-reusable.yml` + per-repo `claude-review.yml` wrappers) was
+removed on 2026-04-21. Reasons:
+- It duplicated the local review the agent was already running.
+- Status check `claude-review` was being required by branch protection on some
+  repos but no longer posted by anything, silently blocking merges.
+- We never want GitHub-side Claude API spend; review happens on the
+  developer's machine.
 
-```yaml
-jobs:
-  claude-review:
-    uses: eriksjaastad/tools/.github/workflows/claude-review-reusable.yml@main
-    with:
-      review_style: governance
-    secrets:
-      anthropic_api_key: ${{ secrets.ANTHROPIC_GITHUB_API_KEY }}
-```
+The only CI workflow we still ship from this repo is the type-label gate
+(`.github/workflows/pr-label-check.yml`), which posts the `check-label`
+status that branch protection on `main` requires.
 
-### What it does
+---
 
-On every PR (`opened` / `synchronize`):
-1. **Runs tests** — configurable per repo (defaults to pytest)
-2. **AI code review** — Claude Sonnet reviews the diff against CLAUDE.md and governance protocol
-3. **Posts sticky comment** — Updates a single review comment (no spam)
-4. **Posts commit status** — `context: "claude-review"` for branch protection gating
-5. **Auto-merges** on APPROVE (squash + delete branch)
-6. **Blocks** on REQUEST_CHANGES
+## Repo Settings Standardization (`governance/standardize-gh-repo.sh`)
 
-### Review gates
-
-- **Gate 0:** Robotic scan (hardcoded paths, silent exceptions, API keys, placeholders)
-- **Gate 1:** Governance checklist against protocol
-- **Gate 2:** Cognitive audit (test gaps, scope creep, database safety, silent failures)
-
-### Configurable inputs
-
-| Input | Default | Description |
-|-------|---------|-------------|
-| `test_command` | pytest auto-detect | Shell command for tests |
-| `review_style` | `governance` | `governance` (full 3-gate) or `simple` |
-| `review_model` | `claude-sonnet-4-20250514` | Claude model for review |
-| `comment_marker` | `<!-- claude-review -->` | Marker for sticky comments |
-| `diff_max_bytes` | `100000` | Max PR diff size |
-
-### Why this matters
-
-One file to update, all 24 repos inherit changes. The commit status API integration means branch protection can gate merges on the review verdict, enabling fully autonomous agent workflows: Worker writes code, Floor Manager submits PR, Architect reviews, auto-merge, done.
+Enforces canonical GitHub repo settings (auto-delete-on-merge, allowed
+merge methods, canonical labels, branch protection requiring `check-label`)
+across all `eriksjaastad/*` repos. See the script header for the full
+policy. Run with `--dry-run` first; `--apply` when you're sure.
 
 ---
 
