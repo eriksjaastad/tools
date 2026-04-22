@@ -282,3 +282,4 @@ done
 echo ""
 echo "Done. Mode was: $MODE"
 [[ "$MODE" == "dry-run" ]] && echo "Re-run with --apply to make changes."
+exit 0
