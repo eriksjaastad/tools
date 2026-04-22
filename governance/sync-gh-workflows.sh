@@ -14,7 +14,7 @@
 # Default mode is --dry-run. If no repos are provided, each action uses its
 # canonical rollout target set.
 
-set -uo pipefail
+set -euo pipefail
 
 OWNER="eriksjaastad"
 MODE="dry-run"
@@ -369,7 +369,11 @@ rename_default_branch() {
     return
   fi
 
-  gh api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1 || true
+  if ! gh api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1; then
+    echo "    ! branch renamed but failed to set default_branch pointer to $to_branch"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
   echo "    ✓ branch renamed"
   run_standardize "$repo"
 }
