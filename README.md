@@ -25,6 +25,11 @@ The only CI workflow we still ship from this repo is the type-label gate
 (`.github/workflows/pr-label-check.yml`), which posts the `check-label`
 status that branch protection on `main` requires.
 
+Use `governance/sync-gh-workflows.sh` to roll that workflow out across
+target repos, delete obsolete
+`claude-review.yml` wrappers, and handle the scoped `master` -> `main`
+rename for `eriksjaastad/eriksjaastad`. Run with `--dry-run` first.
+
 ---
 
 ## Repo Settings Standardization (`governance/standardize-gh-repo.sh`)
@@ -33,6 +38,14 @@ Enforces canonical GitHub repo settings (auto-delete-on-merge, allowed
 merge methods, canonical labels, branch protection requiring `check-label`)
 across all `eriksjaastad/*` repos. See the script header for the full
 policy. Run with `--dry-run` first; `--apply` when you're sure.
+
+Common rollout commands:
+
+```bash
+_tools/governance/sync-gh-workflows.sh --dry-run install-pr-label-check
+_tools/governance/sync-gh-workflows.sh --dry-run delete-dead-claude-review
+_tools/governance/sync-gh-workflows.sh --dry-run rename-default-branch
+```
 
 ---
 
