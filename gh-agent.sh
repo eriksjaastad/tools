@@ -7,9 +7,10 @@ if [ "$#" -lt 1 ]; then
   echo "   or: $0 --auto <gh args...>" >&2
   echo "   or: $0 --auto -- git <args...>" >&2
   echo "" >&2
-  echo "Identities: claude, antigravity, codex, gemini," >&2
-  echo "  ai-memory, smart-invoice-workflow, hypocrisynow," >&2
-  echo "  project-tracker, tax-organizer, _tools, muffinpanrecipes" >&2
+  echo "Identities:" >&2
+  echo "  architect     — cross-repo planning/review (auto-picked at ~/projects root)" >&2
+  echo "  auxesis-coder — autonomous API code-dev (explicit only, scope-restricted)" >&2
+  echo "  manager       — project-scoped execution (auto-picked inside a project dir)" >&2
   exit 1
 fi
 
@@ -56,7 +57,7 @@ if [ "${1:-}" = "--" ]; then
   shift  # drop the literal 'git'
   git_subcommand="$1"
   case "$git_subcommand" in
-    add|commit|push|status|log|rev-parse|fetch|pull)
+    add|commit|push|status|log|rev-parse|fetch|pull|ls-remote)
       ;;
     *)
       echo "Git subcommand not allowed: $git_subcommand" >&2

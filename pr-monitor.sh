@@ -1,12 +1,12 @@
 #!/bin/bash
 # pr-monitor.sh — check all open PRs for failed reviews, alert on Slack if found
-# Authenticates as claude-opus-erik GitHub App (not personal token)
+# Authenticates as Architect[bot] (cross-repo monitoring is an Architect role)
 
 REPO="eriksjaastad/data-vault-factory"
 TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Get a fresh GitHub App token
-GH_TOKEN=$(uv run --with PyJWT --with cryptography "$TOOLS_DIR/github-app-token.py" claude 2>/dev/null)
+GH_TOKEN=$(uv run --with PyJWT --with cryptography "$TOOLS_DIR/github-app-token.py" architect 2>/dev/null)
 if [ -z "$GH_TOKEN" ]; then
   # Fallback to default gh auth if app token fails
   unset GH_TOKEN
