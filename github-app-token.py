@@ -34,49 +34,35 @@ from pathlib import Path
 DOPPLER_CONFIG = "dev"
 
 # Maps identity names to (DOPPLER_SUFFIX, DOPPLER_PROJECT, BOT_NAME).
-# Supports both agent-based and project-based identities.
+# Resolves to Doppler keys GITHUB_APP_ID_<SUFFIX>, GITHUB_APP_INSTALLATION_ID_<SUFFIX>,
+# GITHUB_APP_PRIVATE_KEY_<SUFFIX>. Empty suffix → un-prefixed keys read from the
+# identity's own Doppler project.
 IDENTITY_MAP = {
-    # Agent identities (legacy — still work)
-    "claude": ("CLAUDE", "synth-insight-labs", "claude-opus-erik[bot]"),
-    "gemini": ("GEMINI", "synth-insight-labs", "gemini-cli-erik[bot]"),
-    "codex": ("CODEX", "synth-insight-labs", "codex-mini-erik[bot]"),
-    # Project identities (new — per-project bots)
-    "ai-memory": ("AI_MEMORY", "synth-insight-labs", "ai-memory-manager[bot]"),
-    "smart-invoice-workflow": ("SMART_INVOICE_WORKFLOW", "synth-insight-labs", "smart-invoice-workflow-manager[bot]"),
-    "hypocrisynow": ("HYPOCRISYNOW", "synth-insight-labs", "hypocrisynow-manager[bot]"),
-    "project-tracker": ("PROJECT_TRACKER", "synth-insight-labs", "project-tracker-manager[bot]"),
-    "tax-organizer": ("TAX_ORGANIZER", "synth-insight-labs", "tax-organizer-manager[bot]"),
-    "_tools": ("TOOLS", "synth-insight-labs", "tools-manager[bot]"),
-    "muffinpanrecipes": ("MUFFINPANRECIPES", "synth-insight-labs", "muffinpanrecipes-manager[bot]"),
-    "synth-insight-labs": ("SYNTHINSIGHTLABS", "synth-insight-labs", "synth-insight-labs-manager[bot]"),
-    # Empty suffix → read un-prefixed GITHUB_APP_* keys from the project's
-    # own Doppler config. Preferred pattern for new projects going forward.
-    "cortana-personal-ai": ("", "cortana-personal-ai", "cortana-personal-ai-manager[bot]"),
-}
-
-# Map project directory names to identity keys for auto-detection
-PROJECT_DIR_MAP = {
-    "ai-memory": "ai-memory",
-    "smart-invoice-workflow": "smart-invoice-workflow",
-    "hypocrisynow": "hypocrisynow",
-    "project-tracker": "project-tracker",
-    "tax-organizer": "tax-organizer",
-    "_tools": "_tools",
-    "muffinpanrecipes": "muffinpanrecipes",
-    "synth-insight-labs": "synth-insight-labs",
-    "cortana-personal-ai": "cortana-personal-ai",
+    # Canonical identities (2026-04-24 cutover). Bot login = App slug + [bot].
+    # Erik's display names (Architect, Manager) were taken on GitHub, so the App
+    # slugs got "-identity" suffixed. Auxesis-Coder was clean.
+    "architect":     ("ARCHITECT",     "synth-insight-labs", "architect-identity[bot]"),
+    "auxesis-coder": ("AUXESIS_CODER", "synth-insight-labs", "auxesis-coder[bot]"),
+    "manager":       ("MANAGER",       "synth-insight-labs", "manager-identity[bot]"),
 }
 
 
-def detect_project_from_cwd() -> str:
-    """Walk up from cwd to find which project we're in. Falls back to 'claude'."""
+def detect_role_from_cwd() -> str:
+    """Pick the canonical identity based on cwd position.
+
+    cwd at ~/projects root (cross-cutting context) → architect.
+    cwd inside a project dir → manager.
+    auxesis-coder is never auto-picked; it must be requested explicitly.
+    """
     cwd = Path.cwd()
     projects_root = Path.home() / "projects"
-    if not str(cwd).startswith(str(projects_root)):
-        return "claude"  # Not in a project dir — use default
-    relative = cwd.relative_to(projects_root)
-    top_dir = str(relative).split("/")[0]
-    return PROJECT_DIR_MAP.get(top_dir, "claude")  # Unknown project — use default
+    if cwd == projects_root:
+        return "architect"
+    try:
+        cwd.relative_to(projects_root)
+        return "manager"
+    except ValueError:
+        return "architect"  # Outside ~/projects — default to architect
 
 
 def doppler_get(key: str, project: str) -> str:
@@ -193,11 +179,8 @@ def main():
     # Resolve identity
     identity = args.identity
     if args.auto or identity is None:
-        identity = detect_project_from_cwd()
-        if not identity:
-            print("Error: Could not detect project from cwd. Specify identity explicitly.", file=sys.stderr)
-            sys.exit(1)
-        print(f"Auto-detected project: {identity}", file=sys.stderr)
+        identity = detect_role_from_cwd()
+        print(f"Auto-detected identity: {identity}", file=sys.stderr)
 
     if identity not in IDENTITY_MAP:
         print(f"Error: Unknown identity '{identity}'. Valid: {', '.join(IDENTITY_MAP.keys())}", file=sys.stderr)

@@ -9,9 +9,9 @@
 #                         git network operation (push/fetch/clone).
 #
 # Usage (from inside a git repo):
-#   ./set-repo-bot-identity.sh                    # auto-detect identity from cwd
-#   ./set-repo-bot-identity.sh project-tracker    # explicit identity
-#   ./set-repo-bot-identity.sh claude             # for ~/.claude/ and similar
+#   ./set-repo-bot-identity.sh architect     # cross-repo role
+#   ./set-repo-bot-identity.sh manager       # project-scoped role (most repos)
+#   ./set-repo-bot-identity.sh auxesis-coder # autonomous API code-dev (restricted)
 #
 # After this runs, plain `git commit` + `git push` work as the bot on this
 # machine. No `gha -- git` wrapping needed. `gha` remains the right wrapper
@@ -37,11 +37,12 @@ IDENTITY="${1:-}"
 if [[ -z "$IDENTITY" ]]; then
     echo "Usage: $(basename "$0") <identity>" >&2
     echo "" >&2
-    echo "Valid identities (per IDENTITY_MAP in github-app-token.py):" >&2
-    echo "  claude, gemini, codex," >&2
-    echo "  ai-memory, smart-invoice-workflow, hypocrisynow," >&2
-    echo "  project-tracker, tax-organizer, _tools, muffinpanrecipes," >&2
-    echo "  synth-insight-labs, cortana-personal-ai" >&2
+    echo "Canonical identities (2026-04-24):" >&2
+    echo "  architect     — cross-repo planning/review" >&2
+    echo "  auxesis-coder — autonomous API code-dev (explicit only, scope-restricted)" >&2
+    echo "  manager       — project-scoped execution" >&2
+    echo "" >&2
+    echo "Legacy identities are still accepted until Phase G cleanup." >&2
     exit 1
 fi
 
