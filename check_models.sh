@@ -38,7 +38,7 @@ check_openai() {
 
 check_gemini() {
   local body
-  body="$(curl -fsS "${CURL_TIMEOUT[@]}" "https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}")"
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" "https://generativelanguage.googleapis.com/v1beta/models?key=${GOOGLE_API_KEY}")"
   echo "$body" | jq -e '.models[]?.name | select(. == "models/gemini-2.5-flash" or . == "models/gemini-2.5-flash-latest")' >/dev/null
 }
 
