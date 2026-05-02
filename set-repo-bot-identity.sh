@@ -41,8 +41,6 @@ if [[ -z "$IDENTITY" ]]; then
     echo "  architect     — cross-repo planning/review" >&2
     echo "  auxesis-coder — autonomous API code-dev (explicit only, scope-restricted)" >&2
     echo "  manager       — project-scoped execution" >&2
-    echo "" >&2
-    echo "Legacy identities are still accepted until Phase G cleanup." >&2
     exit 1
 fi
 
