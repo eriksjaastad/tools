@@ -10,7 +10,8 @@ tokens/sec — the only thing that actually differs between the laptop and the M
 since Mercury is cloud-only.
 
 Run:  doppler run -- uv run bench.py
-Env:  any INCEPTIONLABS_*_API_KEY (injected by Doppler), MERCURY_MODEL (optional override)
+Env:  any INCEPTIONLABS_*_API_KEY (injected by Doppler) — or INCEPTION_API_KEY as a
+      generic fallback for manual runs; MERCURY_MODEL (optional model override).
 """
 import os
 import socket
@@ -27,7 +28,11 @@ def find_api_key() -> str | None:
     for name, value in os.environ.items():
         if name.startswith("INCEPTIONLABS_") and name.endswith("_API_KEY") and value:
             return value
+    # Generic fallback so the script also runs outside Doppler (e.g. a manual export).
     return os.environ.get("INCEPTION_API_KEY")
+
+
+REQUEST_TIMEOUT = 30.0  # fail fast rather than hang if the endpoint stalls
 PROMPT = (
     "Write a Python function `merge_intervals(intervals)` that merges overlapping "
     "intervals given as a list of [start, end] pairs. Include a docstring and 3 "
@@ -40,7 +45,7 @@ def main() -> None:
     if not api_key:
         raise SystemExit("No INCEPTIONLABS_*_API_KEY set — run via `doppler run -- uv run bench.py`")
 
-    client = OpenAI(api_key=api_key, base_url=BASE_URL)
+    client = OpenAI(api_key=api_key, base_url=BASE_URL, timeout=REQUEST_TIMEOUT)
     host = socket.gethostname()
 
     # 1) Discover the exact model id rather than guessing.
