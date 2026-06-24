@@ -24,7 +24,7 @@ class ModelEntry:
 
     id: str  # LiteLLM model ID or Ollama model name
     display_name: str
-    provider: str  # "ollama", "anthropic", "openai", "google"
+    provider: str  # "ollama", "anthropic", "openai", "google", "xai"
     tier: str  # "local", "cheap", "mid"
     enabled: bool = True
     # For cost estimation — per 1M tokens. Overridden by route/pricing.py if available.
@@ -78,6 +78,14 @@ MODELS: list[ModelEntry] = [
         tier="cheap",
         input_cost_per_1m=0.15,
         output_cost_per_1m=0.60,
+    ),
+    ModelEntry(
+        id="xai/grok-build-0.1",
+        display_name="Grok Build 0.1",
+        provider="xai",
+        tier="cheap",
+        input_cost_per_1m=1.00,
+        output_cost_per_1m=2.00,
     ),
     # Mid cloud
     ModelEntry(
