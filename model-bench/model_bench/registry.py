@@ -96,6 +96,14 @@ MODELS: list[ModelEntry] = [
         input_cost_per_1m=1.25,
         output_cost_per_1m=10.00,
     ),
+    ModelEntry(
+        id="openrouter/z-ai/glm-5.2",
+        display_name="GLM-5.2 (Z.ai, open-weight)",
+        provider="openrouter",
+        tier="mid",
+        input_cost_per_1m=1.40,
+        output_cost_per_1m=4.40,
+    ),
 ]
 
 # ── Judge config ──────────────────────────────────────────────────────────────
