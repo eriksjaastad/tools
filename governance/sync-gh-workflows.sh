@@ -51,7 +51,6 @@ PR_LABEL_ROLLOUT_REPOS=(
   "cortana-personal-ai"
   "muffinpanrecipes"
   "project-scaffolding"
-  "Smart-Invoice-Follow-Up-Workflow"
   "Flo-Fi"
   "audit-agent"
   "hypocrisynow"
