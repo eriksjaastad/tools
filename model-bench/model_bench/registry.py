@@ -131,6 +131,23 @@ MODELS: list[ModelEntry] = [
         input_cost_per_1m=1.25,
         output_cost_per_1m=2.50,
     ),
+    # Frontier — the top-tier reference line (what the cheap models are measured against)
+    ModelEntry(
+        id="claude-opus-4-8",
+        display_name="Opus 4.8 (Anthropic frontier)",
+        provider="anthropic",
+        tier="frontier",
+        input_cost_per_1m=5.00,
+        output_cost_per_1m=25.00,
+    ),
+    ModelEntry(
+        id="gpt-5.5",
+        display_name="GPT-5.5 (OpenAI, daily driver)",
+        provider="openai",
+        tier="frontier",
+        input_cost_per_1m=5.00,
+        output_cost_per_1m=30.00,
+    ),
 ]
 
 # ── Judge config ──────────────────────────────────────────────────────────────
