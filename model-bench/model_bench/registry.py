@@ -80,12 +80,31 @@ MODELS: list[ModelEntry] = [
         output_cost_per_1m=0.60,
     ),
     ModelEntry(
-        id="xai/grok-build-0.1",
+        # Routed via OpenRouter (was xai/ direct — the xAI-direct key in auxesis:prd
+        # is invalid; OpenRouter's key covers all cheap models with one credential).
+        # xAI aliases for this model: grok-code-fast-1 / grok-code-fast.
+        id="openrouter/x-ai/grok-build-0.1",
         display_name="Grok Build 0.1",
-        provider="xai",
+        provider="openrouter",
         tier="cheap",
         input_cost_per_1m=1.00,
         output_cost_per_1m=2.00,
+    ),
+    ModelEntry(
+        id="openrouter/deepseek/deepseek-v3.2",
+        display_name="DeepSeek V3.2 (open-weight)",
+        provider="openrouter",
+        tier="cheap",
+        input_cost_per_1m=0.23,
+        output_cost_per_1m=0.34,
+    ),
+    ModelEntry(
+        id="openrouter/qwen/qwen3-coder",
+        display_name="Qwen3-Coder (open-weight)",
+        provider="openrouter",
+        tier="cheap",
+        input_cost_per_1m=0.22,
+        output_cost_per_1m=1.80,
     ),
     # Mid cloud
     ModelEntry(
@@ -103,6 +122,14 @@ MODELS: list[ModelEntry] = [
         tier="mid",
         input_cost_per_1m=1.40,
         output_cost_per_1m=4.40,
+    ),
+    ModelEntry(
+        id="openrouter/x-ai/grok-4.3",
+        display_name="Grok 4.3 (xAI, current flagship)",
+        provider="openrouter",
+        tier="mid",
+        input_cost_per_1m=1.25,
+        output_cost_per_1m=2.50,
     ),
 ]
 
