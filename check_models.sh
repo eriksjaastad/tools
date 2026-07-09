@@ -5,7 +5,6 @@ if [[ "${MODEL_HEALTH_INNER:-0}" != "1" ]]; then
   exec doppler run --project synth-insight-labs --config dev -- env MODEL_HEALTH_INNER=1 /bin/bash "$0" "$@"
 fi
 
-export PATH="${PATH:+$PATH:}/usr/bin:/bin:/opt/homebrew/bin"
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
 mkdir -p "$STATE_DIR"
 STATE_FILE="$STATE_DIR/model_health.json"
@@ -15,9 +14,10 @@ STATUS_LINES=""
 CURL_TIMEOUT=(--connect-timeout 5 --max-time 30)
 
 check_ollama() {
+  local model="$1"
   local body
   body="$(curl -fsS "${CURL_TIMEOUT[@]}" http://127.0.0.1:11434/api/tags)"
-  echo "$body" | jq -e '.models[]?.name | select(. == "qwen3.5:35b")' >/dev/null
+  echo "$body" | jq -e --arg model "$model" '.models[]?.name | select(. == $model)' >/dev/null
 }
 
 check_anthropic() {
@@ -30,23 +30,26 @@ check_anthropic() {
 }
 
 check_openai() {
+  local model="$1"
   local body
   body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.openai.com/v1/models \
     -H "Authorization: Bearer ${OPENAI_API_KEY}")"
-  echo "$body" | jq -e '.data[]?.id | select(. == "gpt-4o")' >/dev/null
+  echo "$body" | jq -e --arg model "$model" '.data[]?.id | select(. == $model)' >/dev/null
 }
 
 check_gemini() {
+  local model="$1"
   local body
   body="$(curl -fsS "${CURL_TIMEOUT[@]}" "https://generativelanguage.googleapis.com/v1beta/models?key=${GOOGLE_API_KEY}")"
-  echo "$body" | jq -e '.models[]?.name | select(. == "models/gemini-2.5-flash" or . == "models/gemini-2.5-flash-latest")' >/dev/null
+  echo "$body" | jq -e --arg model "$model" '.models[]?.name | select(. == ("models/" + $model) or . == ("models/" + $model + "-latest"))' >/dev/null
 }
 
-check_xai() {
+check_openrouter() {
+  local model="$1"
   local body
-  body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://api.x.ai/v1/models \
-    -H "Authorization: Bearer ${XAI_API_KEY}")"
-  echo "$body" | jq -e '.data[]?.id | select(startswith("grok-3-mini"))' >/dev/null
+  body="$(curl -fsS "${CURL_TIMEOUT[@]}" https://openrouter.ai/api/v1/models \
+    -H "Authorization: Bearer ${OPENROUTER_API_KEY}")"
+  echo "$body" | jq -e --arg model "$model" '.data[]?.id | select(. == $model)' >/dev/null
 }
 
 record_status() {
@@ -66,12 +69,13 @@ run_check() {
   fi
 }
 
-run_check "ollama/qwen3.5:35b" check_ollama
+run_check "ollama/coding:current" check_ollama "coding:current"
+run_check "anthropic/claude-opus-4-8" check_anthropic "claude-opus-4-8"
 run_check "anthropic/claude-haiku-4-5" check_anthropic "claude-haiku-4-5"
-run_check "openai/gpt-4o" check_openai
-run_check "google/gemini-2.5-flash" check_gemini
-run_check "xai/grok-3-mini" check_xai
-run_check "anthropic/claude-sonnet-4-6" check_anthropic "claude-sonnet-4-6"
+run_check "openai/gpt-5.5" check_openai "gpt-5.5"
+run_check "google/gemini-2.5-flash" check_gemini "gemini-2.5-flash"
+# xAI direct is invalid; Grok is routed through OpenRouter now.
+run_check "openrouter/x-ai/grok-4.3" check_openrouter "x-ai/grok-4.3"
 
 {
   printf '{\n'

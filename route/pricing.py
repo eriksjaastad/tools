@@ -59,7 +59,7 @@ def get_model_pricing(model_id: str) -> Optional[dict]:
     Look up pricing for a model ID.
 
     Args:
-        model_id: Model identifier (e.g., "claude-opus-4-6").
+        model_id: Model identifier (e.g., "claude-opus-4-8").
 
     Returns:
         Dictionary with keys: input_usd, cached_input_usd, output_usd, provider.
@@ -89,7 +89,7 @@ def compute_shadow_cost(
     Shadow cost represents the pay-per-token cost that would apply to this usage.
 
     Args:
-        model_id: Model identifier (e.g., "claude-opus-4-6").
+        model_id: Model identifier (e.g., "claude-opus-4-8").
         input_tokens: Number of input tokens (non-cached).
         output_tokens: Number of output tokens.
         cache_read_tokens: Number of cache read tokens (reads from prompt cache).
@@ -204,9 +204,9 @@ if __name__ == "__main__":
     print(f"Subscriptions: {', '.join(registry['subscriptions'].keys())}\n")
 
     # Example 1: Claude Opus session
-    print("Example 1: Claude Opus 4.6 Session")
+    print("Example 1: Claude Opus 4.8 Session")
     print("-" * 60)
-    model_id = "claude-opus-4-6"
+    model_id = "claude-opus-4-8"
     input_tokens = 250_000
     output_tokens = 50_000
     cache_read_tokens = 100_000
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     # Example 2: Haiku session (cheap model)
     print("\n\nExample 2: Claude Haiku 4.5 Session")
     print("-" * 60)
-    model_id = "claude-haiku-4-5"
+    model_id = "claude-haiku-4-5-20251001"
     input_tokens = 1_000_000
     output_tokens = 100_000
     cache_read_tokens = 0
@@ -266,6 +266,6 @@ if __name__ == "__main__":
     # Example 4: Zero tokens
     print("\n\nExample 4: Zero Tokens")
     print("-" * 60)
-    cost = compute_shadow_cost("claude-opus-4-6")
-    print(f"Model: claude-opus-4-6")
+    cost = compute_shadow_cost("claude-opus-4-8")
+    print(f"Model: claude-opus-4-8")
     print(f"  Shadow cost: {format_cost(cost)} (no usage)")
