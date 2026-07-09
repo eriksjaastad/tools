@@ -63,80 +63,35 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 
 ## Active Tools
 
-### 🤖 AI Router (`ai_router/`)
-Cost-optimized routing between local Ollama and cloud AI models.
-- **Documentation:** [AI Router README](../ai-model-scratch-build/README.md)
-- **Logic:** [AIRouter Library](ai_router/router.py)
-
-### 🛡️ Integrity Warden (`integrity-warden/`)
-Ecosystem health checks and automated remediation.
-- **Documentation:** [Integrity Warden README](../ai-model-scratch-build/README.md)
-- **Core Logic:** [Integrity Warden Core](integrity-warden/integrity_warden.py)
-
-### 🔌 Ollama MCP (`ollama-mcp/`)
-Model Context Protocol integration for local Ollama instances.
-- **Documentation:** [Ollama MCP README](../ai-model-scratch-build/README.md)
-
-### 🔑 SSH Agent (`ssh_agent/`)
-Automated SSH management and host routing.
-- **Documentation:** [SSH Agent README](../ai-model-scratch-build/README.md)
-- **Agent:** [SSH Agent Logic](ssh_agent/agent.py)
-
-### 📄 PDF to Markdown Converter (`pdf-converter/`)
-Convert PDFs to clean markdown for processing.
-- **Converter:** [PDF Converter](pdf-converter/pdf_to_markdown_converter.py)
-- **Cleanup:** [Cleanup Utility](pdf-converter/cleanup_converted_pdfs.py)
-
-### 💬 Claude CLI (`claude-cli/`)
-Legacy command-line interface to Claude.
-- **Script:** [Claude CLI Script](claude-cli/claude-cli.py)
-
-### 🏗️ Agent Hub (`agent-hub/`)
-Central orchestration point for agent communication.
-- **Index:** [Agent Hub Index](agent-hub/00_Index_agent-hub.md)
-- **Hub:** [Hub Core](agent-hub/hub.py)
+- [`governance/`](governance/README.md) - Pre-commit hook validators for secrets, hardcoded paths, API-wrapper enforcement, and agent config sync.
+- [`route/`](route/README.md) - Model routing CLI and `model_registry.json` pricing source of truth.
+- `hooks/` - Claude Code PreToolUse/PostToolUse hooks.
+- `claude-hooks/` - Additional Claude Code hooks for PR enforcement.
+- [`model-bench/`](model-bench/README.md) - Model benchmarking and comparison.
+- [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
+- [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
+- [`integrity-warden/`](integrity-warden/README.md) - Security and compliance auditing.
+- [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
+- [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
+- [`claude-cli/`](claude-cli/README.md) - Legacy command-line interface to Claude.
 
 ---
 
 ## 📋 Planning Templates
-- Create PRD Template (see agent-hub)
-- Baseline Metrics Plan (see agent-hub)
-- Project Lifecycle Tracking (see agent-hub)
+
+Planning templates are no longer maintained in `_tools/`.
+- Canonical pipeline: [Project-workflow.md](../Project-workflow.md)
+- PRD/spec workflow: `/write-prd`, `/strategy`, and `/spec` skills.
 
 ---
 
 ## Setup
 
-### Add to PYTHONPATH (Recommended)
+### Tool Usage
 
-To use tools from any project:
-
-```bash
-# Add to ~/.zshrc (or ~/.bashrc)
-echo 'export PYTHONPATH="[USER_HOME]/projects:$PYTHONPATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-Then import from anywhere:
-
-```python
-from _tools.ai_router import AIRouter
-```
-
-### Install Dependencies
-
-Each tool has its own environment:
-
-```bash
-# AI Router
-cd ai_router
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# PDF Converter (already set up)
-source pdf_converter_env/bin/activate
-```
+Most tools are script or CLI based. Start with the tool-specific README links
+above where they exist; tools without a README are hook directories managed by
+their installed entry points.
 
 ---
 
@@ -161,16 +116,17 @@ When adding a new tool:
 
 ```
 _tools/
-├── ai_router/              # AI routing system (NEW)
-│   ├── router.py
-│   ├── README.md
-│   └── venv/
-├── pdf_to_markdown_converter.py
-├── cleanup_converted_pdfs.py
-├── claude-cli.py
-├── pdf_converter_env/      # Venv for PDF tools
-├── logs/                   # PDF conversion logs
-└── *.md                    # Planning templates
+├── governance/             # Repo governance scripts and hook installers
+├── route/                  # Model routing CLI and registry
+├── hooks/                  # Claude Code PreToolUse/PostToolUse hooks
+├── claude-hooks/           # Additional Claude Code hooks
+├── model-bench/            # Model benchmarking
+├── claude-mcp-go/          # Go MCP hub for agent communication
+├── ollama-mcp-go/          # Go MCP server for local Ollama models
+├── integrity-warden/       # Security and compliance auditing
+├── ssh_agent/              # SSH management and host routing
+├── pdf-converter/          # PDF conversion utilities
+└── claude-cli/             # Legacy Claude CLI
 ```
 
 ---
@@ -180,9 +136,9 @@ _tools/
 `_tools/` contains **builder utilities** - scripts and libraries you use **while building projects**, not the projects themselves.
 
 **Examples:**
-- ✅ AI router library (used by multiple projects)
+- ✅ Model routing CLI (used by multiple projects)
 - ✅ PDF converter (preprocessing documents)
-- ✅ PRD templates (planning new projects)
+- ✅ Governance hooks (repo safety checks)
 - ❌ Cortana (that's a project, not a tool)
 - ❌ actionable-ai-intel (that's a project)
 
@@ -194,24 +150,5 @@ Part of the `..` workspace.
 
 ## Related Documentation
 
-- [LOCAL_MODEL_LEARNINGS](../writing/Documents/reference/LOCAL_MODEL_LEARNINGS.md) - local AI
-- [cortana-personal-ai/README](../ai-model-scratch-build/README.md) - Cortana AI
-
-## Development Resources
-- [integrity-warden/integrity_warden.py|integrity_warden.py](integrity-warden/integrity_warden.py|integrity_warden.py)
-- [integrity-warden/deep_cleanup.py|deep_cleanup.py](integrity-warden/deep_cleanup.py|deep_cleanup.py)
-- [integrity-warden/remediate_renames.py|remediate_renames.py](integrity-warden/remediate_renames.py|remediate_renames.py)
-- [integrity-warden/rename_indices.py|rename_indices.py](integrity-warden/rename_indices.py|rename_indices.py)
-- [ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json](ollama-mcp/cursor_mcp_config_example.json|cursor_mcp_config_example.json)
-- [ollama-mcp/package-lock.json|package-lock.json](ollama-mcp/package-lock.json|package-lock.json)
-- [ollama-mcp/tsconfig.json|tsconfig.json](ollama-mcp/tsconfig.json|tsconfig.json)
-- [ollama-mcp/config/routing.yaml|routing.yaml](ollama-mcp/config/routing.yaml|routing.yaml)
-- [agent-hub/hub.py|hub.py](agent-hub/hub.py|hub.py)
-- [ai_router/router.py|router.py](ai_router/router.py|router.py)
-- [README.md](../ai-model-scratch-build/README.md)
-- [pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py](pdf-converter/pdf_to_markdown_converter.py|pdf_to_markdown_converter.py)
-- [claude-cli/claude-cli.py|claude-cli.py](claude-cli/claude-cli.py|claude-cli.py)
-- [ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml](ssh_agent/ssh_hosts.yaml|ssh_hosts.yaml)
-- [README.md](../ai-model-scratch-build/README.md)
-- [ssh_agent/agent.py|agent.py](ssh_agent/agent.py|agent.py)
-- [ssh_agent/queue/.agent_state.json|.agent_state.json](ssh_agent/queue/.agent_state.json|.agent_state.json)
+- [Project-workflow.md](../Project-workflow.md) - canonical project planning pipeline
+- [local-model-learnings.md](local-model-learnings.md) - local model notes
