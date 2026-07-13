@@ -152,7 +152,7 @@ MODELS: list[ModelEntry] = [
 
 # ── Judge config ──────────────────────────────────────────────────────────────
 
-JUDGE_MODEL = "claude-opus-4-6"  # Via Claude Code subscription — no API cost
+JUDGE_MODEL = "claude-opus-4-8"  # Via Claude Code subscription — no API cost
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
