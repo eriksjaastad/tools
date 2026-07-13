@@ -5,6 +5,8 @@ if [[ "${MODEL_HEALTH_INNER:-0}" != "1" ]]; then
   exec doppler run --project synth-insight-labs --config dev -- env MODEL_HEALTH_INNER=1 /bin/bash "$0" "$@"
 fi
 
+export PATH="${PATH:+$PATH:}/usr/bin:/bin:/opt/homebrew/bin" # absolute path intentional: jq/curl under minimal envs
+
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}"
 mkdir -p "$STATE_DIR"
 STATE_FILE="$STATE_DIR/model_health.json"

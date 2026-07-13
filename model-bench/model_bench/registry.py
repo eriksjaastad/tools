@@ -80,6 +80,17 @@ MODELS: list[ModelEntry] = [
         output_cost_per_1m=0.60,
     ),
     ModelEntry(
+        # Routed via OpenRouter (was xai/ direct — the xAI-direct key in auxesis:prd
+        # is invalid; OpenRouter's key covers all cheap models with one credential).
+        # xAI aliases for this model: grok-code-fast-1 / grok-code-fast.
+        id="openrouter/x-ai/grok-build-0.1",
+        display_name="Grok Build 0.1",
+        provider="openrouter",
+        tier="cheap",
+        input_cost_per_1m=1.00,
+        output_cost_per_1m=2.00,
+    ),
+    ModelEntry(
         id="openrouter/deepseek/deepseek-v3.2",
         display_name="DeepSeek V3.2 (open-weight)",
         provider="openrouter",
