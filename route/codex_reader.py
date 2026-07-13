@@ -15,13 +15,13 @@ from typing import Optional
 def _get_codex_model() -> str:
     """
     Read the model from ~/.codex/config.toml using simple string parsing.
-    Returns the model value (e.g., "gpt-5.2-codex").
-    Falls back to "gpt-5.2-codex" if not found or file doesn't exist.
+    Returns the model value (e.g., "gpt-5.5").
+    Falls back to "gpt-5.5" if not found or file doesn't exist.
     """
     config_path = Path.home() / ".codex" / "config.toml"
 
     if not config_path.exists():
-        return "gpt-5.2-codex"
+        return "gpt-5.5"
 
     try:
         with open(config_path, "r") as f:
@@ -36,7 +36,7 @@ def _get_codex_model() -> str:
     except (OSError, IOError):
         pass
 
-    return "gpt-5.2-codex"
+    return "gpt-5.5"
 
 
 def _extract_project_from_cwd(cwd: str) -> str:
@@ -116,7 +116,7 @@ def read_sessions(since_date: Optional[str] = None) -> list[dict]:
             "session_id": str,
             "project": str (extracted from session_meta cwd),
             "timestamp": str (from session_meta),
-            "model": str (from config, default "gpt-5.2-codex"),
+            "model": str (from config, default "gpt-5.5"),
             "input_tokens": int,
             "cached_input_tokens": int,
             "output_tokens": int,
@@ -193,7 +193,7 @@ def get_token_totals() -> dict:
     Returns:
         Dict with model IDs as keys:
         {
-            "gpt-5.2-codex": {
+            "gpt-5.5": {
                 "input_tokens": int,
                 "output_tokens": int,
                 "cached_input_tokens": int,
