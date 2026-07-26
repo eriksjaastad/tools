@@ -1,8 +1,11 @@
-"""Sends model responses to Opus for rubric-based 1-5 scoring."""
+"""Sends model responses to the configured judge for rubric-based scoring."""
 
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import litellm
 
@@ -31,7 +34,7 @@ def judge_responses(
     max_score: int,
     responses: dict[str, str],  # model_id → response text
 ) -> list[JudgeScore]:
-    """Score all model responses for one task+variant using Opus.
+    """Score all model responses for one task+variant using the configured judge.
 
     Sends a single batch prompt to minimize judge calls.
     """
@@ -50,6 +53,7 @@ def judge_responses(
         truncated = response[:4000] + "..." if len(response) > 4000 else response
         responses_text += f"\n### Model: {model_id}\n```\n{truncated}\n```\n"
 
+    rubric_format = "\n".join(f"{r['name']}: <score>" for r in rubric)
     judge_prompt = f"""You are a code/content quality judge. Score each model's response on a 1-5 scale for each rubric criterion.
 
 ## Task
@@ -70,7 +74,7 @@ For each model, provide scores for each rubric criterion (1-5 integer) and a bri
 Respond in this exact format for EACH model (one block per model):
 
 MODEL: <model_id>
-{chr(10).join(f'{r["name"]}: <score>' for r in rubric)}
+{rubric_format}
 REASONING: <one sentence>
 
 Be strict but fair. A 3 is "acceptable", 4 is "good", 5 is "excellent". Reserve 1 for broken/wrong, 2 for poor quality.
@@ -83,7 +87,7 @@ Be strict but fair. A 3 is "acceptable", 4 is "good", 5 is "excellent". Reserve 
             timeout=60,
         )
         judge_text = response.choices[0].message.content or ""
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - provider failure becomes score evidence
         # Return zero scores on judge failure
         return [
             JudgeScore(
@@ -98,7 +102,9 @@ Be strict but fair. A 3 is "acceptable", 4 is "good", 5 is "excellent". Reserve 
             for mid in responses
         ]
 
-    return _parse_judge_output(judge_text, task_id, variant_id, category, rubric, responses.keys())
+    return _parse_judge_output(
+        judge_text, task_id, variant_id, category, rubric, responses.keys()
+    )
 
 
 def _parse_judge_output(
@@ -203,3 +209,130 @@ def _match_model_id(raw: str, known_ids: list[str] | set[str]) -> str:
 
     # Give up — return raw (will end up in "not found" bucket)
     return raw
+
+
+def judge_seat_responses(
+    *,
+    seat: Mapping[str, Any] | object,
+    case: Mapping[str, Any] | object,
+    prompt: str,
+    responses: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Judge valid seat artifacts against the project-owned expected output."""
+    if not responses:
+        return {}
+    if any(
+        not isinstance(response, (str, Mapping, list))
+        for response in responses.values()
+    ):
+        raise ValueError(
+            "binary artifacts require a project-declared vision review gate"
+        )
+
+    raw_seat = _raw_mapping(seat)
+    expected = _value(case, "expected_output")
+    response_payload = [
+        {
+            "model_id": model_id,
+            "artifact": response,
+        }
+        for model_id, response in responses.items()
+    ]
+    judge_prompt = f"""You are evaluating candidate models for one real project-owned model seat.
+
+Score each already machine-valid artifact from 0 to 5:
+- 5: fully satisfies the expected-output rubric/gold and the seat's job
+- 4: correct with a minor omission
+- 3: acceptable but materially incomplete
+- 2: major errors
+- 1: mostly wrong
+- 0: unusable
+
+Do not reward prose style over correctness. Treat the expected output as a
+rubric when it describes required/prohibited qualities rather than one exact
+wording.
+
+SEAT JOB:
+{raw_seat["job"]}
+
+OUTPUT VALIDATION:
+{raw_seat["output_contract"]["validation"]}
+
+MODEL PROMPT:
+{prompt}
+
+EXPECTED OUTPUT / RUBRIC:
+{json.dumps(expected, ensure_ascii=False, default=str)}
+
+VALID ARTIFACTS:
+{json.dumps(response_payload, ensure_ascii=False, default=str)}
+
+Return JSON only:
+{{"judgments":[{{"model_id":"exact id","score":0,"reasoning":"one concise sentence"}}]}}
+"""
+    response = litellm.completion(
+        model=JUDGE_MODEL,
+        messages=[{"role": "user", "content": judge_prompt}],
+        timeout=60,
+        max_tokens=1000,
+        reasoning_effort="low",
+    )
+    content = response.choices[0].message.content or ""
+    parsed = _parse_json_object(content)
+    judgments = parsed.get("judgments")
+    if not isinstance(judgments, list):
+        raise TypeError("seat judge response has no judgments list")
+
+    result: dict[str, dict[str, Any]] = {}
+    for item in judgments:
+        if not isinstance(item, Mapping):
+            continue
+        model_id = item.get("model_id")
+        score = item.get("score")
+        if (
+            model_id not in responses
+            or isinstance(score, bool)
+            or not isinstance(score, (int, float))
+        ):
+            continue
+        result[str(model_id)] = {
+            "score": max(0.0, min(5.0, float(score))),
+            "reasoning": str(item.get("reasoning", "")),
+        }
+    missing = set(responses) - set(result)
+    if missing:
+        raise ValueError(f"seat judge omitted models: {sorted(missing)}")
+    return result
+
+
+def _parse_json_object(content: str) -> dict[str, Any]:
+    text = content.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"seat judge returned invalid JSON: {exc.msg}") from exc
+    if not isinstance(parsed, dict):
+        raise TypeError("seat judge response must be a JSON object")
+    return parsed
+
+
+def _raw_mapping(value: Mapping[str, Any] | object) -> Mapping[str, Any]:
+    if isinstance(value, Mapping):
+        return value
+    raw = getattr(value, "raw", None)
+    if isinstance(raw, Mapping):
+        return raw
+    raise TypeError("seat must be a mapping or expose a raw mapping")
+
+
+def _value(value: Mapping[str, Any] | object, name: str) -> Any:
+    if isinstance(value, Mapping):
+        return value[name]
+    return getattr(value, name)

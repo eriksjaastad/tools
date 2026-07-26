@@ -1,0 +1,318 @@
+{
+  "candidates": {
+    "gemini/gemini-3.5-flash": {
+      "avg_latency_ms": 5535.5,
+      "avg_score": 2.0,
+      "case_count": 2,
+      "cost_delta_vs_incumbent": 0.0267018,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 2,
+      "model_id": "gemini/gemini-3.5-flash",
+      "score_delta_vs_incumbent": 0.5,
+      "total_cost_usd": 0.0272505,
+      "valid_cases": 1,
+      "validity_rate": 0.5
+    },
+    "gpt-4.1-mini": {
+      "avg_latency_ms": 614.5,
+      "avg_score": 0.0,
+      "case_count": 2,
+      "cost_delta_vs_incumbent": 0.00017849999999999995,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 2,
+      "model_id": "gpt-4.1-mini",
+      "score_delta_vs_incumbent": -1.5,
+      "total_cost_usd": 0.0007272,
+      "valid_cases": 2,
+      "validity_rate": 1.0
+    },
+    "gpt-4o-mini": {
+      "avg_latency_ms": 2019.5,
+      "avg_score": 1.5,
+      "case_count": 2,
+      "cost_delta_vs_incumbent": 0.0,
+      "errors": 0,
+      "is_incumbent": true,
+      "judged_cases": 2,
+      "model_id": "gpt-4o-mini",
+      "score_delta_vs_incumbent": 0.0,
+      "total_cost_usd": 0.0005487000000000001,
+      "valid_cases": 2,
+      "validity_rate": 1.0
+    }
+  },
+  "case_results": [
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003",
+      "cost_error": null,
+      "cost_usd": 0.0003612,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Returns an empty array and misses both required attributable political claims.",
+      "judge_score": 0.0,
+      "latency_ms": 705,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "extraction-003"
+      },
+      "response": "[]",
+      "seat_id": "extraction",
+      "tokens_in": 899,
+      "tokens_out": 1,
+      "validity": {
+        "details": {
+          "parsed_output_type": "list"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003",
+      "cost_error": null,
+      "cost_usd": 0.014901000000000001,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 19, column 14",
+      "judge_score": 0.0,
+      "latency_ms": 5849,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "extraction-003"
+      },
+      "response": "[\n  {\n    \"entity\": \"Marjorie Taylor Greene\",\n    \"entity_type\": \"PERSON\",\n    \"party\": \"Republican\",\n    \"topic\": \"Politicizing family tragedies for political gain\",\n    \"stance\": \"oppose\",\n    \"principle_invoked\": null,\n    \"quote\": \"This is a family tragedy, not about politics or political enemies.\",\n    \"confidence\": 0.95\n  },\n  {\n    \"entity\": \"Donald Trump\",\n    \"entity_type\": \"PERSON\",\n    \"party\": \"Republican\",\n    \"topic\": \"Rob Reiner and political opposition\",\n    \"stance\": \"oppose\",\n    \"principle_invoked\": null,\n    \"quote\": \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive,",
+      "seat_id": "extraction",
+      "tokens_in": 958,
+      "tokens_out": 1496,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 19, column 14",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003",
+      "cost_error": null,
+      "cost_usd": 0.00027345,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Misses the required Donald Trump claim and assigns Marjorie Taylor Greene the wrong stance and topic despite including the relevant quote.",
+      "judge_score": 1.0,
+      "latency_ms": 1977,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "extraction-003"
+      },
+      "response": "[\n    {\n        \"entity\": \"Rob Reiner\",\n        \"entity_type\": \"PERSON\",\n        \"party\": \"Democratic Party\",\n        \"topic\": \"political criticism\",\n        \"stance\": \"oppose\",\n        \"principle_invoked\": null,\n        \"quote\": \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\",\n        \"confidence\": 0.9\n    },\n    {\n        \"entity\": \"Marjorie Taylor Greene\",\n        \"entity_type\": \"PERSON\",\n        \"party\": \"Republican Party\",\n        \"topic\": \"political criticism\",\n        \"stance\": \"support\",\n        \"principle_invoked\": null,\n        \"quote\": \"This is a family tragedy, not about politics or political enemies.\",\n        \"confidence\": 0.8\n    }\n]",
+      "seat_id": "extraction",
+      "tokens_in": 899,
+      "tokens_out": 231,
+      "validity": {
+        "details": {
+          "parsed_output_type": "list"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.000366,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Returns an empty array and misses both required attributable political positions.",
+      "judge_score": 0.0,
+      "latency_ms": 524,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\n \n[forwarded context; formatting may be inconsistent]\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.\n\t",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "extraction-003::dirty-v1"
+      },
+      "response": "[]",
+      "seat_id": "extraction",
+      "tokens_in": 911,
+      "tokens_out": 1,
+      "validity": {
+        "details": {
+          "parsed_output_type": "list"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.0123495,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Extracts both required claims with correct entities, parties, stances, and quotes, but topic normalization does not match the expected labels exactly.",
+      "judge_score": 4.0,
+      "latency_ms": 5222,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\n \n[forwarded context; formatting may be inconsistent]\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.\n\t",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "extraction-003::dirty-v1"
+      },
+      "response": "[\n  {\n    \"entity\": \"Marjorie Taylor Greene\",\n    \"entity_type\": \"PERSON\",\n    \"party\": \"Republican\",\n    \"topic\": \"politicization of family tragedies\",\n    \"stance\": \"oppose\",\n    \"principle_invoked\": null,\n    \"quote\": \"This is a family tragedy, not about politics or political enemies.\",\n    \"confidence\": 0.9\n  },\n  {\n    \"entity\": \"Donald Trump\",\n    \"entity_type\": \"PERSON\",\n    \"party\": \"Republican\",\n    \"topic\": \"Trump administration performance\",\n    \"stance\": \"support\",\n    \"principle_invoked\": null,\n    \"quote\": \"the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\",\n    \"confidence\": 0.8\n  }\n]",
+      "seat_id": "extraction",
+      "tokens_in": 973,
+      "tokens_out": 1210,
+      "validity": {
+        "details": {
+          "parsed_output_type": "list"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "extraction-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.00027525,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Misattributes Greene's criticism to Rob Reiner and fails to extract the required Trump administration self-praise quote, leaving the required claims materially wrong.",
+      "judge_score": 2.0,
+      "latency_ms": 2062,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Extract attributable political positions from messy article text into normalized claim records.\nOutput type: json\nValidity requirements: Parse a JSON array; reject non-arrays, normalize stance to support/oppose/neutral/unclear, discard claims below 0.7 confidence or with generic entities, resolve entity aliases, then validate retained records against schema_ref before scoring fixture rubrics.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-extraction-output.schema.json\",\n  \"title\": \"Claim extraction output\",\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"required\": [\n      \"entity\",\n      \"entity_type\",\n      \"party\",\n      \"topic\",\n      \"stance\",\n      \"principle_invoked\",\n      \"quote\",\n      \"confidence\"\n    ],\n    \"properties\": {\n      \"entity\": {\"type\": \"string\", \"minLength\": 1},\n      \"entity_type\": {\"enum\": [\"PERSON\", \"ORG\"]},\n      \"party\": {\"type\": [\"string\", \"null\"]},\n      \"topic\": {\"type\": \"string\", \"minLength\": 1},\n      \"stance\": {\"enum\": [\"support\", \"oppose\", \"neutral\", \"unclear\"]},\n      \"principle_invoked\": {\n        \"enum\": [\n          \"fiscal_responsibility\",\n          \"free_speech\",\n          \"states_rights\",\n          \"law_and_order\",\n          \"individual_liberty\",\n          \"national_security\",\n          \"religious_freedom\",\n          \"equality\",\n          null\n        ]\n      },\n      \"quote\": {\"type\": \"string\", \"minLength\": 1},\n      \"confidence\": {\"type\": \"number\", \"minimum\": 0.7, \"maximum\": 1}\n    },\n    \"additionalProperties\": true\n  }\n}\n\n\nReal fixture input:\n \n[forwarded context; formatting may be inconsistent]\nPresident Trump disparaged Hollywood director Rob Reiner, who died along with his wife over the weekend in what officials are investigating as a homicide. Their 32-year-old son, Nick, has been arrested.\nReiner, 78, was a prominent supporter of the Democratic Party and a vocal Trump critic.\n\"A very sad thing happened last night in Hollywood,\" Trump said in a post on Truth Social Monday morning. \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME, sometimes referred to as TDS.\"\nTrump went on to say that Reiner had a \"raging obsession\" with him, \"with his obvious paranoia reaching new heights as the Trump Administration surpassed all goals and expectations of greatness, and with the Golden Age of America upon us, perhaps like never before.\"\nHis post concluded with, \"May Rob and Michele rest in peace!\"\nTributes for Reiner have been pouring in since late Sunday night, including from former President Barack Obama, who said that \"beneath all of the stories he produced was a deep belief in the goodness of people \u2013 and a lifelong commitment to putting that belief into action.\"\nThe Los Angeles Fire Department said it responded to a medical aid request at around 3:40 p.m. local time Sunday and discovered the bodies inside the couple's home.\nReiner's son Nick had a history of addiction, which inspired the 2016 movie Being Charlie, which Nick Reiner worked on with his dad.\nRepublican Rep. Marjorie Taylor Greene of Georgia, who has had a public falling out with Trump, criticized the president's comments. Referencing Nick Reiner's history in a post on X, Greene called the incident \"a family tragedy, not about politics or political enemies.\"\nRob Reiner and his wife were tragically killed at the hands of their own son, who reportedly had drug addiction and other issues, and their remaining children are left in serious mourning and heartbreak.\n\u2014 Rep. Marjorie Taylor Greene\ud83c\uddfa\ud83c\uddf8 (@RepMTG) December 15, 2025\nThis is a family tragedy, not about politics or political enemies.\n\t",
+      "provenance": {
+        "fixture_id": "extraction-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "extraction-003::dirty-v1"
+      },
+      "response": "[\n    {\n        \"entity\": \"Rob Reiner\",\n        \"entity_type\": \"PERSON\",\n        \"party\": \"Democratic Party\",\n        \"topic\": \"Trump's comments on Reiner's death\",\n        \"stance\": \"oppose\",\n        \"principle_invoked\": null,\n        \"quote\": \"This is a family tragedy, not about politics or political enemies.\",\n        \"confidence\": 0.9\n    },\n    {\n        \"entity\": \"Donald Trump\",\n        \"entity_type\": \"PERSON\",\n        \"party\": \"Republican Party\",\n        \"topic\": \"Trump's comments on Reiner's death\",\n        \"stance\": \"support\",\n        \"principle_invoked\": null,\n        \"quote\": \"Rob Reiner, a tortured and struggling, but once very talented movie director and comedy star, has passed away, together with his wife, Michele, reportedly due to the anger he caused others through his massive, unyielding, and incurable affliction with a mind crippling disease known as TRUMP DERANGEMENT SYNDROME.\",\n        \"confidence\": 0.8\n    }\n]",
+      "seat_id": "extraction",
+      "tokens_in": 911,
+      "tokens_out": 231,
+      "validity": {
+        "details": {
+          "parsed_output_type": "list"
+        },
+        "reason": "",
+        "valid": true
+      }
+    }
+  ],
+  "manifest": {
+    "candidate_model_ids": [
+      "gpt-4.1-mini",
+      "gemini/gemini-3.5-flash",
+      "gpt-4o-mini"
+    ],
+    "case_ids": [
+      "extraction-003",
+      "extraction-003::dirty-v1"
+    ],
+    "case_provenance": {
+      "extraction-003": {
+        "fixture_id": "extraction-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "extraction-003"
+      },
+      "extraction-003::dirty-v1": {
+        "fixture_id": "extraction-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "extraction-003::dirty-v1"
+      }
+    },
+    "current_pin": {
+      "model": "gpt-4o-mini",
+      "parameters": {
+        "max_tokens": 1500,
+        "temperature": 0.3,
+        "timeout_seconds": 30
+      },
+      "provider": "openai",
+      "reason": "Current production chair configured by config.models.GPT_MODEL_EXTRACTION; eligible for evidence-based bench comparison.",
+      "status": "LIVE"
+    },
+    "finished_at": "2026-07-26T05:26:58.937451+00:00",
+    "incumbent_model_id": "gpt-4o-mini",
+    "project_id": "hypocrisynow",
+    "provenance": {
+      "call_parameters": {
+        "max_tokens": 1500,
+        "temperature": 0.3
+      },
+      "dirty_variants": true,
+      "fixture_path": "benchmarks/seats/extraction.jsonl",
+      "fixtures_sha256": "5583a1b6df446670dd7c60d913afb809273a188f2161c8edd864e30e36fe9fdb",
+      "project_root": ".",
+      "schema_path": "schemas/seat-extraction-output.schema.json",
+      "seats_path": "seats.yaml",
+      "seats_sha256": "663820a3f6c0a85277884f60a52558da4609f8e5fe4ce5ab9e9fe09ba900ce48",
+      "split": "sealed"
+    },
+    "run_id": "20260726T052446Z-hypocrisynow-extraction",
+    "schema_version": "seat-run.v1",
+    "seat_id": "extraction",
+    "seat_status": "LIVE",
+    "started_at": "2026-07-26T05:26:30.718907+00:00"
+  },
+  "recommendation": {
+    "candidate_model_id": "gpt-4o-mini",
+    "evidence": {
+      "avg_latency_ms": 2019.5,
+      "avg_score": 1.5,
+      "case_count": 2,
+      "errors": 0,
+      "judged_cases": 2,
+      "model_id": "gpt-4o-mini",
+      "total_cost_usd": 0.0005487000000000001,
+      "validity_rate": 1.0
+    },
+    "status": "keep_current",
+    "summary": "No candidate matched or exceeded incumbent validity with a measured quality gain or non-regressive cost saving."
+  },
+  "schema_version": "seat-report.v1"
+}

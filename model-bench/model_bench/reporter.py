@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from rich.console import Console
@@ -29,7 +29,9 @@ def render_table(matrix: Matrix, console: Console | None = None) -> None:
         table.add_column(cat.replace("_", " ").title(), justify="right")
 
     # Sort by overall score descending
-    sorted_models = sorted(matrix.models.values(), key=lambda m: m.overall_score, reverse=True)
+    sorted_models = sorted(
+        matrix.models.values(), key=lambda m: m.overall_score, reverse=True
+    )
 
     for m in sorted_models:
         row = [
@@ -54,7 +56,7 @@ def render_table(matrix: Matrix, console: Console | None = None) -> None:
 def render_markdown(matrix: Matrix) -> str:
     """Render matrix as markdown string."""
     lines = ["# Model Benchmark Results", ""]
-    lines.append(f"*Generated {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}*")
+    lines.append(f"*Generated {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}*")
     lines.append("")
 
     # Header
@@ -67,7 +69,9 @@ def render_markdown(matrix: Matrix) -> str:
     lines.append(header)
     lines.append(sep)
 
-    sorted_models = sorted(matrix.models.values(), key=lambda m: m.overall_score, reverse=True)
+    sorted_models = sorted(
+        matrix.models.values(), key=lambda m: m.overall_score, reverse=True
+    )
     for m in sorted_models:
         row = f"| {m.display_name} | {m.tier} | {m.overall_score:.1f}/5 | {m.overall_latency_ms:.0f}ms | ${m.total_cost_usd:.4f} |"
         for cat in cats:
@@ -85,7 +89,7 @@ def render_markdown(matrix: Matrix) -> str:
 def save_results(matrix: Matrix, results_dir: Path) -> tuple[Path, Path]:
     """Save run results as JSON and markdown. Returns (json_path, md_path)."""
     results_dir.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
 
     # JSON
     json_path = results_dir / f"run_{timestamp}.json"
