@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
 
-from .judge import JudgeScore
 from .caller import CallResult
+from .judge import JudgeScore
 from .registry import ModelEntry, estimate_cost
 
 
@@ -71,10 +71,18 @@ def build_matrix(
     # Group judge scores by category
     # task_id format: "{category_prefix}_{number}" e.g. "code_gen_001"
     # We'll need the category passed in alongside scores
-    score_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-    latency_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-    cost_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-    errors_by_model_cat: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    score_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    latency_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    cost_by_model_cat: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: defaultdict(list)
+    )
+    errors_by_model_cat: dict[str, dict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
 
     for js in judge_scores:
         score_by_model_cat[js.model_id][js.category].append(js.overall)
@@ -83,7 +91,7 @@ def build_matrix(
         key = getattr(cr, "_key", None)
         if not key:
             continue
-        model_id, task_id, variant_id, cat = key
+        model_id, _task_id, _variant_id, cat = key
 
         latency_by_model_cat[model_id][cat].append(float(cr.latency_ms))
 
@@ -130,5 +138,3 @@ def build_matrix(
 def _avg(values: list[float]) -> float:
     """Safe average."""
     return sum(values) / len(values) if values else 0.0
-
-
