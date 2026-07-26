@@ -811,6 +811,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
+    { name = "jsonschema" },
     { name = "litellm" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -821,6 +822,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27.0" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "litellm", specifier = ">=1.50.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },

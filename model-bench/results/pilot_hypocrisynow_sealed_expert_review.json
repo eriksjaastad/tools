@@ -1,0 +1,423 @@
+{
+  "candidates": {
+    "gemini/gemini-3.5-flash": {
+      "avg_latency_ms": 3401.6666666666665,
+      "avg_score": 3.0,
+      "case_count": 3,
+      "cost_delta_vs_incumbent": 0.01863495,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 3,
+      "model_id": "gemini/gemini-3.5-flash",
+      "score_delta_vs_incumbent": -0.3333333333333335,
+      "total_cost_usd": 0.019362,
+      "valid_cases": 3,
+      "validity_rate": 1.0
+    },
+    "gpt-4.1-mini": {
+      "avg_latency_ms": 2908.3333333333335,
+      "avg_score": 3.0,
+      "case_count": 3,
+      "cost_delta_vs_incumbent": 0.00137975,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 3,
+      "model_id": "gpt-4.1-mini",
+      "score_delta_vs_incumbent": -0.3333333333333335,
+      "total_cost_usd": 0.0021068,
+      "valid_cases": 3,
+      "validity_rate": 1.0
+    },
+    "gpt-4o-mini": {
+      "avg_latency_ms": 1571.6666666666667,
+      "avg_score": 3.3333333333333335,
+      "case_count": 3,
+      "cost_delta_vs_incumbent": 0.0,
+      "errors": 0,
+      "is_incumbent": true,
+      "judged_cases": 3,
+      "model_id": "gpt-4o-mini",
+      "score_delta_vs_incumbent": 0.0,
+      "total_cost_usd": 0.0007270499999999999,
+      "valid_cases": 3,
+      "validity_rate": 1.0
+    }
+  },
+  "case_results": [
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010",
+      "cost_error": null,
+      "cost_usd": 0.000704,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Incorrectly publishes a finding that the rubric expects to reject as a non-hypocrisy edge case despite acknowledging the context distinction.",
+      "judge_score": 2.0,
+      "latency_ms": 3250,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"CONTEXT_DIFFERENCE\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-010"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.85,\n  \"reasoning\": \"The evidence is strong and well-sourced, coming from credible congressional records and official statements. The claim involves a nuanced context difference rather than outright hypocrisy, but the factual debunking of Cruz's pork-barrel spending claim weakens his defense and supports publishing the finding. Public interest is moderate given the political figure involved and disaster relief context. The clarity of the claim and explanation is good, and the review is fair in acknowledging counterarguments and partial context differences. The confidence surpasses the 0.7 threshold and total quality scores meet the minimum for publishing.\",\n  \"scores\": {\n    \"evidence_strength\": 4,\n    \"source_quality\": 4,\n    \"public_interest\": 3,\n    \"clarity\": 4,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 988,
+      "tokens_out": 193,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010",
+      "cost_error": null,
+      "cost_usd": 0.0063795,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Incorrectly publishes contrary to the expected rejection, treating the debunked factual premise as sufficient for publication rather than grounds for caution.",
+      "judge_score": 2.0,
+      "latency_ms": 3525,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"CONTEXT_DIFFERENCE\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-010"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.85,\n  \"reasoning\": \"The finding meets the standards for publication. While there is a context difference in Cruz's stated reasoning (opposing 'pork' in the Sandy bill versus supporting 'clean' relief for Harvey), independent fact-checking of the congressional record demonstrated that his factual premise regarding the Sandy bill's contents was highly inaccurate. Presenting both his stated justification and the factual counter-evidence provides a fair, clear, and highly relevant public interest finding.\",\n  \"scores\": {\n    \"evidence_strength\": 4,\n    \"source_quality\": 4,\n    \"public_interest\": 5,\n    \"clarity\": 4,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1103,
+      "tokens_out": 525,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010",
+      "cost_error": null,
+      "cost_usd": 0.00023579999999999999,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly rejects with an accepted reason and valid confidence/scores, though the reasoning slightly muddles how the debunked pork claim affects the hypocrisy analysis.",
+      "judge_score": 4.0,
+      "latency_ms": 1623,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"CONTEXT_DIFFERENCE\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-010"
+      },
+      "response": "{\n  \"decision\": \"REJECT\",\n  \"rejection_reason\": \"INSUFFICIENT_EVIDENCE\",\n  \"confidence\": 0.85,\n  \"reasoning\": \"While there is a context difference in Cruz's arguments regarding the Sandy and Harvey relief bills, the factual basis for his objections to the Sandy bill has been debunked. This weakens the case for hypocrisy as it relies on a false premise, leading to insufficient evidence for a strong finding.\",\n  \"scores\": {\n    \"evidence_strength\": 3,\n    \"source_quality\": 4,\n    \"public_interest\": 3,\n    \"clarity\": 4,\n    \"fairness\": 3\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 988,
+      "tokens_out": 146,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.0007212,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "It is schema-valid and recognizes the key context-difference and debunking issues, but it incorrectly publishes a finding that the rubric requires rejecting as a non-hypocrisy edge case.",
+      "judge_score": 2.0,
+      "latency_ms": 2830,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \" \\n[forwarded context; formatting may be inconsistent]\\nCONTEXT_DIFFERENCE\\n\\t\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "expert-review-010::dirty-v1"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.85,\n  \"reasoning\": \"The finding meets the threshold for publication given a high confidence (0.85) and total quality score of 17. The evidence is strong and well-sourced from credible congressional records and official statements. The context difference is material, as Cruz opposed the Sandy bill due to alleged pork-barrel spending, which was factually debunked, while supporting targeted disaster relief for Harvey. This nuance supports the hypocrisy finding rather than legitimate evolution. Public interest is high due to the political figure involved and the policy implications. Clarity and fairness are adequate, with balanced presentation of counterarguments and factual corrections.\",\n  \"scores\": {\n    \"evidence_strength\": 4,\n    \"source_quality\": 4,\n    \"public_interest\": 4,\n    \"clarity\": 3,\n    \"fairness\": 2\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1003,
+      "tokens_out": 200,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.007161,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "It gives plausible editorial reasoning and notes Cruz\u2019s contextual defense, but the core decision is wrong because the expected outcome is REJECT with a context/evidence-based rejection reason.",
+      "judge_score": 2.0,
+      "latency_ms": 3819,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \" \\n[forwarded context; formatting may be inconsistent]\\nCONTEXT_DIFFERENCE\\n\\t\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "expert-review-010::dirty-v1"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.85,\n  \"reasoning\": \"The finding meets the standards for publication. The evidence is well-documented through congressional records and official statements, and there is high public interest in the consistency of disaster relief funding decisions by federal lawmakers. While Senator Cruz asserted a contextual difference (opposing 'pork' in the Sandy bill rather than disaster relief itself), public fact-checking extensively debunked the claim that the Sandy bill was mostly non-disaster spending. Presenting both his stated defense and the factual analysis of that defense provides a fair, clear, and complete picture for the public.\",\n  \"scores\": {\n    \"evidence_strength\": 4,\n    \"source_quality\": 4,\n    \"public_interest\": 5,\n    \"clarity\": 4,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1120,
+      "tokens_out": 609,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-010::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.00025065,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "It acknowledges the plausible distinction and debunked factual basis, but incorrectly treats the borderline case as publishable rather than rejecting it under the rubric.",
+      "judge_score": 2.0,
+      "latency_ms": 1604,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \" \\n[forwarded context; formatting may be inconsistent]\\nCONTEXT_DIFFERENCE\\n\\t\",\n  \"claim_a_receipt\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\"\n  },\n  \"confidence\": 0.85,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Ted Cruz\",\n  \"explanation\": \"BORDERLINE - classified as context difference with asterisk. Cruz's stated objection was to pork in the Sandy bill, not disaster relief per se. However, fact-checkers found his claim that 'two-thirds' was unrelated spending was false - the vast majority went to Sandy relief\\n\\nNot legitimate evolution: There IS a partial context difference: if the Sandy bill truly contained significant unrelated spending, opposing it while supporting clean disaster relief would be consistent. However, the factual claim about pork was debunked, weakening this defense\\n\\nCounterarguments: Cruz's stated reasoning (opposing pork, not disaster relief) creates a plausible distinction, but the factual basis for that reasoning was false\",\n  \"severity\": 3\n}",
+      "provenance": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "expert-review-010::dirty-v1"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.85,\n  \"reasoning\": \"The evidence presented demonstrates a clear inconsistency in Ted Cruz's positions regarding disaster relief funding. While he opposed the Sandy relief bill due to alleged pork-barrel spending, he later sought targeted assistance for Hurricane Harvey. The claim that the Sandy bill contained significant unrelated spending has been debunked, which undermines his rationale. Despite this, the distinction he makes between types of spending is plausible, warranting publication of the hypocrisy finding.\",\n  \"scores\": {\n    \"evidence_strength\": 4,\n    \"source_quality\": 4,\n    \"public_interest\": 5,\n    \"clarity\": 4,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1003,
+      "tokens_out": 167,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-011",
+      "cost_error": null,
+      "cost_usd": 0.0006816000000000001,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Fully satisfies the publish decision, confidence and quality thresholds, and addresses evidence, sourcing, public interest, clarity, fairness, legitimate-evolution concerns, and counterargument.",
+      "judge_score": 5.0,
+      "latency_ms": 2645,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"BEHAVIORAL_HYPOCRISY\",\n  \"claim_a_receipt\": {\n    \"context\": \"Hours before the Capitol breach, Hawley pumped his fist to the crowd that would later storm the building\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley raised his fist in solidarity with the crowd of Trump supporters gathering outside the Capitol.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Jan. 6 committee footage showed Hawley fleeing the same crowd he had saluted hours earlier, then he later sold merchandise of the fist-pump photo\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley was seen running through a Senate hallway, briskly descending a staircase to flee the rioters he had encouraged.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"confidence\": 1.0,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Josh Hawley\",\n  \"explanation\": \"Encouraged the crowd with a solidarity fist pump, then fled when they acted on the energy he helped create, and later monetized the fist-pump image while condemning the violence\\n\\nNot legitimate evolution: Same-day contradictory behavior: encouraging a crowd, then running from the consequences, then selling merchandise of the encouragement while claiming to condemn the result\\n\\nCounterarguments: Hawley said the fist pump was simply acknowledging constituents exercising their First Amendment rights, not encouraging violence\",\n  \"severity\": 8\n}",
+      "provenance": {
+        "fixture_id": "expert-review-011",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-011"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.9,\n  \"reasoning\": \"The evidence is strong and well-sourced from credible video footage by NBC News showing contradictory behavior by Josh Hawley on the same day. The claim is clearly articulated and of high public interest due to its political significance. The editorial review finds no legitimate evolution in behavior, as the actions occurred within hours and are directly contradictory. The coverage is fair, acknowledging Hawley's counterarguments while emphasizing the hypocrisy claim. The total quality score exceeds the threshold for publishing.\",\n  \"scores\": {\n    \"evidence_strength\": 5,\n    \"source_quality\": 5,\n    \"public_interest\": 4,\n    \"clarity\": 4,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1020,
+      "tokens_out": 171,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-011",
+      "cost_error": null,
+      "cost_usd": 0.005821499999999999,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Fully satisfies the rubric with a well-supported publish decision, strong threshold-compliant scores, and clear treatment of evidence, sourcing, public interest, fairness, and Hawley\u2019s defense.",
+      "judge_score": 5.0,
+      "latency_ms": 2861,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"BEHAVIORAL_HYPOCRISY\",\n  \"claim_a_receipt\": {\n    \"context\": \"Hours before the Capitol breach, Hawley pumped his fist to the crowd that would later storm the building\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley raised his fist in solidarity with the crowd of Trump supporters gathering outside the Capitol.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Jan. 6 committee footage showed Hawley fleeing the same crowd he had saluted hours earlier, then he later sold merchandise of the fist-pump photo\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley was seen running through a Senate hallway, briskly descending a staircase to flee the rioters he had encouraged.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"confidence\": 1.0,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Josh Hawley\",\n  \"explanation\": \"Encouraged the crowd with a solidarity fist pump, then fled when they acted on the energy he helped create, and later monetized the fist-pump image while condemning the violence\\n\\nNot legitimate evolution: Same-day contradictory behavior: encouraging a crowd, then running from the consequences, then selling merchandise of the encouragement while claiming to condemn the result\\n\\nCounterarguments: Hawley said the fist pump was simply acknowledging constituents exercising their First Amendment rights, not encouraging violence\",\n  \"severity\": 8\n}",
+      "provenance": {
+        "fixture_id": "expert-review-011",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-011"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 0.95,\n  \"reasoning\": \"This finding meets all editorial standards for publication. The evidence is exceptionally strong, relying on official congressional committee video footage documented by reputable news sources (NBC News). The public interest is extremely high given the subject is a sitting US Senator and the event is of historical significance (the January 6 Capitol attack). The contrast between publicly encouraging a crowd and subsequently fleeing them, followed by monetizing the encouragement, represents a clear and well-documented behavioral asymmetry. Fairness is maintained by noting Hawley's defense that the gesture was intended to acknowledge peaceful protesters.\",\n  \"scores\": {\n    \"evidence_strength\": 5,\n    \"source_quality\": 5,\n    \"public_interest\": 5,\n    \"clarity\": 5,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1133,
+      "tokens_out": 458,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "expert-review-011",
+      "cost_error": null,
+      "cost_usd": 0.0002406,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly publishes with adequate confidence and scores and captures the core hypocrisy, but reasoning is thinner on sourcing, public interest, and the specific counterargument.",
+      "judge_score": 4.0,
+      "latency_ms": 1488,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Apply editorial evidence, sourcing, interest, clarity, and fairness standards to publish or reject a pending hypocrisy finding.\nOutput type: json\nValidity requirements: Parse JSON and require a PUBLISH or REJECT decision, conditional rejection reason, confidence in [0,1], reasoning, and five integer quality scores in [1,5]; PUBLISH changes state only at confidence >= 0.7 and total quality >= 15.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-expert-review-output.schema.json\",\n  \"title\": \"Expert editorial review output\",\n  \"type\": \"object\",\n  \"required\": [\"decision\", \"rejection_reason\", \"confidence\", \"reasoning\", \"scores\"],\n  \"properties\": {\n    \"decision\": {\"enum\": [\"PUBLISH\", \"REJECT\"]},\n    \"rejection_reason\": {\n      \"enum\": [\n        \"INSUFFICIENT_EVIDENCE\",\n        \"WEAK_SOURCING\",\n        \"CONTEXT_TOO_SIMILAR\",\n        \"LOW_PUBLIC_INTEREST\",\n        \"LEGITIMATE_EVOLUTION\",\n        \"STALE_FINDING\",\n        null\n      ]\n    },\n    \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n    \"scores\": {\n      \"type\": \"object\",\n      \"required\": [\"evidence_strength\", \"source_quality\", \"public_interest\", \"clarity\", \"fairness\"],\n      \"properties\": {\n        \"evidence_strength\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"source_quality\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"public_interest\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"clarity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n        \"fairness\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5}\n      },\n      \"additionalProperties\": false\n    }\n  },\n  \"allOf\": [\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"PUBLISH\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"null\"}}}\n    },\n    {\n      \"if\": {\"properties\": {\"decision\": {\"const\": \"REJECT\"}}},\n      \"then\": {\"properties\": {\"rejection_reason\": {\"type\": \"string\"}}}\n    }\n  ],\n  \"additionalProperties\": false\n}\n\n\nReal fixture input:\n{\n  \"asymmetry_type\": \"BEHAVIORAL_HYPOCRISY\",\n  \"claim_a_receipt\": {\n    \"context\": \"Hours before the Capitol breach, Hawley pumped his fist to the crowd that would later storm the building\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley raised his fist in solidarity with the crowd of Trump supporters gathering outside the Capitol.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"claim_b_receipt\": {\n    \"context\": \"Jan. 6 committee footage showed Hawley fleeing the same crowd he had saluted hours earlier, then he later sold merchandise of the fist-pump photo\",\n    \"date\": \"2021-01-06\",\n    \"quote\": \"Hawley was seen running through a Senate hallway, briskly descending a staircase to flee the rioters he had encouraged.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.nbcnews.com/politics/congress/josh-hawley-seen-fleeing-trump-mob-riled-newly-released-jan-6-footage-rcna39490\"\n  },\n  \"confidence\": 1.0,\n  \"editorial_precedents\": [],\n  \"entity_name\": \"Josh Hawley\",\n  \"explanation\": \"Encouraged the crowd with a solidarity fist pump, then fled when they acted on the energy he helped create, and later monetized the fist-pump image while condemning the violence\\n\\nNot legitimate evolution: Same-day contradictory behavior: encouraging a crowd, then running from the consequences, then selling merchandise of the encouragement while claiming to condemn the result\\n\\nCounterarguments: Hawley said the fist pump was simply acknowledging constituents exercising their First Amendment rights, not encouraging violence\",\n  \"severity\": 8\n}",
+      "provenance": {
+        "fixture_id": "expert-review-011",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-011"
+      },
+      "response": "{\n  \"decision\": \"PUBLISH\",\n  \"rejection_reason\": null,\n  \"confidence\": 1.0,\n  \"reasoning\": \"The evidence clearly demonstrates behavioral hypocrisy by Josh Hawley, as he encouraged a crowd with a fist pump and then fled from them when they acted violently. The same-day contradictory actions and subsequent monetization of the fist-pump image further support the finding of hypocrisy. The counterarguments presented do not sufficiently negate the evidence of hypocrisy.\",\n  \"scores\": {\n    \"evidence_strength\": 5,\n    \"source_quality\": 5,\n    \"public_interest\": 5,\n    \"clarity\": 5,\n    \"fairness\": 4\n  }\n}",
+      "seat_id": "expert_review",
+      "tokens_in": 1020,
+      "tokens_out": 146,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    }
+  ],
+  "manifest": {
+    "candidate_model_ids": [
+      "gpt-4.1-mini",
+      "gemini/gemini-3.5-flash",
+      "gpt-4o-mini"
+    ],
+    "case_ids": [
+      "expert-review-010",
+      "expert-review-010::dirty-v1",
+      "expert-review-011"
+    ],
+    "case_provenance": {
+      "expert-review-010": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-010"
+      },
+      "expert-review-010::dirty-v1": {
+        "fixture_id": "expert-review-010",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "expert-review-010::dirty-v1"
+      },
+      "expert-review-011": {
+        "fixture_id": "expert-review-011",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "expert-review-011"
+      }
+    },
+    "current_pin": {
+      "model": "gpt-4o-mini",
+      "parameters": {
+        "temperature": 0.3
+      },
+      "provider": "openai",
+      "reason": "Current production chair inherited from config.models.GPT_MODEL_DETECTION by pipeline.expert_reviewer; eligible for evidence-based bench comparison.",
+      "status": "LIVE"
+    },
+    "finished_at": "2026-07-26T05:26:30.708420+00:00",
+    "incumbent_model_id": "gpt-4o-mini",
+    "project_id": "hypocrisynow",
+    "provenance": {
+      "call_parameters": {
+        "temperature": 0.3
+      },
+      "dirty_variants": true,
+      "fixture_path": "benchmarks/seats/expert_review.jsonl",
+      "fixtures_sha256": "d512b8b724f15fa12f352356d7f29d66a4b5d97cd82c800cd97565d5fee42eb2",
+      "project_root": ".",
+      "schema_path": "schemas/seat-expert-review-output.schema.json",
+      "seats_path": "seats.yaml",
+      "seats_sha256": "663820a3f6c0a85277884f60a52558da4609f8e5fe4ce5ab9e9fe09ba900ce48",
+      "split": "sealed"
+    },
+    "run_id": "20260726T052446Z-hypocrisynow-expert_review",
+    "schema_version": "seat-run.v1",
+    "seat_id": "expert_review",
+    "seat_status": "LIVE",
+    "started_at": "2026-07-26T05:25:49.546826+00:00"
+  },
+  "recommendation": {
+    "candidate_model_id": "gpt-4o-mini",
+    "evidence": {
+      "avg_latency_ms": 1571.6666666666667,
+      "avg_score": 3.3333333333333335,
+      "case_count": 3,
+      "errors": 0,
+      "judged_cases": 3,
+      "model_id": "gpt-4o-mini",
+      "total_cost_usd": 0.0007270499999999999,
+      "validity_rate": 1.0
+    },
+    "status": "keep_current",
+    "summary": "No candidate matched or exceeded incumbent validity with a measured quality gain or non-regressive cost saving."
+  },
+  "schema_version": "seat-report.v1"
+}
