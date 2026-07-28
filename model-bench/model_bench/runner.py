@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,12 +10,12 @@ import yaml
 from dotenv import load_dotenv
 from rich.console import Console
 
-from .caller import CallResult, call_model, close as close_caller
+from .caller import CallResult, call_model
+from .caller import close as close_caller
 from .judge import JudgeScore, judge_responses
 from .registry import ModelEntry, estimate_cost, get_enabled_models
-from .scorer import Matrix, build_matrix
 from .reporter import render_table, save_results
-
+from .scorer import Matrix, build_matrix
 
 # ── Task loading ──────────────────────────────────────────────────────────────
 
@@ -61,7 +60,10 @@ def load_tasks(category: str | None = None) -> list[Task]:
                     name=t["name"],
                     description=t["description"],
                     category=cat,
-                    variants=[TaskVariant(id=v["id"], prompt=v["prompt"]) for v in t["variants"]],
+                    variants=[
+                        TaskVariant(id=v["id"], prompt=v["prompt"])
+                        for v in t["variants"]
+                    ],
                     rubric=t["rubric"],
                     max_score=t["max_score"],
                     timeout_seconds=t.get("timeout_seconds", 30),
@@ -97,23 +99,26 @@ def run_benchmark(
     # Count totals
     total_variants = sum(len(t.variants) for t in tasks)
     total_calls = len(models) * total_variants
-    categories = sorted(set(t.category for t in tasks))
+    categories = sorted({task.category for task in tasks})
 
     # Estimate cost
     avg_input_tokens = 500  # rough estimate per prompt
     avg_output_tokens = 800  # rough estimate per response
     est_cost = sum(
-        estimate_cost(m, avg_input_tokens, avg_output_tokens) * total_variants for m in models
+        estimate_cost(m, avg_input_tokens, avg_output_tokens) * total_variants
+        for m in models
     )
 
-    console.print(f"\n[bold]Benchmark Plan[/bold]")
-    console.print(f"  Models:     {len(models)} ({', '.join(m.display_name for m in models)})")
+    console.print("\n[bold]Benchmark Plan[/bold]")
+    console.print(
+        f"  Models:     {len(models)} ({', '.join(m.display_name for m in models)})"
+    )
     console.print(f"  Tasks:      {len(tasks)} across {len(categories)} categories")
     console.print(f"  Variants:   {total_variants}")
     console.print(f"  Total calls: {total_calls}")
     console.print(f"  Est. cost:  ${est_cost:.4f}")
     if not no_judge:
-        console.print(f"  Judge:      Opus (via subscription)")
+        console.print("  Judge:      Opus (via subscription)")
     console.print()
 
     if dry_run:
@@ -142,7 +147,9 @@ def run_benchmark(
                 if result.error:
                     console.print(f"[red]ERROR[/red] ({result.latency_ms}ms)")
                 else:
-                    console.print(f"[green]OK[/green] ({result.latency_ms}ms, {result.tokens_out}tok)")
+                    console.print(
+                        f"[green]OK[/green] ({result.latency_ms}ms, {result.tokens_out}tok)"
+                    )
                     responses[model.id] = result.response
 
                 # Brief pause between cloud calls to avoid rate limiting
@@ -151,7 +158,7 @@ def run_benchmark(
 
             # Judge this task+variant
             if not no_judge and responses:
-                console.print(f"  [dim]Judging with Opus...[/dim]", end=" ")
+                console.print("  [dim]Judging with Opus...[/dim]", end=" ")
                 scores = judge_responses(
                     task_id=task.id,
                     variant_id=variant.id,

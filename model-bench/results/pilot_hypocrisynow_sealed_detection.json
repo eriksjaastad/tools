@@ -1,0 +1,742 @@
+{
+  "candidates": {
+    "gemini/gemini-3.5-flash": {
+      "avg_latency_ms": 3137.6666666666665,
+      "avg_score": 0.8333333333333334,
+      "case_count": 6,
+      "cost_delta_vs_incumbent": 0.03231584999999999,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 6,
+      "model_id": "gemini/gemini-3.5-flash",
+      "score_delta_vs_incumbent": -2.6666666666666665,
+      "total_cost_usd": 0.033290999999999994,
+      "valid_cases": 1,
+      "validity_rate": 0.16666666666666666
+    },
+    "gpt-4.1-mini": {
+      "avg_latency_ms": 1555.0,
+      "avg_score": 4.333333333333333,
+      "case_count": 6,
+      "cost_delta_vs_incumbent": 0.0018492500000000006,
+      "errors": 0,
+      "is_incumbent": false,
+      "judged_cases": 6,
+      "model_id": "gpt-4.1-mini",
+      "score_delta_vs_incumbent": 0.833333333333333,
+      "total_cost_usd": 0.0028244000000000003,
+      "valid_cases": 6,
+      "validity_rate": 1.0
+    },
+    "gpt-4o-mini": {
+      "avg_latency_ms": 1156.1666666666667,
+      "avg_score": 3.5,
+      "case_count": 6,
+      "cost_delta_vs_incumbent": 0.0,
+      "errors": 0,
+      "is_incumbent": true,
+      "judged_cases": 6,
+      "model_id": "gpt-4o-mini",
+      "score_delta_vs_incumbent": 0.0,
+      "total_cost_usd": 0.0009751499999999998,
+      "valid_cases": 6,
+      "validity_rate": 1.0
+    }
+  },
+  "case_results": [
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003",
+      "cost_error": null,
+      "cost_usd": 0.0004488,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Matches the expected contradiction judgment and score, with reasoning covering the short timeframe, reversal, acknowledgment, and lack of contextual justification.",
+      "judge_score": 5.0,
+      "latency_ms": 1627,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Interview with Times of London and Bild\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-003"
+      },
+      "response": "{\n  \"score\": 8,\n  \"reasoning\": \"The two claims by President Trump are temporally close (January and April 2017) and directly contradict each other regarding NATO's obsolescence. In the first claim, he states NATO was obsolete, while in the second, he explicitly says it is no longer obsolete. This represents a clear contradiction with a high confidence score, as the stance on NATO's obsolescence flips within a short timeframe without explicit contextual justification.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 686,
+      "tokens_out": 109,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003",
+      "cost_error": null,
+      "cost_usd": 0.0047174999999999995,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly identifies a direct contradiction within three months and gives a score within tolerance with adequate reasoning.",
+      "judge_score": 5.0,
+      "latency_ms": 2941,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Interview with Times of London and Bild\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-003"
+      },
+      "response": "{\n  \"score\": 9,\n  \"reasoning\": \"The entity directly contradicts his own prior statement within a three-month window. In January 2017, he asserted that NATO was 'obsolete,' whereas in April 2017, he explicitly reversed this stance by declaring 'It's no longer obsolete.' While he acknowledges his previous position, the two assessments of the organization's status are logically contradictory.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 775,
+      "tokens_out": 395,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003",
+      "cost_error": null,
+      "cost_usd": 0.0001479,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correct contradiction judgment and score within tolerance, but the reasoning is somewhat incomplete because it omits the close timeframe and lack of substantive explanation.",
+      "judge_score": 4.0,
+      "latency_ms": 1083,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Interview with Times of London and Bild\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-003"
+      },
+      "response": "{\n  \"score\": 9,\n  \"reasoning\": \"The two claims made by President Trump are directly contradictory. In the first claim, he states that NATO is obsolete, while in the second claim, he asserts that it is no longer obsolete. This represents a clear reversal of his stance on NATO's status.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 686,
+      "tokens_out": 75,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.0004468,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Matches the expected contradiction judgment with score 8 and accurately explains the rapid reversal on NATO obsolescence.",
+      "judge_score": 5.0,
+      "latency_ms": 1183,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \" \\n[forwarded context; formatting may be inconsistent]\\nInterview with Times of London and Bild\\n\\t\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "detection-score-003::dirty-v1"
+      },
+      "response": "{\n  \"score\": 8,\n  \"reasoning\": \"Claim A states that NATO was obsolete, reflecting a clear negative assessment at that time. Claim B later asserts that NATO is no longer obsolete, directly contradicting the earlier statement. The temporal proximity (within months) and the direct negation of the obsolescence claim justify a high contradiction score. The claims cannot both be true simultaneously regarding NATO's obsolescence status at the time of each statement.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 701,
+      "tokens_out": 104,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.005652,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 3, column 16",
+      "judge_score": 0.0,
+      "latency_ms": 3179,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \" \\n[forwarded context; formatting may be inconsistent]\\nInterview with Times of London and Bild\\n\\t\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "detection-score-003::dirty-v1"
+      },
+      "response": "{\n  \"score\": 9,\n  \"reasoning\": \"In January 2017, the entity asserted that NATO was obsolete due to its age and design. By April 2017, during a joint press conference with the",
+      "seat_id": "detection",
+      "tokens_in": 792,
+      "tokens_out": 496,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 3, column 16",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-003::dirty-v1",
+      "cost_error": null,
+      "cost_usd": 0.00015675,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly marks the pair as a contradiction with an in-tolerance high score and identifies the direct reversal in stance.",
+      "judge_score": 5.0,
+      "latency_ms": 1104,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \" \\n[forwarded context; formatting may be inconsistent]\\nInterview with Times of London and Bild\\n\\t\",\n    \"date\": \"2017-01-16\",\n    \"quote\": \"I said a long time ago that NATO had problems. Number one, it was obsolete, because it was designed many, many years ago.\",\n    \"source\": \"https://www.bbc.com/news/world-us-canada-38635181\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Joint press conference with NATO Secretary General\",\n    \"date\": \"2017-04-12\",\n    \"quote\": \"I said it was obsolete. It's no longer obsolete.\",\n    \"source\": \"https://www.reuters.com/article/us-usa-trump-nato-idUSKBN17E2OK\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"President Trump\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "detection-score-003::dirty-v1"
+      },
+      "response": "{\n  \"score\": 9,\n  \"reasoning\": \"The two claims made by President Trump exhibit a clear contradiction regarding the status of NATO. In the first claim, he states that NATO is 'obsolete', while in the second claim, he asserts that it is 'no longer obsolete'. This direct reversal of stance indicates a significant inconsistency in his position on NATO.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 701,
+      "tokens_out": 86,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-009",
+      "cost_error": null,
+      "cost_usd": 0.0004944,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Matches the expected contradiction score and true contradiction flag with sound reasoning about condemnation followed by endorsement.",
+      "judge_score": 5.0,
+      "latency_ms": 1465,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Senate floor speech after impeachment vote\",\n    \"date\": \"2021-02-13\",\n    \"quote\": \"There's no question, none, that President Trump is practically and morally responsible for provoking the events of the day.\",\n    \"source\": \"https://www.washingtonpost.com/politics/2021/02/13/mitch-mcconnell-speech-text/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Statement endorsing Trump for 2024\",\n    \"date\": \"2024-03-06\",\n    \"quote\": \"I'm endorsing Donald Trump for President of the United States.\",\n    \"source\": \"https://www.reuters.com/world/us/mcconnell-endorse-trump-after-long-saying-he-would-back-republican-nominee-2024-03-06/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"Senator McConnell\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-009",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-009"
+      },
+      "response": "{\n  \"score\": 8,\n  \"reasoning\": \"The two claims by Senator McConnell are strongly contradictory. In 2021, he explicitly stated that President Trump was morally responsible for provoking the January 6 events, indicating strong opposition. In 2024, he endorses Trump for President, signaling support. These positions reflect a significant reversal in stance within a relatively short timeframe, creating a high contradiction score. However, the contradiction is not absolute (score 10) because endorsement does not necessarily negate past moral responsibility claims, but the practical political support contrasts sharply with the earlier condemnation.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 712,
+      "tokens_out": 131,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-009",
+      "cost_error": null,
+      "cost_usd": 0.00567,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 3, column 16",
+      "judge_score": 0.0,
+      "latency_ms": 3581,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Senate floor speech after impeachment vote\",\n    \"date\": \"2021-02-13\",\n    \"quote\": \"There's no question, none, that President Trump is practically and morally responsible for provoking the events of the day.\",\n    \"source\": \"https://www.washingtonpost.com/politics/2021/02/13/mitch-mcconnell-speech-text/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Statement endorsing Trump for 2024\",\n    \"date\": \"2024-03-06\",\n    \"quote\": \"I'm endorsing Donald Trump for President of the United States.\",\n    \"source\": \"https://www.reuters.com/world/us/mcconnell-endorse-trump-after-long-saying-he-would-back-republican-nominee-2024-03-06/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"Senator McConnell\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-009",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-009"
+      },
+      "response": "{\n  \"score\": 7,\n  \"reasoning\": \"While not a direct logical contradiction (as one can believe someone is morally responsible for an event and still endorse them for political reasons), the two statements represent a severe pragmatic and ethical contradiction. Claim A establishes deep moral and practical culpability for an",
+      "seat_id": "detection",
+      "tokens_in": 804,
+      "tokens_out": 496,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 3, column 16",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-score-009",
+      "cost_error": null,
+      "cost_usd": 0.00017099999999999998,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Within the expected score tolerance, correctly flags contradiction, and explains the reversal from moral condemnation to endorsement.",
+      "judge_score": 5.0,
+      "latency_ms": 1152,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Senate floor speech after impeachment vote\",\n    \"date\": \"2021-02-13\",\n    \"quote\": \"There's no question, none, that President Trump is practically and morally responsible for provoking the events of the day.\",\n    \"source\": \"https://www.washingtonpost.com/politics/2021/02/13/mitch-mcconnell-speech-text/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Statement endorsing Trump for 2024\",\n    \"date\": \"2024-03-06\",\n    \"quote\": \"I'm endorsing Donald Trump for President of the United States.\",\n    \"source\": \"https://www.reuters.com/world/us/mcconnell-endorse-trump-after-long-saying-he-would-back-republican-nominee-2024-03-06/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"No additional search context; score the repository gold pair deterministically.\",\n  \"entity\": \"Senator McConnell\",\n  \"operation\": \"contradiction_scoring\",\n  \"topic\": \"foreign_policy\"\n}",
+      "provenance": {
+        "fixture_id": "detection-score-009",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-009"
+      },
+      "response": "{\n  \"score\": 9,\n  \"reasoning\": \"The two claims made by Senator McConnell are fundamentally contradictory. In the first claim, he attributes moral and practical responsibility for the events of January 6th to President Trump, indicating a strong opposition to Trump's actions. In the second claim, he endorses Trump for the 2024 presidential election, which suggests a complete reversal of his previous stance. This contradiction highlights a significant shift in his position regarding Trump's accountability.\",\n  \"is_contradiction\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 712,
+      "tokens_out": 107,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-003",
+      "cost_error": null,
+      "cost_usd": 0.0005048,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly classifies partisan hypocrisy with appropriate severity and captures the partisan double standard, but omits the key detail that Graham explicitly invited people to use his words against him and does not address the stated counterargument.",
+      "judge_score": 4.0,
+      "latency_ms": 1670,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\",\n    \"date\": \"2016-03-16\",\n    \"quote\": \"I want you to use my words against me. If there's a Republican president in 2016 and a vacancy occurs in the last year of the first term, you can say Lindsey Graham said let's let the next president, whoever it might be, make that nomination.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.c-span.org/video/?406228-1/lindsey-graham-merrick-garland-nomination\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n    \"date\": \"2020-09-26\",\n    \"quote\": \"I will support President Trump in any effort to move forward regarding the recent vacancy created by the passing of Justice Ginsburg.\",\n    \"source_type\": \"social_media\",\n    \"source_url\": \"https://twitter.com/LindseyGrahamSC/status/1309658840002478080\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\\nClaim B context: Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n  \"entity\": \"Lindsey Graham\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-003"
+      },
+      "response": "{\n  \"classification\": \"PARTISAN_HYPOCRISY\",\n  \"confidence\": 0.9,\n  \"explanation\": \"Lindsey Graham's 2016 statement explicitly set a standard to block Supreme Court nominations in an election year under a Democratic president, but in 2020 he supported confirming a nominee shortly before the election under a Republican president. This clear partisan double standard indicates partisan hypocrisy rather than legitimate evolution or context difference.\",\n  \"severity\": 8,\n  \"is_hypocrisy\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 818,
+      "tokens_out": 111,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-003",
+      "cost_error": null,
+      "cost_usd": 0.005859,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 1, column 1",
+      "judge_score": 0.0,
+      "latency_ms": 3035,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\",\n    \"date\": \"2016-03-16\",\n    \"quote\": \"I want you to use my words against me. If there's a Republican president in 2016 and a vacancy occurs in the last year of the first term, you can say Lindsey Graham said let's let the next president, whoever it might be, make that nomination.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.c-span.org/video/?406228-1/lindsey-graham-merrick-garland-nomination\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n    \"date\": \"2020-09-26\",\n    \"quote\": \"I will support President Trump in any effort to move forward regarding the recent vacancy created by the passing of Justice Ginsburg.\",\n    \"source_type\": \"social_media\",\n    \"source_url\": \"https://twitter.com/LindseyGrahamSC/status/1309658840002478080\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\\nClaim B context: Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n  \"entity\": \"Lindsey Graham\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-003"
+      },
+      "response": "thought\n}{\n  \"classification\": \"PARTISAN_HYPOCRISY\",\n  ",
+      "seat_id": "detection",
+      "tokens_in": 930,
+      "tokens_out": 496,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 1, column 1",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-003",
+      "cost_error": null,
+      "cost_usd": 0.0001767,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correct classification and acceptable severity, but the explanation is generic and omits the strongest rubric points about Graham\u2019s explicit supposedly party-neutral standard, lack of legitimate evolution, and the same-party Senate counterargument.",
+      "judge_score": 3.0,
+      "latency_ms": 1092,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\",\n    \"date\": \"2016-03-16\",\n    \"quote\": \"I want you to use my words against me. If there's a Republican president in 2016 and a vacancy occurs in the last year of the first term, you can say Lindsey Graham said let's let the next president, whoever it might be, make that nomination.\",\n    \"source_type\": \"video\",\n    \"source_url\": \"https://www.c-span.org/video/?406228-1/lindsey-graham-merrick-garland-nomination\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n    \"date\": \"2020-09-26\",\n    \"quote\": \"I will support President Trump in any effort to move forward regarding the recent vacancy created by the passing of Justice Ginsburg.\",\n    \"source_type\": \"social_media\",\n    \"source_url\": \"https://twitter.com/LindseyGrahamSC/status/1309658840002478080\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Graham supported blocking Obama's Supreme Court nominee Merrick Garland in an election year\\nClaim B context: Graham supported confirming Amy Coney Barrett 38 days before the 2020 election, after explicitly inviting people to hold him to his 2016 standard\",\n  \"entity\": \"Lindsey Graham\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-003"
+      },
+      "response": "{\n  \"classification\": \"PARTISAN_HYPOCRISY\",\n  \"confidence\": 0.85,\n  \"explanation\": \"Lindsey Graham's actions in 2016 and 2020 demonstrate a clear inconsistency in his stance on Supreme Court nominations during election years, suggesting a partisan bias rather than a principled position.\",\n  \"severity\": 8,\n  \"is_hypocrisy\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 818,
+      "tokens_out": 90,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-007",
+      "cost_error": null,
+      "cost_usd": 0.0004672000000000001,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Correctly classifies as CONTEXT_DIFFERENCE with no hypocrisy and severity within tolerance, though the explanation only generally notes different policy contexts rather than the key PPP-designed-for-forgiveness distinction.",
+      "judge_score": 4.0,
+      "latency_ms": 1811,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Greene opposed Biden's plan to forgive student loan debt\",\n    \"date\": \"2022-08-24\",\n    \"quote\": \"Greene criticized student loan forgiveness as unfair.\",\n    \"source_type\": \"news_interview\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n    \"date\": \"2020-04-10\",\n    \"quote\": \"Greene's business received $183,504 in forgiven PPP loans.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Greene opposed Biden's plan to forgive student loan debt\\nClaim B context: Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n  \"entity\": \"Marjorie Taylor Greene\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-007",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-007"
+      },
+      "response": "{\n  \"classification\": \"CONTEXT_DIFFERENCE\",\n  \"confidence\": 0.85,\n  \"explanation\": \"The apparent asymmetry arises because Claim A concerns opposition to student loan forgiveness for individuals, a policy debate about government spending and fairness, while Claim B involves acceptance of PPP loan forgiveness for a business during a pandemic relief effort. These are distinct contexts with different policy rationales, so the difference in stance does not necessarily indicate hypocrisy.\",\n  \"severity\": 4,\n  \"is_hypocrisy\": false\n}",
+      "seat_id": "detection",
+      "tokens_in": 728,
+      "tokens_out": 110,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-007",
+      "cost_error": null,
+      "cost_usd": 0.005691,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 3, column 1",
+      "judge_score": 0.0,
+      "latency_ms": 2934,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Greene opposed Biden's plan to forgive student loan debt\",\n    \"date\": \"2022-08-24\",\n    \"quote\": \"Greene criticized student loan forgiveness as unfair.\",\n    \"source_type\": \"news_interview\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n    \"date\": \"2020-04-10\",\n    \"quote\": \"Greene's business received $183,504 in forgiven PPP loans.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Greene opposed Biden's plan to forgive student loan debt\\nClaim B context: Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n  \"entity\": \"Marjorie Taylor Greene\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-007",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-007"
+      },
+      "response": "{\n  \"classification\": \"BEHAVIORAL_HYPOCRISY\",\n",
+      "seat_id": "detection",
+      "tokens_in": 818,
+      "tokens_out": 496,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 3, column 1",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-classify-007",
+      "cost_error": null,
+      "cost_usd": 0.0001548,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Misclassifies the calibrated edge case as PARTISAN_HYPOCRISY with is_hypocrisy true and excessive severity, despite identifying the superficial tension.",
+      "judge_score": 2.0,
+      "latency_ms": 1020,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Greene opposed Biden's plan to forgive student loan debt\",\n    \"date\": \"2022-08-24\",\n    \"quote\": \"Greene criticized student loan forgiveness as unfair.\",\n    \"source_type\": \"news_interview\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n    \"date\": \"2020-04-10\",\n    \"quote\": \"Greene's business received $183,504 in forgiven PPP loans.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://www.snopes.com/fact-check/marjorie-taylor-greene-ppp-loan/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Greene opposed Biden's plan to forgive student loan debt\\nClaim B context: Greene's business loan was forgiven under the PPP program designed for pandemic relief\",\n  \"entity\": \"Marjorie Taylor Greene\",\n  \"operation\": \"asymmetry_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-classify-007",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-007"
+      },
+      "response": "{\n  \"classification\": \"PARTISAN_HYPOCRISY\",\n  \"confidence\": 0.85,\n  \"explanation\": \"Greene opposes student loan forgiveness for individuals while benefiting from a loan forgiveness program herself, indicating a double standard based on political affiliation.\",\n  \"severity\": 7,\n  \"is_hypocrisy\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 728,
+      "tokens_out": 76,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-second-opinion-015",
+      "cost_error": null,
+      "cost_usd": 0.00046240000000000007,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Schema-valid and gets non-hypocrisy with appropriate low severity, but misclassifies as LEGITIMATE_EVOLUTION instead of the required CONTEXT_DIFFERENCE and omits the debunked factual-basis caveat.",
+      "judge_score": 3.0,
+      "latency_ms": 1574,
+      "model_id": "gpt-4.1-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Cruz argued the Sandy bill was padded with pork-barrel spending\\nClaim B context: Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n  \"entity\": \"Ted Cruz\",\n  \"operation\": \"second_opinion_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-second-opinion-015",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-second-opinion-015"
+      },
+      "response": "{\n  \"classification\": \"LEGITIMATE_EVOLUTION\",\n  \"confidence\": 0.85,\n  \"explanation\": \"Ted Cruz opposed the Sandy relief bill in 2013 due to concerns about unrelated spending, but supported targeted aid for Harvey in 2017. This reflects a consistent principle of opposing broad, pork-barrel spending while supporting narrowly tailored disaster relief, indicating a legitimate evolution in stance rather than hypocrisy.\",\n  \"severity\": 2,\n  \"is_hypocrisy\": false\n}",
+      "seat_id": "detection",
+      "tokens_in": 740,
+      "tokens_out": 104,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-second-opinion-015",
+      "cost_error": null,
+      "cost_usd": 0.0057015,
+      "error": null,
+      "is_incumbent": false,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Artifact validity hard floor: json.parse: invalid JSON at line 1, column 1",
+      "judge_score": 0.0,
+      "latency_ms": 3156,
+      "model_id": "gemini/gemini-3.5-flash",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Cruz argued the Sandy bill was padded with pork-barrel spending\\nClaim B context: Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n  \"entity\": \"Ted Cruz\",\n  \"operation\": \"second_opinion_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-second-opinion-015",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-second-opinion-015"
+      },
+      "response": "`: \"PARTISAN_HYPOCRISY\"\n- `confidence",
+      "seat_id": "detection",
+      "tokens_in": 831,
+      "tokens_out": 495,
+      "validity": {
+        "details": {},
+        "reason": "json.parse: invalid JSON at line 1, column 1",
+        "valid": false
+      }
+    },
+    {
+      "artifact_mime_type": null,
+      "artifact_size_bytes": 0,
+      "case_id": "detection-second-opinion-015",
+      "cost_error": null,
+      "cost_usd": 0.000168,
+      "error": null,
+      "is_incumbent": true,
+      "judge_details": {},
+      "judge_error": null,
+      "judge_reasoning": "Schema-valid but incorrectly labels the case as partisan hypocrisy with high severity, missing the key context-difference rationale and expected non-hypocrisy finding.",
+      "judge_score": 2.0,
+      "latency_ms": 1486,
+      "model_id": "gpt-4o-mini",
+      "prompt": "Job: Score contradictory claim pairs, classify political asymmetry, and provide an independent principle-consistency second opinion.\nOutput type: json\nValidity requirements: Dispatch by fixture input.operation and validate contradiction score/reasoning output, primary classification output, or learning-loop second-opinion classification output against the corresponding schema_ref branch before applying pipeline thresholds.\nReturn only the JSON artifact; do not wrap it in Markdown.\nRequired JSON Schema:\n{\n  \"$schema\": \"https://json-schema.org/draft/2020-12/schema\",\n  \"$id\": \"seat-detection-output.schema.json\",\n  \"title\": \"Detection output\",\n  \"oneOf\": [\n    {\n      \"title\": \"Contradiction score\",\n      \"type\": \"object\",\n      \"required\": [\"score\", \"reasoning\", \"is_contradiction\"],\n      \"properties\": {\n        \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"reasoning\": {\"type\": \"string\", \"minLength\": 1},\n        \"is_contradiction\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    },\n    {\n      \"title\": \"Asymmetry classification\",\n      \"type\": \"object\",\n      \"required\": [\"classification\", \"confidence\", \"explanation\", \"severity\", \"is_hypocrisy\"],\n      \"properties\": {\n        \"classification\": {\n          \"enum\": [\n            \"BEHAVIORAL_HYPOCRISY\",\n            \"TEMPORAL_HYPOCRISY\",\n            \"PARTISAN_HYPOCRISY\",\n            \"LEGITIMATE_EVOLUTION\",\n            \"CONTEXT_DIFFERENCE\",\n            \"NO_ASYMMETRY\"\n          ]\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"explanation\": {\"type\": \"string\", \"minLength\": 1},\n        \"severity\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 10},\n        \"is_hypocrisy\": {\"type\": \"boolean\"}\n      },\n      \"additionalProperties\": false\n    }\n  ]\n}\n\n\nReal fixture input:\n{\n  \"claim_a\": {\n    \"context\": \"Cruz argued the Sandy bill was padded with pork-barrel spending\",\n    \"date\": \"2013-01-04\",\n    \"quote\": \"Cruz opposed the Sandy relief bill, arguing it contained billions in spending unrelated to the disaster.\",\n    \"source_type\": \"congressional_record\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"oppose\"\n  },\n  \"claim_b\": {\n    \"context\": \"Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n    \"date\": \"2017-08-28\",\n    \"quote\": \"Cruz sought disaster relief for Texas after Hurricane Harvey, requesting targeted federal assistance.\",\n    \"source_type\": \"official_statement\",\n    \"source_url\": \"https://time.com/4919599/ted-cruz-superstorm-sandy-hurricane-harvey-spending/\",\n    \"stance\": \"support\"\n  },\n  \"context\": \"Claim A context: Cruz argued the Sandy bill was padded with pork-barrel spending\\nClaim B context: Cruz argued the Harvey relief request was more targeted than the Sandy bill\",\n  \"entity\": \"Ted Cruz\",\n  \"operation\": \"second_opinion_classification\"\n}",
+      "provenance": {
+        "fixture_id": "detection-second-opinion-015",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-second-opinion-015"
+      },
+      "response": "{\n  \"classification\": \"PARTISAN_HYPOCRISY\",\n  \"confidence\": 0.85,\n  \"explanation\": \"Cruz opposed the Sandy relief bill due to perceived excessive spending, yet later supported a relief request for Harvey, which he claimed was more targeted. This indicates a potential inconsistency in his stance based on political alignment rather than principle.\",\n  \"severity\": 7,\n  \"is_hypocrisy\": true\n}",
+      "seat_id": "detection",
+      "tokens_in": 740,
+      "tokens_out": 95,
+      "validity": {
+        "details": {
+          "parsed_output_type": "dict"
+        },
+        "reason": "",
+        "valid": true
+      }
+    }
+  ],
+  "manifest": {
+    "candidate_model_ids": [
+      "gpt-4.1-mini",
+      "gemini/gemini-3.5-flash",
+      "gpt-4o-mini"
+    ],
+    "case_ids": [
+      "detection-score-003",
+      "detection-score-003::dirty-v1",
+      "detection-score-009",
+      "detection-classify-003",
+      "detection-classify-007",
+      "detection-second-opinion-015"
+    ],
+    "case_provenance": {
+      "detection-classify-003": {
+        "fixture_id": "detection-classify-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-003"
+      },
+      "detection-classify-007": {
+        "fixture_id": "detection-classify-007",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-classify-007"
+      },
+      "detection-score-003": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-003"
+      },
+      "detection-score-003::dirty-v1": {
+        "fixture_id": "detection-score-003",
+        "is_dirty": true,
+        "split": "sealed",
+        "variant_id": "detection-score-003::dirty-v1"
+      },
+      "detection-score-009": {
+        "fixture_id": "detection-score-009",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-score-009"
+      },
+      "detection-second-opinion-015": {
+        "fixture_id": "detection-second-opinion-015",
+        "is_dirty": false,
+        "split": "sealed",
+        "variant_id": "detection-second-opinion-015"
+      }
+    },
+    "current_pin": {
+      "model": "gpt-4o-mini",
+      "parameters": {
+        "classification_max_tokens": 400,
+        "scoring_max_tokens": 300,
+        "second_opinion_max_tokens": 500,
+        "temperature": 0.3,
+        "timeout_seconds": 30
+      },
+      "provider": "openai",
+      "reason": "Current production chair configured by config.models.GPT_MODEL_DETECTION; eligible for evidence-based bench comparison.",
+      "status": "LIVE"
+    },
+    "finished_at": "2026-07-26T05:25:49.543378+00:00",
+    "incumbent_model_id": "gpt-4o-mini",
+    "project_id": "hypocrisynow",
+    "provenance": {
+      "call_parameters": {
+        "max_tokens": 500,
+        "temperature": 0.3
+      },
+      "dirty_variants": true,
+      "fixture_path": "benchmarks/seats/detection.jsonl",
+      "fixtures_sha256": "457acb347bd6e296038fddb3089633681b9c130648c4c6c840ddb059c667dd2e",
+      "project_root": ".",
+      "schema_path": "schemas/seat-detection-output.schema.json",
+      "seats_path": "seats.yaml",
+      "seats_sha256": "663820a3f6c0a85277884f60a52558da4609f8e5fe4ce5ab9e9fe09ba900ce48",
+      "split": "sealed"
+    },
+    "run_id": "20260726T052446Z-hypocrisynow-detection",
+    "schema_version": "seat-run.v1",
+    "seat_id": "detection",
+    "seat_status": "LIVE",
+    "started_at": "2026-07-26T05:24:46.157878+00:00"
+  },
+  "recommendation": {
+    "candidate_model_id": "gpt-4.1-mini",
+    "evidence": {
+      "avg_latency_ms": 1555.0,
+      "avg_score": 4.333333333333333,
+      "case_count": 6,
+      "cost_delta_usd": 0.0018492500000000006,
+      "errors": 0,
+      "incumbent_cost_usd": 0.0009751499999999998,
+      "incumbent_model_id": "gpt-4o-mini",
+      "incumbent_score": 3.5,
+      "incumbent_validity_rate": 1.0,
+      "judged_cases": 6,
+      "model_id": "gpt-4.1-mini",
+      "score_delta": 0.833333333333333,
+      "total_cost_usd": 0.0028244000000000003,
+      "validity_rate": 1.0
+    },
+    "status": "consider_replacement",
+    "summary": "gpt-4.1-mini is the strongest fully evaluated candidate on this run; consider replacement only with the attached seat evidence."
+  },
+  "schema_version": "seat-report.v1"
+}
