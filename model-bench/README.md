@@ -1,99 +1,147 @@
 # model-bench
 
-Benchmark cheap/free models against worker tasks. Scores with Opus judge.
+`model-bench` is a seat-fit bench for MacBook projects. Projects own their
+model job definitions and real evaluation fixtures in `seats.yaml`;
+model-bench discovers those files, validates them strictly, and compares
+candidate models on the work each project actually performs.
 
-## Which Computer Are You Running This On?
+It is not a central seat registry and it does not change production model pins.
+Its output is evidence: per-seat quality, artifact validity, latency, errors,
+and measured model cost.
 
-This tool runs on both Erik's laptop and the Mac Mini, but the experience is very different. Read this before you do anything.
-
-### Laptop (MacBook Pro)
-
-- **RAM is tight.** You cannot run the 32B model here. It will thrash memory and timeout.
-- **`reviewing:current` (Qwen2.5-Coder 32B) is commented out in `registry.py`.** Leave it that way.
-- **Local models are slow.** Expect 40-90s per call. The laptop runs hot under sustained Ollama load.
-- **Model swapping kills you.** Ollama evicts the previous model when loading a new one. Two local models back-to-back means cold loads every time.
-- **Best use:** Cloud model benchmarks (Haiku, GPT-4.1 Mini, Gemini Flash). Local models are testable but painful.
-- **Available local models:** `coding:current` (14B), `reasoning:current` (11B)
-
-### Mac Mini (M4 Pro, 64GB)
-
-- **This is where local benchmarks belong.** All three models fit comfortably.
-- **Uncomment `reviewing:current` in `registry.py`** to enable the 32B model.
-- **Ollama can keep multiple models loaded.** Set `OLLAMA_KEEP_ALIVE` in `.env` if you want models to stay warm between calls.
-- **Expect 5-15s per call** for local models (vs 40-90s on laptop).
-- **Available local models:** `coding:current` (14B), `reviewing:current` (32B), `reasoning:current` (11B)
-- **Connection:** `ssh eriksjaastad@eriks-mac-mini.local`
-
-### Registry Changes Between Machines
-
-In `model_bench/registry.py`, the `reviewing:current` entry is commented out by default (laptop-safe). On the Mac Mini, uncomment it:
-
-```python
-# Uncomment this on Mac Mini:
-ModelEntry(
-    id="ollama/reviewing:current",
-    display_name="reviewing:current (Qwen2.5-Coder 32B)",
-    provider="ollama",
-    tier="local",
-),
-```
-
-### Ollama Aliases
-
-Both machines need these Ollama aliases set up:
-
-```bash
-ollama cp qwen2.5-coder:14b coding:current
-ollama cp qwen2.5-coder:32b-instruct-q3_K_L reviewing:current   # Mac Mini only
-ollama cp llama3.2-vision:11b reasoning:current
-```
-
-## Quick Start
+## Quick start
 
 ```bash
 cd _tools/model-bench
-cp .env.example .env  # Add your API keys
-uv run model_bench models              # List registered models
-uv run model_bench run --dry-run       # Preview plan + cost estimate
-uv run model_bench run                 # Full sweep
-uv run model_bench results             # View latest results
+
+# Strictly validate and list every discovered seat.
+uv run model_bench seats
+
+# Plan a development sweep. This makes no API calls.
+uv run model_bench run
+
+# Plan one project's seats with two candidates.
+uv run model_bench run \
+  --project hypocrisynow \
+  --models gpt-4.1-mini,gemini-3.5-flash
+
+# Execute only after reviewing the plan and available credentials.
+uv run model_bench run \
+  --project hypocrisynow \
+  --models gpt-4.1-mini,gemini-3.5-flash \
+  --execute
+
+# Show the latest report.
+uv run model_bench results
 ```
+
+The portfolio root defaults to `~/projects`. Set `PROJECTS_ROOT` or pass
+`--projects-root` for a different immediate-child repository root.
+
+## Contract and discovery
+
+The current `seats.v1` contract and validator live in the sibling
+`project-scaffolding` repository. Discovery:
+
+1. checks only immediate child repositories under the portfolio root;
+2. finds root-level `seats.yaml` files deterministically;
+3. imports the canonical `project-scaffolding/scaffold/seats.py` validator;
+4. rejects malformed YAML, unknown fields, duplicate project IDs, path
+   traversal, and missing fixture/schema/context/label files as hard errors.
+
+There are no silent skips. A valid scan that finds zero contracts emits an
+explicit warning.
+
+## Evaluation discipline
+
+### Real fixtures and sealed results
+
+Each seat points to project-owned JSONL, JSON, YAML, or CSV fixtures.
+Development runs select only the deterministic `dev` remainders. A sealed run
+requires the exact environment gate declared by that seat:
+
+```bash
+MODEL_BENCH_UNSEAL=1 uv run model_bench run \
+  --project hypocrisynow \
+  --split sealed \
+  --models gpt-4.1-mini,gemini-3.5-flash \
+  --execute
+```
+
+Use development fixtures for prompt and runner work. Publication numbers should
+come from one deliberate sealed run, not repeated tuning against the holdout.
+
+### FROZEN seats
+
+`FROZEN` is policy, not a label. Frozen seats are reported with the incumbent
+and reason, but their fixtures are not loaded, they are not swept against
+alternatives, and no replacement recommendation is produced.
+
+This protects ai-memory's paper-comparable LongMemEval judge and its
+deployment-honest answerer.
+
+### Dirty-input pressure
+
+Every `messy` or `adversarial` seat receives one deterministic, semantics-
+preserving dirty variant by default. This adds formatting and forwarding noise
+without mutating the source fixture. Use `--no-dirty` only for a targeted
+diagnostic, not publication evidence.
+
+### Validity before judgment
+
+The project contract gates the returned artifact before the quality judge sees
+it:
+
+- `json`: parse and validate against the project JSON Schema;
+- `image`: inspect actual encoded bytes, MIME, dimensions, size, and ratio;
+- `free_text`: require non-empty text without invalid NUL content;
+- `code`: require an explicitly injected sandbox executor. Untrusted code is
+  never executed directly by the default CLI.
+
+Invalid artifacts receive a hard-floor score of zero. A fluent judge cannot
+rescue malformed JSON or a broken artifact.
+
+Project-file contexts are size-bounded. Vision fixture paths are resolved
+inside the owning project and attached as actual multimodal inputs. Stability
+image generation fails closed when `STABILITY_API_KEY` is unavailable.
 
 ## Commands
 
 | Command | Description |
-|---------|-------------|
-| `run` | Execute benchmark (full or filtered) |
-| `run --category code_generation` | One category only |
-| `run --models coding:current,reasoning:current` | Subset of models |
-| `run --dry-run` | Show plan + cost, no calls |
-| `run --no-judge` | Skip Opus scoring, latency only |
-| `results` | Show latest run as table |
-| `results --format markdown` | Markdown output |
-| `models` | List registered models + availability |
-| `estimate` | Cost estimate for full run |
+|---|---|
+| `seats` | Strictly validate and list discovered seats |
+| `run` | Produce a dry seat plan by default |
+| `run --execute` | Execute candidate and judge calls |
+| `run --project ID` | Restrict to one or more comma-separated projects |
+| `run --seat ID` | Restrict by seat ID or `project/seat` |
+| `run --split sealed` | Use the explicitly unsealed holdout |
+| `run --no-judge` | Capture validity, latency, errors, and cost only |
+| `estimate` | Show candidate and judge call counts without calls |
+| `models` | List candidate capabilities and availability |
+| `results` | Show the latest per-seat report |
 
-## Task Bank
+The retired fixed-category task bank remains available temporarily through the
+hidden `legacy-run` command. It is not the source of truth for seat-fit work.
 
-YAML files in `tasks/` — one per category. Each task has prompt variants and a rubric for Opus to score against.
+## Reports and recommendations
 
-5 categories, 20 tasks, ~39 variants total:
-- `code_generation` — fibonacci, REST endpoints, SQL builders, async decorators
-- `dialogue_creative` — character voice, group chat, scene writing, conflict
-- `review_judgment` — code review, architecture decisions, PR review, error messages
-- `diagnosis_debugging` — race conditions, memory leaks, stack traces, N+1 queries
-- `summarization` — tech docs, error logs, meeting notes, changelogs
+Each run writes an atomic JSON/Markdown pair under `results/`. Reports include:
 
-## Adding Models
+- seat and project identity;
+- exact incumbent and candidates;
+- fixture split, dirty variants, and source hashes;
+- quality score, artifact-validity rate, latency, errors, and cost;
+- deltas against the incumbent;
+- case and run provenance.
 
-Edit `model_bench/registry.py` — add to `MODELS` list with provider, tier, and LiteLLM model ID.
+A LIVE replacement is suggested only when both incumbent and candidate have
+complete, fully valid, error-free evidence on the same case count. The report
+is advisory; changing a production pin requires a separate project decision.
 
-## Adding Tasks
+## Credentials
 
-Create or edit YAML files in `tasks/`. Follow the existing format (see `tasks/code_generation.yaml`).
-
-## Known Issues
-
-- **Local model compliance:** Models may generate correct code but ignore instructions about target files or output format. The judge catches this in scoring.
-- **Cold load latency:** First call to a model after swap includes Ollama load time (10-40s depending on model size and hardware).
-- **Rate limiting:** Cloud APIs may rate-limit rapid-fire calls. The runner adds 1s delay between cloud calls.
+Cloud calls use the provider environment variables expected by LiteLLM.
+`STABILITY_API_KEY` is required for the Stability image incumbent. Ollama uses
+`OLLAMA_HOST` when configured. Keep credentials in `.env` or the project secret
+manager; never commit them. The quality judge defaults to `gpt-5.5`; override
+it with `MODEL_BENCH_JUDGE_MODEL` when a deliberate, available judge is needed.
