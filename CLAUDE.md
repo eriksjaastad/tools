@@ -40,14 +40,16 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 | `manager` | `manager-identity[bot]` |
 | `auxesis-coder` | `auxesis-coder[bot]` |
 
-**Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore. `gh-codex.sh` and `gh-gemini.sh` were removed because they were the wrong shape, not merely broken.
+**Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore.
+
+**`gh-codex.sh`, `gh-gemini.sh`, and `gh-claude.sh` are still present and all three are dead.** Each execs an identity (`codex`, `gemini`, `claude`) that no longer exists in `IDENTITY_MAP`, so invoking one fails with "Unknown identity". Do not use them. `gh-agent.sh --auto` also still falls back to the retired `claude` identity when detection fails, which fails the same way. PR #46 (open) removes the first two and makes that fallback fail loudly with a reason; #6782 covers `gh-claude.sh`, which is worse than merely dead because `~/.claude/hooks/gh-identity-check.py` still lists it as a sanctioned wrapper.
 
 Rules:
 
 - **All GitHub write operations go through `gh-agent.sh` / the `gha` wrapper**, never bare `gh`. A PreToolUse hook enforces this.
 - **Never set `git config user.name` / `user.email` by hand.** This repo's `.git/config` already resolves to `manager-identity[bot]`. `--auto` picks `manager` inside a project dir and `architect` at `~/projects` root; `auxesis-coder` is never auto-picked.
 - **Never let a `gh` call run with an empty `GH_TOKEN`.** An empty value is not treated as "no credentials" — `gh` reads it as unset and falls through to Erik's personal keyring, authenticating as `eriksjaastad` while the git author still says `<something>[bot]`. Any wrapper that builds a token in a subshell must explicitly test it is non-empty before invoking `gh`. Do not rely on `set -e` alone.
-- **Token cache:** installation tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) and carry a `config` fingerprint of their `IDENTITY_MAP` entry, so repointing an identity re-mints. It does **not** catch a Doppler secret rotated in place under an unchanged suffix — after that kind of change, use `--no-cache` or clear the cache directory.
+- **Token cache — pending in PR #46, not yet on `main`.** Today every call mints a fresh installation token; there is no cache directory and no `--no-cache` flag. Once #46 merges, tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) with a `config` fingerprint of their `IDENTITY_MAP` entry, so repointing an identity re-mints — but a Doppler secret rotated in place under an unchanged suffix is **not** caught, and needs `--no-cache` or a cleared cache directory. Delete this sentence and state it as current when #46 lands.
 
 ## Safety Rules
 
