@@ -154,10 +154,12 @@ def _write_cached_token(identity: str, token: str, expires_at: str) -> None:
     """Persist a token 0600 in a 0700 dir. Cache failures are non-fatal."""
     path = _cache_path(identity)
     try:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        os.chmod(CACHE_DIR, 0o700)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+        os.chmod(CACHE_DIR, 0o700)  # also tighten a dir that already existed
         # Write via a private temp file so a reader never sees a partial token.
-        tmp = path.with_suffix(".tmp")
+        # Per-process temp name: two agents resolving to the same identity
+        # concurrently must not interleave writes into a shared temp file.
+        tmp = path.with_suffix(f".{os.getpid()}.tmp")
         fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(fd, "w") as fh:
             json.dump({"token": token, "expires_at": expires_at}, fh)
