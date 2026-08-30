@@ -40,6 +40,7 @@ WRITE_PATTERNS = [
 WRAPPER_PATTERNS = [
     r"gha\b",
     r"gh-agent\.sh",
+    r"gh-claude\.sh",
 ]
 
 
