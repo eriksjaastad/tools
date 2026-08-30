@@ -66,7 +66,7 @@ Rules:
 3. **Governance validators** — false positives block all commits across all projects
 
 ### Do Not Touch
-`model-bench/` contains `codex` and `gemini` references that are **models under test**, not identities. Identity cleanup means `gh-*.sh` wrappers and `IDENTITY_MAP`, nothing else. Erik's standing instruction (2026-08-06): "do not tear the existing machinery out. The bench code, the schema, and 21 committed `seats.yaml` files stay put." Those `seats.yaml` files live in the portfolio project repos, not here — `_tools` owns the schema that validates them — so searching `model-bench/` for them turns up nothing. That is expected, not evidence the instruction is stale.
+`model-bench/` contains `codex` and `gemini` references that are **models under test**, not identities. Identity cleanup means `gh-*.sh` wrappers and `IDENTITY_MAP`, nothing else. Erik's standing instruction (2026-08-06): "do not tear the existing machinery out. The bench code, the schema, and 21 committed `seats.yaml` files stay put." Neither those `seats.yaml` files nor the schema they answer to live here. The files sit in the portfolio project repos, and the contract belongs to `project-scaffolding` (`scaffold/seats.py`, `templates/seats.schema.v1.md`); `model-bench/model_bench/seats.py` deliberately loads that repo's validator rather than copying schema rules in. So searching `_tools` for either turns up nothing — that is expected, not evidence the instruction is stale. **Changes to the seats contract belong in `project-scaffolding`, not here.**
 
 ## Code Review Standards
 
