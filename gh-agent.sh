@@ -20,28 +20,35 @@ TOKEN_SCRIPT="$SCRIPT_DIR/github-app-token.py"
 identity="$1"
 shift
 
-# Auto-detect: try project-based identity from cwd, fall back to claude
+# Resolve identity, botname, and token in ONE interpreter start.
+# --bundle prints three lines: identity, botname, token. Previously this ran
+# the token script twice (once for --botname, once for the token), paying uv
+# startup and a full Doppler + GitHub token exchange each time.
+UV_ARGS=(--with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0')
+# `|| bundle=""` keeps `set -e` from aborting here, so the explicit check
+# below can report *why* resolution failed instead of exiting silently.
+# stderr is deliberately not redirected: the token script's diagnostics are
+# the only signal explaining a failure.
 if [ "$identity" = "--auto" ]; then
-  identity=$(uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" --auto --botname 2>/dev/null | head -1)
-  if [ -z "$identity" ]; then
-    echo "Auto-detect failed, falling back to claude" >&2
-    identity="claude"
-  fi
-  # We got the botname, now get the token using auto
-  export GH_TOKEN="$(
-    uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" --auto 2>/dev/null
-  )"
-  botname="$identity"
+  bundle="$(uv run "${UV_ARGS[@]}" "$TOKEN_SCRIPT" --auto --bundle)" || bundle=""
 else
-  # Get botname from the token script
-  botname=$(uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" "$identity" --botname 2>/dev/null)
-  if [ -z "$botname" ]; then
-    botname="${identity}[bot]"
-  fi
-  export GH_TOKEN="$(
-    uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" "$identity"
-  )"
+  bundle="$(uv run "${UV_ARGS[@]}" "$TOKEN_SCRIPT" "$identity" --bundle)" || bundle=""
 fi
+
+identity="$(printf '%s\n' "$bundle" | sed -n 1p)"
+botname="$(printf '%s\n' "$bundle" | sed -n 2p)"
+token="$(printf '%s\n' "$bundle" | sed -n 3p)"
+
+# Fail closed: an unresolved identity or a missing token must never fall
+# through to an unauthenticated or wrongly-attributed gh call.
+if [ -z "$identity" ] || [ -z "$token" ]; then
+  echo "gh-agent: could not resolve a GitHub identity (see error above)." >&2
+  echo "gh-agent: refusing to run '$*' unauthenticated." >&2
+  exit 1
+fi
+[ -n "$botname" ] || botname="${identity}[bot]"
+
+export GH_TOKEN="$token"
 
 export GIT_AUTHOR_NAME="$botname"
 export GIT_AUTHOR_EMAIL="$botname@users.noreply.github.com"
