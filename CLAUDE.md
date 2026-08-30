@@ -79,7 +79,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-scaffolding/RE
 | M3 | No API keys in code |
 | H1 | Subprocess uses `check=True` and `timeout` |
 
-M1–M3 are enforced by governance validators in `governance/`. H1 is manual.
+**Only M1 and M3 are automated** — `governance/validators/absolute-path-check.py` and `secrets-scanner.py`, wired up by `governance-check.sh` along with a third validator, `api-wrapper-check.py`, that has no row in the table above. **M2 and H1 are manual.** Nothing in `governance/` scans for silent `except: pass`, so catching it is on you and the reviewer, not the pre-commit hook.
 
 ## Definition of Done
 
