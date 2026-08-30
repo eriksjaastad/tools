@@ -42,14 +42,16 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 **Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore.
 
-**`gh-codex.sh`, `gh-gemini.sh`, and `gh-claude.sh` are still present and all three are dead.** Each execs an identity (`codex`, `gemini`, `claude`) that no longer exists in `IDENTITY_MAP`, so invoking one fails with "Unknown identity". Do not use them. `gh-agent.sh --auto` also still falls back to the retired `claude` identity when detection fails, which fails the same way. PR #46 (open) removes the first two and makes that fallback fail loudly with a reason; #6782 covers `gh-claude.sh`, which is worse than merely dead because `~/.claude/hooks/gh-identity-check.py` still lists it as a sanctioned wrapper.
+**`gh-claude.sh` is still present and it is dead.** It execs the `claude` identity, which no longer exists in `IDENTITY_MAP`, so invoking it fails with "Unknown identity". Do not use it. It is worse than merely dead: `~/.claude/hooks/gh-identity-check.py` still lists it in `WRAPPER_PATTERNS` as a sanctioned wrapper, so it looks blessed and then fails. Removing the script and that entry is #6782.
+
+`gh-codex.sh` and `gh-gemini.sh` were removed in #46, together with `gh-agent.sh`'s old silent fallback to the retired `claude` identity. An unresolved identity now fails closed with a readable reason instead of exiting 1 with no output.
 
 Rules:
 
 - **All GitHub write operations go through `gh-agent.sh` / the `gha` wrapper**, never bare `gh`. A PreToolUse hook enforces this.
 - **Never set `git config user.name` / `user.email` by hand.** This repo's `.git/config` already resolves to `manager-identity[bot]`. `--auto` picks `manager` inside a project dir and `architect` at `~/projects` root; `auxesis-coder` is never auto-picked.
 - **Never let a `gh` call run with an empty `GH_TOKEN`.** An empty value is not treated as "no credentials" — `gh` reads it as unset and falls through to Erik's personal keyring, authenticating as `eriksjaastad` while the git author still says `<something>[bot]`. Any wrapper that builds a token in a subshell must explicitly test it is non-empty before invoking `gh`. Do not rely on `set -e` alone.
-- **Token cache — pending in PR #46, not yet on `main`.** Today every call mints a fresh installation token; there is no cache directory and no `--no-cache` flag. Once #46 merges, tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) with a `config` fingerprint of their `IDENTITY_MAP` entry, so repointing an identity re-mints — but a Doppler secret rotated in place under an unchanged suffix is **not** caught, and needs `--no-cache` or a cleared cache directory. Delete this sentence and state it as current when #46 lands.
+- **Token cache:** installation tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) and reused until 300s before the expiry GitHub reports. Each entry carries a `config` fingerprint of its `IDENTITY_MAP` tuple, so repointing an identity re-mints instead of serving the superseded App's token. A Doppler secret rotated **in place** under an unchanged suffix is **not** caught — after that kind of change, pass `--no-cache` or clear the cache directory. Any corrupt, expired, or drifted entry is treated as a miss, never as a failure.
 
 ## Safety Rules
 
@@ -64,7 +66,7 @@ Rules:
 3. **Governance validators** — false positives block all commits across all projects
 
 ### Do Not Touch
-`model-bench/` contains `codex` and `gemini` references that are **models under test**, not identities. Identity cleanup means `gh-*.sh` wrappers and `IDENTITY_MAP`, nothing else. Erik's standing instruction (2026-08-06): "do not tear the existing machinery out. The bench code, the schema, and 21 committed `seats.yaml` files stay put."
+`model-bench/` contains `codex` and `gemini` references that are **models under test**, not identities. Identity cleanup means `gh-*.sh` wrappers and `IDENTITY_MAP`, nothing else. Erik's standing instruction (2026-08-06): "do not tear the existing machinery out. The bench code, the schema, and 21 committed `seats.yaml` files stay put." Those `seats.yaml` files live in the portfolio project repos, not here — `_tools` owns the schema that validates them — so searching `model-bench/` for them turns up nothing. That is expected, not evidence the instruction is stale.
 
 ## Code Review Standards
 
