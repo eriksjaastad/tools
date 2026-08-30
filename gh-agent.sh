@@ -20,12 +20,12 @@ TOKEN_SCRIPT="$SCRIPT_DIR/github-app-token.py"
 identity="$1"
 shift
 
-# Auto-detect: try project-based identity from cwd, fall back to claude
+# Auto-detect the canonical identity from cwd.
 if [ "$identity" = "--auto" ]; then
   identity=$(uv run --with 'PyJWT>=2.9.0' --with 'cryptography>=42.0.0' "$TOKEN_SCRIPT" --auto --botname 2>/dev/null | head -1)
   if [ -z "$identity" ]; then
-    echo "Auto-detect failed, falling back to claude" >&2
-    identity="claude"
+    echo "Auto-detect failed" >&2
+    exit 1
   fi
   # We got the botname, now get the token using auto
   export GH_TOKEN="$(
