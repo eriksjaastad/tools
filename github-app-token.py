@@ -127,11 +127,30 @@ def _cache_path(identity: str) -> Path:
     return CACHE_DIR / f"{identity}.json"
 
 
+def _config_fingerprint(identity: str) -> str:
+    """Identify which IDENTITY_MAP config a cached token was minted under.
+
+    An identity name is not enough to key the cache on. Repointing an existing
+    name at a different Doppler suffix or project -- which is how an identity
+    gets moved to a new App or installation -- would otherwise keep serving the
+    old App's token for up to an hour, silently.
+
+    Deliberately built from IDENTITY_MAP alone, never from the secret values:
+    reading those costs the Doppler round-trip the cache exists to avoid, so a
+    fingerprint that needed them would have to be checked on every cache hit and
+    defeat the whole optimisation. This catches config drift for free. It does
+    not catch a secret rotated in place under an unchanged suffix; use
+    --no-cache, or clear ~/.cache/gh-agent/, after that kind of change.
+    """
+    return "|".join(IDENTITY_MAP.get(identity, ()))
+
+
 def _read_cached_token(identity: str):
     """Return a still-valid cached token, or None.
 
-    Any malformed, unreadable, or expired entry is treated as a miss. A bad
-    cache must only ever be able to slow authentication down, never break it.
+    Any malformed, unreadable, expired, or config-drifted entry is treated as a
+    miss. A bad cache must only ever be able to slow authentication down, never
+    break it and never hand back a token from a superseded App.
     """
     path = _cache_path(identity)
     try:
@@ -141,6 +160,11 @@ def _read_cached_token(identity: str):
             entry["expires_at"].replace("Z", "+00:00")
         )
     except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+    # An entry written before this field existed has no provable provenance,
+    # so it reads as a miss rather than being trusted.
+    if entry.get("config") != _config_fingerprint(identity):
         return None
 
     remaining = (expires_at - datetime.now(timezone.utc)).total_seconds()
@@ -160,9 +184,23 @@ def _write_cached_token(identity: str, token: str, expires_at: str) -> None:
         # Per-process temp name: two agents resolving to the same identity
         # concurrently must not interleave writes into a shared temp file.
         tmp = path.with_suffix(f".{os.getpid()}.tmp")
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        # O_EXCL|O_NOFOLLOW so a pre-planted symlink at the temp path can't be
+        # followed and written through with a live token. O_EXCL means a stale
+        # temp left by a crashed same-pid run would block the write, so clear
+        # one first -- inside a 0700 dir this can only be our own leftover.
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+        fd = os.open(
+            tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
+        )
         with os.fdopen(fd, "w") as fh:
-            json.dump({"token": token, "expires_at": expires_at}, fh)
+            json.dump({
+                "token": token,
+                "expires_at": expires_at,
+                "config": _config_fingerprint(identity),
+            }, fh)
         os.replace(tmp, path)
     except OSError as e:
         print(f"Warning: could not cache token for {identity}: {e}", file=sys.stderr)
