@@ -198,3 +198,5 @@ pdf_converter_env/
 pdf-converter/logs/
 # Claude Code harness state (plan-mode artifacts, worktree workspace)
 .claude/
+# Session memory - never source, never committed (#6783)
+PROGRESS.md
