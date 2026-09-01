@@ -32,7 +32,9 @@ def main():
     if "--label" not in command:
         warnings.append(
             "WARNING: PR created WITHOUT a label. "
-            "Add one: gha pr edit <number> --add-label 'type:feat'"
+            "Add one of: feature enhancement bug chore refactor docs "
+            "test hotfix security perf "
+            "(e.g. gha pr edit <number> --add-label chore)"
         )
 
     # Check 2: multi-concern PR?
