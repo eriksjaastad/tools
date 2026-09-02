@@ -1,31 +1,10 @@
 """Tests for governance/validators/secrets-scanner.py SKIP_PATTERNS.
 
-Runs via `pytest governance/validators/tests/`. The scanner file has a
-hyphen in its name so we load it with importlib.util.
+Runs via `pytest governance/validators/tests/`. The `scanner` fixture, and the
+importlib loading it needs, live in conftest.py — shared with the other
+validator test modules rather than duplicated here.
 """
-import importlib.util
-import os
-import sys
-
 import pytest
-
-HERE = os.path.dirname(os.path.abspath(__file__))
-SCANNER_PATH = os.path.normpath(os.path.join(HERE, "..", "secrets-scanner.py"))
-
-
-def _load():
-    spec = importlib.util.spec_from_file_location("secrets_scanner", SCANNER_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Cannot load secrets scanner from {SCANNER_PATH}")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules["secrets_scanner"] = mod
-    spec.loader.exec_module(mod)
-    return mod
-
-
-@pytest.fixture(scope="module")
-def scanner():
-    return _load()
 
 
 class TestSkipPatterns:
