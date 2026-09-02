@@ -9,7 +9,7 @@ Absolute Path Blocker - Standalone Git Hook Validator
 
 Catches hardcoded absolute paths in code/config files.
 Blocks commits that contain paths like:
-- /Users/eriksjaastad/...
+- /Users/<name>/...
 - /Users/*/...
 - /home/*/...
 
@@ -29,7 +29,7 @@ from pathlib import Path
 ABSOLUTE_PATH_PATTERNS = [
     r'/Users/\w+/',           # macOS user paths
     r'/home/\w+/',            # Linux user paths
-    r'/opt/homebrew/',        # Homebrew paths
+    r'/opt/homebrew/',        # Homebrew — absolute path intentional: pattern literal
     r'C:\\Users\\\w+\\',      # Windows paths
 ]
 
@@ -41,7 +41,15 @@ CHECK_EXTENSIONS = {
     '.html', '.css', '.scss',
     '.go', '.rs', '.rb',
     '.toml', '.ini', '.cfg', '.conf',
-    '.env.example',  # Check example env files
+}
+
+# Files matched by exact name rather than by extension.
+CHECK_FILENAMES = {
+    'Makefile', 'Dockerfile', 'Vagrantfile', 'Gemfile',
+    # `.env.example` cannot be matched by suffix: Path('.env.example').suffix
+    # is '.example'. It sat in CHECK_EXTENSIONS unreachable, so env templates
+    # were never scanned despite the comment claiming they were.
+    '.env.example',
 }
 
 # Files/patterns to skip (legitimate uses of absolute paths)
@@ -63,37 +71,105 @@ def should_check_file(file_path: Path) -> bool:
         if re.search(pattern, path_str):
             return False
 
+    # Check by exact filename (extension cannot identify these)
+    if file_path.name in CHECK_FILENAMES:
+        return True
+
     # Check by extension
     suffix = file_path.suffix.lower()
     if suffix in CHECK_EXTENSIONS:
         return True
 
-    # Check files without extension (like Makefile, Dockerfile)
-    if file_path.name in {'Makefile', 'Dockerfile', 'Vagrantfile', 'Gemfile'}:
-        return True
-
     return False
+
+
+# Markers that make a comment documentation rather than a real hardcoded path.
+DOC_MARKERS = ('example:', 'e.g.')
+
+# An established convention for deliberate absolute paths, e.g.
+#   PATH="...:/opt/homebrew/bin"  # absolute path intentional: minimal env
+# A comment carrying this marker exempts its whole line.
+INTENTIONAL_MARKER = 'absolute path'
+
+# Extensions whose content is prose. These have no comment syntax, so a
+# documentation marker anywhere on the line scopes the whole line.
+# Only '.md' is reachable today -- the others are here so that adding them to
+# CHECK_EXTENSIONS does not silently reintroduce the false positives this
+# carve-out fixes.
+PROSE_EXTENSIONS = {'.md', '.markdown', '.rst', '.txt'}
+
+
+def comment_start(line: str) -> int | None:
+    """Index where a line comment begins, or None if there is no comment.
+
+    Recognises `#` and `//`. Quote state is tracked so a marker inside a string
+    literal is not mistaken for a comment, and `//` preceded by `:` is ignored
+    so URLs such as https://example.com survive.
+    """
+    in_single = in_double = False
+    i = 0
+    while i < len(line):
+        ch = line[i]
+        if ch == '\\':
+            i += 2
+            continue
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif not in_single and not in_double:
+            if ch == '#':
+                return i
+            if line.startswith('//', i) and (i == 0 or line[i - 1] != ':'):
+                return i
+        i += 1
+    return None
+
+
+def is_doc_comment(comment: str) -> bool:
+    """True if a comment reads as documentation rather than a real path."""
+    lowered = comment.lower()
+    return any(marker in lowered for marker in DOC_MARKERS)
 
 
 def find_absolute_paths(content: str, file_path: str) -> list[dict]:
     """
     Find absolute paths in content.
     Returns list of {line_num, line, matches} dicts.
+
+    A match is ignored only when it sits inside a documentation comment.
+    Previously any line containing 'e.g.' or 'example:' anywhere -- including
+    inside a string in real code -- suppressed every match on that line.
     """
     issues = []
     lines = content.split('\n')
+    is_prose = Path(file_path).suffix.lower() in PROSE_EXTENSIONS
 
     for line_num, line in enumerate(lines, 1):
-        for pattern in ABSOLUTE_PATH_PATTERNS:
-            matches = re.findall(pattern, line)
-            if matches:
-                # Skip if it's in a comment explaining the issue
-                if 'absolute path' in line.lower() and '#' in line:
-                    continue
-                # Skip if it looks like documentation/example
-                if 'example:' in line.lower() or 'e.g.' in line.lower():
-                    continue
+        comment_at = comment_start(line)
+        comment = line[comment_at:].lower() if comment_at is not None else ''
 
+        # A deliberate-use marker in a comment exempts the whole line.
+        if INTENTIONAL_MARKER in comment:
+            continue
+
+        # Prose has no comment syntax, so a marker anywhere on the line
+        # scopes it. Without this, documentation describing a bad path is
+        # indistinguishable from the bad path itself.
+        if is_prose:
+            lowered = line.lower()
+            if INTENTIONAL_MARKER in lowered or any(m in lowered for m in DOC_MARKERS):
+                continue
+
+        doc_comment = comment_at is not None and is_doc_comment(comment)
+
+        for pattern in ABSOLUTE_PATH_PATTERNS:
+            matches = [
+                m.group(0)
+                for m in re.finditer(pattern, line)
+                if not (doc_comment and m.start() >= comment_at)
+            ]
+            if matches:
                 issues.append({
                     'line_num': line_num,
                     'line': line.strip()[:100],  # Truncate long lines
