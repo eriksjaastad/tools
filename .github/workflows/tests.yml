@@ -1,0 +1,35 @@
+name: Tests
+
+# Runs this repo's own test suites on every PR and reports pass/fail.
+#
+# Deliberately NOT the reusable auto-merge-on-tests.yml workflow: that one
+# bundles merge-on-green, and landing in this repo stays manual (Erik's call,
+# 2026-09-01). This job only reports.
+#
+# Before this existed, _tools ran no tests in CI at all — governance/validators
+# and integrity-warden were covered only when a person remembered to invoke
+# pytest by hand.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Run test suites
+        run: |
+          uv run --python 3.12 --with pytest pytest \
+            governance/validators/tests/ \
+            integrity-warden/tests/ \
+            -q
