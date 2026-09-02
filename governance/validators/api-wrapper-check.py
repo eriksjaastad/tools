@@ -80,6 +80,9 @@ SKIP_PATH_PATTERNS = [
     r'doc_audit',                       # Offline batch audit scripts (Gemini)
 ]
 
+# Triple-quote delimiters that open a Python block string.
+TRIPLE_QUOTES = ('"""', "'''")
+
 
 def should_check_file(file_path: Path) -> bool:
     """Determine if this file should be scanned."""
@@ -93,11 +96,66 @@ def should_check_file(file_path: Path) -> bool:
 
 
 def file_uses_wrapper(content: str) -> bool:
-    """Check if the file imports or uses the cost tracking wrapper."""
+    """Check if the file imports or uses the cost tracking wrapper.
+
+    This is deliberately file-global: one wrapper indicator anywhere exempts
+    every call in the file. Narrowing it to per-call-site proximity would be a
+    behavior change with real false-positive risk, so it is left as designed.
+    """
     for pattern in WRAPPER_INDICATORS:
         if re.search(pattern, content):
             return True
     return False
+
+
+def code_portion(line: str, block_delim: str | None) -> tuple[str, str | None]:
+    """Return the executable part of `line`, plus block-string state.
+
+    `block_delim` is the triple-quote currently open, or None. String contents
+    and trailing comments are dropped, so a call named inside a docstring or
+    after a `#` is not reported as a real call.
+
+    Previously only lines that *started* with a comment or a triple-quote were
+    skipped, so a trailing comment and every line in the body of a docstring
+    produced false positives.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(line):
+        if block_delim is not None:
+            end = line.find(block_delim, i)
+            if end == -1:
+                return "".join(out), block_delim
+            i = end + len(block_delim)
+            block_delim = None
+            continue
+
+        triple = next((q for q in TRIPLE_QUOTES if line.startswith(q, i)), None)
+        if triple is not None:
+            block_delim = triple
+            i += len(triple)
+            continue
+
+        ch = line[i]
+        if ch == '#':
+            break
+        if line.startswith('//', i) and (i == 0 or line[i - 1] != ':'):
+            break
+        if ch in ('"', "'"):
+            i += 1
+            while i < len(line):
+                if line[i] == '\\':
+                    i += 2
+                    continue
+                if line[i] == ch:
+                    i += 1
+                    break
+                i += 1
+            continue
+        out.append(ch)
+        i += 1
+
+    return "".join(out), block_delim
 
 
 def find_raw_api_calls(content: str) -> list[dict]:
@@ -106,19 +164,21 @@ def find_raw_api_calls(content: str) -> list[dict]:
     Returns list of {line_num, line, provider, description} dicts.
     """
     issues = []
-    lines = content.split('\n')
+    block_delim = None
 
-    for line_num, line in enumerate(lines, 1):
-        # Skip comments
+    for line_num, line in enumerate(content.split('\n'), 1):
+        # Always advance the block state, even for lines we go on to skip.
+        code, block_delim = code_portion(line, block_delim)
+
         stripped = line.strip()
-        if stripped.startswith('#') or stripped.startswith('//'):
+        # JS/C block-comment continuation lines
+        if stripped.startswith(('*', '/*')):
             continue
-        # Skip string literals that look like documentation
-        if stripped.startswith(('"""', "'''", '*', '/*')):
+        if not code.strip():
             continue
 
         for pattern, provider, description in RAW_API_PATTERNS:
-            if re.search(pattern, line):
+            if re.search(pattern, code):
                 issues.append({
                     'line_num': line_num,
                     'line': stripped[:120],
