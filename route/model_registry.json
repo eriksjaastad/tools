@@ -1,149 +1,265 @@
 {
   "schema_version": "1.0",
-  "last_updated": "2026-07-08",
+  "last_updated": "2026-09-06",
   "models": [
     {
       "provider": "anthropic",
       "model_id": "claude-opus-4-8",
       "display_name": "Claude Opus 4.8",
-      "role_fit": ["planner", "reviewer", "architect"],
+      "role_fit": [
+        "planner",
+        "reviewer",
+        "architect"
+      ],
       "pricing_per_1M": {
-        "input_usd": 5.00,
-        "cached_input_usd": 0.50,
-        "output_usd": 25.00
+        "input_usd": 5.0,
+        "cached_input_usd": 0.5,
+        "output_usd": 25.0
       },
       "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard first-party pricing; compute_shadow_cost assumes 5-minute cache writes."
     },
     {
       "provider": "openai",
       "model_id": "gpt-5.5",
       "display_name": "GPT-5.5",
-      "role_fit": ["planner", "coder", "reviewer", "architect"],
+      "role_fit": [
+        "planner",
+        "coder",
+        "reviewer",
+        "architect"
+      ],
       "pricing_per_1M": {
-        "input_usd": 5.00,
-        "cached_input_usd": 0.50,
-        "output_usd": 30.00
+        "input_usd": 5.0,
+        "cached_input_usd": 0.5,
+        "output_usd": 30.0
       },
-      "source_url": "https://platform.openai.com/docs/pricing",
-      "last_verified_date": "2026-07-08"
+      "source_url": "https://developers.openai.com/api/docs/models/gpt-5.5",
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard text pricing through 272K input tokens; excludes long-context and regional processing uplifts."
     },
     {
       "provider": "anthropic",
       "model_id": "claude-haiku-4-5-20251001",
       "display_name": "Claude Haiku 4.5",
-      "role_fit": ["coder", "reviewer"],
+      "role_fit": [
+        "coder",
+        "reviewer"
+      ],
       "pricing_per_1M": {
-        "input_usd": 0.80,
-        "cached_input_usd": 0.08,
-        "output_usd": 4.00
+        "input_usd": 1,
+        "cached_input_usd": 0.1,
+        "output_usd": 5
       },
       "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard first-party pricing; compute_shadow_cost assumes 5-minute cache writes."
     },
     {
       "provider": "openai",
       "model_id": "gpt-4.1-mini",
       "display_name": "GPT-4.1 Mini",
-      "role_fit": ["coder"],
+      "role_fit": [
+        "coder"
+      ],
       "pricing_per_1M": {
-        "input_usd": 0.40,
-        "cached_input_usd": 0.10,
-        "output_usd": 1.60
+        "input_usd": 0.4,
+        "cached_input_usd": 0.1,
+        "output_usd": 1.6
       },
-      "source_url": "https://platform.openai.com/docs/pricing",
-      "last_verified_date": "2026-07-08"
+      "source_url": "https://developers.openai.com/api/docs/models/gpt-4.1-mini",
+      "last_verified_date": "2026-09-06"
     },
     {
       "provider": "google",
       "model_id": "gemini/gemini-2.5-flash",
       "display_name": "Gemini 2.5 Flash",
-      "role_fit": ["coder", "reader", "floor_manager"],
+      "role_fit": [
+        "coder",
+        "reader",
+        "floor_manager"
+      ],
       "pricing_per_1M": {
-        "input_usd": 0.15,
-        "cached_input_usd": 0.0375,
-        "output_usd": 0.60
+        "input_usd": 0.3,
+        "cached_input_usd": 0.03,
+        "output_usd": 2.5
       },
       "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard paid text/image/video input; excludes audio input, cache storage, and tools."
     },
     {
       "provider": "google",
       "model_id": "gemini/gemini-2.5-pro",
       "display_name": "Gemini 2.5 Pro",
-      "role_fit": ["planner", "reviewer", "floor_manager"],
+      "role_fit": [
+        "planner",
+        "reviewer",
+        "floor_manager"
+      ],
       "pricing_per_1M": {
         "input_usd": 1.25,
-        "cached_input_usd": 0.3125,
-        "output_usd": 10.00
+        "cached_input_usd": 0.125,
+        "output_usd": 10
       },
       "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard paid pricing for prompts up to 200K tokens; excludes long-context rates, cache storage, and tools."
     },
     {
       "provider": "openrouter",
       "model_id": "openrouter/x-ai/grok-4.3",
       "display_name": "Grok 4.3",
-      "role_fit": ["coder", "reviewer", "architect"],
+      "role_fit": [
+        "coder",
+        "reviewer",
+        "architect"
+      ],
       "pricing_per_1M": {
         "input_usd": 1.25,
-        "cached_input_usd": 0.20,
-        "output_usd": 2.50
+        "cached_input_usd": 0.2,
+        "output_usd": 2.5
       },
       "source_url": "https://openrouter.ai/api/v1/models",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "OpenRouter catalog base rates; excludes the tier above 200K prompt tokens, priority providers, and tools."
     },
     {
       "provider": "openrouter",
       "model_id": "openrouter/x-ai/grok-build-0.1",
       "display_name": "Grok Build 0.1",
-      "role_fit": ["coder"],
+      "role_fit": [
+        "coder"
+      ],
       "pricing_per_1M": {
-        "input_usd": 1.00,
-        "cached_input_usd": 1.00,
-        "output_usd": 2.00
+        "input_usd": 1,
+        "cached_input_usd": 0.2,
+        "output_usd": 2
       },
       "source_url": "https://openrouter.ai/api/v1/models",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "OpenRouter catalog base rates; excludes the tier above 200K prompt tokens, priority providers, and tools."
     },
     {
       "provider": "openrouter",
       "model_id": "openrouter/z-ai/glm-5.2",
       "display_name": "GLM-5.2",
-      "role_fit": ["coder", "reviewer", "architect"],
+      "role_fit": [
+        "coder",
+        "reviewer",
+        "architect"
+      ],
       "pricing_per_1M": {
-        "input_usd": 1.40,
-        "cached_input_usd": 0.18,
-        "output_usd": 4.40
+        "input_usd": 0.966,
+        "cached_input_usd": 0.1932,
+        "output_usd": 3.036
       },
       "source_url": "https://openrouter.ai/api/v1/models",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "OpenRouter catalog base rates at verification; endpoint/provider routing can change the billed rate."
     },
     {
       "provider": "openrouter",
       "model_id": "openrouter/deepseek/deepseek-v3.2",
       "display_name": "DeepSeek V3.2",
-      "role_fit": ["coder"],
+      "role_fit": [
+        "coder"
+      ],
       "pricing_per_1M": {
-        "input_usd": 0.23,
-        "cached_input_usd": 0.02288,
-        "output_usd": 0.34
+        "input_usd": 0.269,
+        "cached_input_usd": 0.1345,
+        "output_usd": 0.4
       },
       "source_url": "https://openrouter.ai/api/v1/models",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "OpenRouter catalog base rates at verification; endpoint/provider routing can change the billed rate."
     },
     {
       "provider": "openrouter",
       "model_id": "openrouter/qwen/qwen3-coder",
       "display_name": "Qwen3-Coder",
-      "role_fit": ["coder"],
+      "role_fit": [
+        "coder"
+      ],
       "pricing_per_1M": {
-        "input_usd": 0.22,
-        "cached_input_usd": 0.22,
-        "output_usd": 1.80
+        "input_usd": 0.3,
+        "cached_input_usd": 0.1,
+        "output_usd": 1
       },
       "source_url": "https://openrouter.ai/api/v1/models",
-      "last_verified_date": "2026-07-08"
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "OpenRouter catalog base rates at verification; endpoint/provider routing can change the billed rate."
+    },
+    {
+      "provider": "openai",
+      "model_id": "gpt-4o-mini",
+      "display_name": "GPT-4o Mini",
+      "role_fit": [
+        "coder"
+      ],
+      "pricing_per_1M": {
+        "input_usd": 0.15,
+        "cached_input_usd": 0.075,
+        "output_usd": 0.6
+      },
+      "source_url": "https://developers.openai.com/api/docs/models/gpt-4o-mini",
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard text token pricing; cached reads cost 50% of input, not a universal cache discount."
+    },
+    {
+      "provider": "google",
+      "model_id": "gemini/gemini-3.5-flash",
+      "display_name": "Gemini 3.5 Flash",
+      "role_fit": [
+        "coder",
+        "reader",
+        "floor_manager"
+      ],
+      "pricing_per_1M": {
+        "input_usd": 1.5,
+        "cached_input_usd": 0.15,
+        "output_usd": 9
+      },
+      "source_url": "https://ai.google.dev/gemini-api/docs/pricing#gemini-3.5-flash",
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard paid pricing including thinking output; excludes cache storage and tools."
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-opus-5",
+      "display_name": "Claude Opus 5",
+      "role_fit": [
+        "planner",
+        "reviewer",
+        "architect"
+      ],
+      "pricing_per_1M": {
+        "input_usd": 5,
+        "cached_input_usd": 0.5,
+        "output_usd": 25
+      },
+      "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "Standard first-party pricing; compute_shadow_cost assumes 5-minute cache writes."
+    },
+    {
+      "provider": "anthropic",
+      "model_id": "claude-sonnet-5",
+      "display_name": "Claude Sonnet 5",
+      "role_fit": [
+        "coder",
+        "reviewer",
+        "floor_manager"
+      ],
+      "pricing_per_1M": {
+        "input_usd": 2,
+        "cached_input_usd": 0.2,
+        "output_usd": 10
+      },
+      "source_url": "https://platform.claude.com/docs/en/about-claude/pricing",
+      "last_verified_date": "2026-09-06",
+      "pricing_notes": "The launch $2/$10 input/output rates are now standard; the planned September 1 increase was canceled. Assumes 5-minute cache writes."
     }
   ],
   "subscriptions": {
