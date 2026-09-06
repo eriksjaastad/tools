@@ -13,7 +13,7 @@ Run `pt memory search "_tools"` before starting work for prior decisions and con
 
 If `PROGRESS.md` exists in the project root, read it FIRST before doing anything else. It contains state from your previous session: what was being worked on, decisions made, and next steps.
 
-`PROGRESS.md` is currently **tracked** in this repo, which is a misconfiguration (#6783) — it belongs in `.gitignore`. Until that lands, expect a permanent `M PROGRESS.md` in `git status`. That is the steady state, not a finding. Never commit it, never stage it, never delete it.
+`PROGRESS.md` is local session context, ignored and untracked since #6783 (PR #48). Keep it on disk and current. Never commit it, never stage it, never delete it. Verify that it is ignored and absent from tracked files when preparing a PR.
 
 ## What Is This Directory?
 
@@ -42,7 +42,7 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 **Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore.
 
-**`gh-claude.sh` is still present and it is dead.** It execs the `claude` identity, which no longer exists in `IDENTITY_MAP`, so invoking it fails with "Unknown identity". Do not use it. It is worse than merely dead: `~/.claude/hooks/gh-identity-check.py` still lists it in `WRAPPER_PATTERNS` as a sanctioned wrapper, so it looks blessed and then fails. Removing the script and that entry is #6782.
+**`gh-claude.sh` has been removed**, together with its allowance in the repository-owned `hooks/gh-identity-check.py` (#6782). Use `gha` or `gh-agent.sh` with a canonical role. The installed `~/.claude/hooks/gh-identity-check.py` belongs to user configuration and requires separate cleanup and verification; #6782 stays open until both portions are verified.
 
 `gh-codex.sh` and `gh-gemini.sh` were removed in #46, together with `gh-agent.sh`'s old silent fallback to the retired `claude` identity. An unresolved identity now fails closed with a readable reason instead of exiting 1 with no output.
 
@@ -83,7 +83,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-scaffolding/RE
 
 ## Definition of Done
 
-- [ ] M1–M3 robot checks pass
+- [ ] Automated M1/M3 and API-wrapper checks pass; M2 and H1 reviewed manually
 - [ ] Tests pass for any touched component with a suite (e.g. `pytest integrity-warden/tests/` when editing integrity-warden; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed
