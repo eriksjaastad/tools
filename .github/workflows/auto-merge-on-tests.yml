@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
-          TYPES="feature enhancement bug chore refactor docs test hotfix security perf ci"
+          TYPES="feature enhancement bug chore refactor docs test hotfix security perf"
           for type in $TYPES; do
             if echo "$LABELS" | grep -qx "$type"; then
               echo "Found type label: $type"

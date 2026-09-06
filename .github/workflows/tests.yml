@@ -6,9 +6,9 @@ name: Tests
 # bundles merge-on-green, and landing in this repo stays manual (Erik's call,
 # 2026-09-01). This job only reports.
 #
-# Before this existed, _tools ran no tests in CI at all — governance/validators
-# and integrity-warden were covered only when a person remembered to invoke
-# pytest by hand.
+# Includes governance, integrity-warden, authentication, identity-hook and
+# route pricing regressions. Authentication executables are stubbed; these
+# suites do not mint live tokens or call providers.
 
 on:
   pull_request:
@@ -29,7 +29,10 @@ jobs:
 
       - name: Run test suites
         run: |
-          uv run --python 3.12 --with pytest pytest \
+          uv run --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' pytest \
             governance/validators/tests/ \
             integrity-warden/tests/ \
+            tests/auth/ \
+            tests/hooks/ \
+            route/test_pricing.py \
             -q
