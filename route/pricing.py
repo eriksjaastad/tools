@@ -94,6 +94,7 @@ def compute_shadow_cost(
         output_tokens: Number of output tokens.
         cache_read_tokens: Number of cache read tokens (reads from prompt cache).
         cache_write_tokens: Number of cache write tokens (writes to prompt cache).
+            Anthropic writes are estimated at the 5-minute TTL rate.
 
     Returns:
         Total shadow cost in USD. Returns 0.0 if model not found.
@@ -106,6 +107,10 @@ def compute_shadow_cost(
 
         For Anthropic models: cache_write_rate = input_rate * 1.25
         For other providers: cache_write_rate = input_rate (default, no premium)
+
+    This flat-rate estimate uses the registry's standard text/base context tier.
+    It cannot account for per-request context tiers, Anthropic 1-hour writes,
+    cache storage duration, service-tier premiums, or non-token tool charges.
     """
     pricing = get_model_pricing(model_id)
     if pricing is None:
