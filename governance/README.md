@@ -8,7 +8,12 @@ This governance system provides reusable git pre-commit hooks that can be instal
 
 - **Secrets Scanner**: Blocks commits containing API keys, tokens, and other secrets
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
-- **Agent Config Sync**: Ensures AGENTS.md, .cursorrules, and CLAUDE.md stay in sync
+- **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
+
+The standalone **Silent Failure Checker** and portfolio dry-run reporter are
+available for #6900 rollout review. They are not registered in the shared
+pre-commit gate; M2 still requires manual review. See
+[the rollout record](SILENT_FAILURE_ROLLOUT.md) before enabling enforcement.
 
 ## Directory Structure
 
@@ -81,6 +86,58 @@ $HOME/.local/bin/uv run validators/absolute-path-check.py file1.py file2.js
 
 ## Validators
 
+### Silent Failure Checker (not yet installed as a gate)
+
+This standard-library Python AST scanner reports two syntactic patterns:
+
+- `SF001`: exception handlers containing only inert statements such as `pass`,
+  ellipsis or a docstring.
+- `SF002`: exception handlers returning empty/default values, including a
+  logged failure followed by `return []`, `None`, zero or an empty constructor.
+
+From the repository root:
+
+```bash
+uv run governance/validators/silent-failure-check.py module.py
+uv run governance/validators/silent-failure-check.py --dry-run --json module.py
+uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json
+```
+
+The scanner accepts explicit `.py`/`.pyi` paths and does no recursive discovery.
+It exits `1` for findings and `2` for unreadable or invalid source. `--dry-run`
+makes findings nonblocking, but scanning errors still exit `2`. Non-Python
+paths are skipped. Output contains locations/rules, not source snippets.
+
+The portfolio reporter examines immediate child Git repositories, including
+worktrees, and only their tracked `.py` working-tree files. It records the
+scanner hash, repository revisions and tracked dirty state. It does not import
+project code or call services. Findings do not fail the report; incomplete
+scans do. Zero-Python repositories are reported explicitly. Concurrent source
+edits are not locked, so this is a working-tree snapshot, not a reproducible
+checkout of every recorded HEAD.
+
+An intentional exception can be documented with a rule-specific comment on
+the handler line or the immediately preceding standalone comment:
+
+```python
+try:
+    temporary_path.unlink()
+except FileNotFoundError:  # governance: allow-silent SF001: missing temporary file is already cleaned up
+    pass
+```
+
+The comment applies only to that handler and rule, requires a reason, and must
+be an actual Python comment. A marker inside a string does not suppress findings.
+Review the caller contract before using an exception; logging alone is not a
+reason to hide a failed operation behind empty results.
+
+This is a pattern scanner, not proof that error handling is correct. It does
+not resolve aliases, assigned fallback values, shadowed constructor names,
+implicit fallthrough, or full reachability. Returns in nested functions/classes
+belong to their own scope. Determining whether a configuration fallback is
+required or optional is also outside this version's scope. Those limitations
+and the unresolved portfolio findings remain part of #6900 before gate activation.
+
 ### Secrets Scanner
 
 **Purpose**: Prevent accidental commit of API keys, tokens, and other secrets.
@@ -107,10 +164,10 @@ $HOME/.local/bin/uv run validators/absolute-path-check.py file1.py file2.js
 **Purpose**: Prevent hardcoded absolute paths that break portability.
 
 **Detects**:
-- macOS user paths (`/Users/username/...`)
-- Linux user paths (`/home/username/...`)
-- Homebrew paths (`/opt/homebrew/...`)
-- Windows user paths (`C:\Users\username\...`)
+- macOS user paths, e.g. `/Users/username/...`
+- Linux user paths, e.g. `/home/username/...`
+- Homebrew paths, e.g. `/opt/homebrew/...`
+- Windows user paths, e.g. `C:\Users\username\...`
 
 **Checks**: `.py`, `.js`, `.ts`, `.tsx`, `.jsx`, `.md`, `.yaml`, `.yml`, `.json`, `.sh`, `.bash`, `.zsh`, `.html`, `.css`, `.scss`, `.go`, `.rs`, `.rb`, `.toml`, `.ini`, `.cfg`, `.conf`, `Makefile`, `Dockerfile`
 
@@ -243,7 +300,7 @@ Running absolute-path-check.py... ✗ FAIL
 🚫 HARDCODED ABSOLUTE PATHS DETECTED
 
 File: config.yaml
-  Line 12: data_dir: /Users/erik/project/data
+  Line 12: data_dir: /Users/erik/project/data  # example: prohibited user path
 
 Fix by using relative paths or environment variables instead.
 Example: Use './data/file.csv' or '$PROJECT_ROOT/data/file.csv'
