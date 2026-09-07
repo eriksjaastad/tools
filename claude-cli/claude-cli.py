@@ -29,8 +29,8 @@ except ImportError:
     track = lambda resp, *a, **kw: resp
 
 
-def claude_chat(message: str, api_key: str) -> str:
-    """Send a message to Claude via API."""
+def claude_chat(message: str, api_key: str) -> Optional[str]:
+    """Return response text or None; callers report failure or exit nonzero."""
     try:
         import anthropic
 
@@ -45,11 +45,11 @@ def claude_chat(message: str, api_key: str) -> str:
 
         return response.content[0].text
         
-    except ImportError:
+    except ImportError:  # governance: allow-silent SF002: main exits 1 for None and interactive_mode reports the failed request
         print("❌ The 'anthropic' package is not installed.")
         print("Install it with: pip3 install anthropic")
         return None
-    except Exception as e:
+    except Exception as e:  # governance: allow-silent SF002: main exits 1 for None and interactive_mode reports the failed request
         print(f"❌ Error communicating with Claude: {e}")
         return None
 
@@ -118,4 +118,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

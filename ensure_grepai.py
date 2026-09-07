@@ -4,38 +4,38 @@ import sys
 import time
 
 def is_grepai_running():
-    try:
-        result = subprocess.run(["grepai", "watch", "--status"], capture_output=True, text=True)
-        return "Status: running" in result.stdout
-    except Exception:
+    """Return a confirmed status; failed or unfamiliar inspections must raise."""
+    result = subprocess.run(
+        ["grepai", "watch", "--status"], capture_output=True, text=True,
+        check=True, timeout=10,
+    )
+    statuses = {line.strip() for line in result.stdout.splitlines() if line.strip().startswith("Status:")}
+    if statuses == {"Status: running"}:
+        return True
+    if statuses == {"Status: not running"}:
         return False
+    raise RuntimeError("grepai status was not recognized; refusing to start a daemon")
 
 def start_grepai():
     print("Starting grepai watch daemon...")
-    try:
-        # Run in background mode as per TODO.md instructions
-        subprocess.run(["grepai", "watch", "--background"], check=True)
-        # Give it a second to initialize
-        time.sleep(1)
-        if is_grepai_running():
-            print("✅ grepai watch is now running in the background.")
-            return True
-        else:
-            print("❌ Failed to start grepai watch.")
-            return False
-    except subprocess.CalledProcessError as e:
-        print(f"❌ Error starting grepai: {e}")
-        return False
+    subprocess.run(
+        ["grepai", "watch", "--background"], check=True,
+        capture_output=True, text=True, timeout=15,
+    )
+    time.sleep(1)
+    if not is_grepai_running():
+        raise RuntimeError("grepai remained stopped after startup")
+    print("✅ grepai watch is now running in the background.")
+    return True
 
 def main():
-    if is_grepai_running():
-        # print("✅ grepai watch is already running.")
-        sys.exit(0)
-    else:
-        if start_grepai():
-            sys.exit(0)
-        else:
-            sys.exit(1)
+    try:
+        if not is_grepai_running():
+            start_grepai()
+    except (OSError, subprocess.SubprocessError, RuntimeError) as error:
+        print(f"grepai check/start failed: {error}", file=sys.stderr)
+        return 1
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
