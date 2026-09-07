@@ -7,36 +7,27 @@ Extracts token usage from the last token_count event in each session.
 """
 
 import json
+import os
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+
+import tomllib
 
 
 def _get_codex_model() -> str:
     """
-    Read the model from ~/.codex/config.toml using simple string parsing.
-    Returns the model value (e.g., "gpt-5.5").
-    Falls back to "gpt-5.5" if not found or file doesn't exist.
+    Read the explicit top-level model from ~/.codex/config.toml.
+    Missing, malformed, or unreadable configuration cannot establish pricing.
     """
     config_path = Path.home() / ".codex" / "config.toml"
 
-    if not config_path.exists():
-        return "gpt-5.5"
-
-    try:
-        with open(config_path, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith('model = "'):
-                    # Extract value between quotes: model = "value"
-                    start = line.find('"') + 1
-                    end = line.rfind('"')
-                    if start > 0 and end > start:
-                        return line[start:end]
-    except (OSError, IOError):
-        pass
-
-    return "gpt-5.5"
+    with open(config_path, "rb") as file:
+        config = tomllib.load(file)
+    model = config.get("model")
+    if not isinstance(model, str) or not model.strip():
+        raise ValueError("Codex configuration requires an explicit top-level model for pricing")
+    return model
 
 
 def _extract_project_from_cwd(cwd: str) -> str:
@@ -46,61 +37,91 @@ def _extract_project_from_cwd(cwd: str) -> str:
     return Path(cwd).name
 
 
-def _find_last_token_count(session_file: Path) -> Optional[dict]:
+def _read_records(session_file: Path):
+    """Yield complete JSONL evidence; malformed records never become omissions."""
+    with open(session_file, "r") as file:
+        for number, line in enumerate(file, 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"Invalid Codex session JSON at {session_file}:{number}") from error
+            if not isinstance(record, dict):
+                raise TypeError(f"Codex session record must be an object at {session_file}:{number}")
+            yield record
+
+
+def _find_last_token_count(session_file: Path) -> dict:
     """
     Read a JSONL session file and find the LAST token_count event.
-    Returns the token_count info dict or None if not found.
+    Return the token_count info dict. Missing or partial usage evidence raises.
     """
     last_token_count = None
 
-    try:
-        with open(session_file, "r") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                try:
-                    record = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-
-                # Look for event_msg with type == "token_count"
-                if (record.get("type") == "event_msg" and
-                    record.get("payload", {}).get("type") == "token_count"):
-                    info = record.get("payload", {}).get("info")
-                    if info and info.get("total_token_usage"):
-                        last_token_count = info
-    except (OSError, IOError):
-        pass
-
+    for record in _read_records(session_file):
+        if record.get("type") != "event_msg":
+            continue
+        payload = record.get("payload")
+        if not isinstance(payload, dict):
+            raise TypeError(f"Codex event payload must be an object in {session_file}")
+        if payload.get("type") != "token_count":
+            continue
+        info = payload.get("info")
+        if "info" in payload and info is None and isinstance(payload.get("rate_limits"), dict) and payload["rate_limits"]:
+            # Native rate-limit updates share the token_count event name but
+            # contain no new usage. They neither reset nor establish a total.
+            continue
+        if not isinstance(info, dict) or not isinstance(info.get("total_token_usage"), dict):
+            raise TypeError(f"Codex token event has no cumulative usage object in {session_file}")
+        usage = info["total_token_usage"]
+        for required in ("input_tokens", "output_tokens"):
+            if required not in usage:
+                raise ValueError(f"Codex token event is missing {required} in {session_file}")
+        for field in ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"):
+            value = usage.get(field, 0)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"Codex token event requires a nonnegative integer for {field} in {session_file}")
+        last_token_count = info
+    if last_token_count is None:
+        raise ValueError(f"Codex session has no token-count evidence in {session_file}")
     return last_token_count
 
 
-def _parse_session_meta(session_file: Path) -> Optional[dict]:
+def _parse_session_meta(session_file: Path) -> dict:
     """
     Read the first line of a JSONL session file to extract session_meta.
-    Returns a dict with session_id, timestamp, and cwd, or None if not found.
+    Returns a dict with required session_id, timestamp, and cwd metadata.
     """
+    with open(session_file, "r") as file:
+        first_line = file.readline()
     try:
-        with open(session_file, "r") as f:
-            first_line = f.readline()
-            if not first_line.strip():
-                return None
+        record = json.loads(first_line)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Invalid or missing Codex session metadata in {session_file}") from error
+    if not isinstance(record, dict) or record.get("type") != "session_meta":
+        raise ValueError(f"Codex session must start with session_meta in {session_file}")
+    payload = record.get("payload")
+    if not isinstance(payload, dict):
+        raise TypeError(f"Codex session metadata payload must be an object in {session_file}")
+    meta = {
+        "session_id": payload.get("id"),
+        "timestamp": payload.get("timestamp", record.get("timestamp")),
+        "cwd": payload.get("cwd", "unknown"),
+    }
+    if any(not isinstance(value, str) or not value.strip() for value in meta.values()):
+        raise ValueError(f"Codex session metadata requires string ID, timestamp, and cwd in {session_file}")
+    timestamp = datetime.fromisoformat(meta["timestamp"].replace("Z", "+00:00"))
+    if timestamp.utcoffset() is None:
+        raise ValueError(f"Codex session timestamp requires a timezone in {session_file}")
+    return meta
 
-            record = json.loads(first_line)
-            if record.get("type") == "session_meta":
-                payload = record.get("payload", {})
-                return {
-                    "session_id": payload.get("id", "unknown"),
-                    "timestamp": payload.get("timestamp", record.get("timestamp")),
-                    "cwd": payload.get("cwd", "unknown"),
-                }
-    except (OSError, IOError, json.JSONDecodeError):
-        pass
 
-    return None
+def _raise_walk_error(error):
+    raise error
 
 
-def read_sessions(since_date: Optional[str] = None) -> list[dict]:
+def read_sessions(since_date: str | None = None) -> list[dict]:
     """
     Read Codex session files from ~/.codex/sessions/**/*.jsonl
 
@@ -116,7 +137,7 @@ def read_sessions(since_date: Optional[str] = None) -> list[dict]:
             "session_id": str,
             "project": str (extracted from session_meta cwd),
             "timestamp": str (from session_meta),
-            "model": str (from config, default "gpt-5.5"),
+            "model": str (from explicit top-level config),
             "input_tokens": int,
             "cached_input_tokens": int,
             "output_tokens": int,
@@ -127,47 +148,34 @@ def read_sessions(since_date: Optional[str] = None) -> list[dict]:
     sessions = []
     sessions_dir = Path.home() / ".codex" / "sessions"
 
-    if not sessions_dir.exists():
-        return sessions
-
     # Parse since_date if provided
     since_datetime = None
-    if since_date:
-        try:
-            since_datetime = datetime.fromisoformat(since_date)
-            # Make it UTC-aware for comparison with session timestamps
-            if since_datetime.tzinfo is None:
-                since_datetime = since_datetime.replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Invalid date format, ignore filter
-            pass
+    if since_date is not None:
+        since_datetime = datetime.fromisoformat(since_date)
+        # A requested calendar date has historically meant midnight UTC.
+        if since_datetime.tzinfo is None:
+            since_datetime = since_datetime.replace(tzinfo=timezone.utc)
 
-    model = _get_codex_model()
-
-    # Find all .jsonl files in sessions directory recursively
-    for session_file in sessions_dir.glob("**/*.jsonl"):
+    if not stat.S_ISDIR(sessions_dir.stat().st_mode):
+        raise NotADirectoryError(f"Codex sessions path is not a directory: {sessions_dir}")
+    paths = []
+    for directory, _, filenames in os.walk(sessions_dir, onerror=_raise_walk_error):
+        paths.extend(Path(directory) / name for name in filenames if name.endswith(".jsonl"))
+    model = None
+    for session_file in sorted(paths):
         # Extract session metadata (first line)
         meta = _parse_session_meta(session_file)
-        if not meta:
-            continue
-
         # Check date filter
         if since_datetime:
-            try:
-                session_ts = datetime.fromisoformat(
-                    meta["timestamp"].replace("Z", "+00:00")
-                )
-                if session_ts < since_datetime:
-                    continue
-            except (ValueError, AttributeError):
-                pass
+            session_ts = datetime.fromisoformat(meta["timestamp"].replace("Z", "+00:00"))
+            if session_ts < since_datetime:
+                continue
 
         # Find the last token_count event
         token_info = _find_last_token_count(session_file)
-        if not token_info:
-            continue
-
-        total_usage = token_info.get("total_token_usage", {})
+        total_usage = token_info["total_token_usage"]
+        if model is None:
+            model = _get_codex_model()
 
         session_record = {
             "session_id": meta["session_id"],
@@ -230,7 +238,7 @@ if __name__ == "__main__":
     totals = get_token_totals()
 
     print(f"Found {len(sessions)} Codex sessions")
-    print(f"Token totals by model:")
+    print("Token totals by model:")
 
     for model, tokens in sorted(totals.items()):
         total = tokens["total_tokens"] if "total_tokens" in tokens else (

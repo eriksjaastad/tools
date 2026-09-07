@@ -285,18 +285,23 @@ def is_ollama_available() -> bool:
     try:
         r = httpx.get(f"{host}/api/tags", timeout=3.0)
         return r.status_code == 200
-    except httpx.HTTPError:
+    except httpx.HTTPError:  # governance: allow-silent SF002: CLI renders this availability failure as Ollama offline, never as an empty inventory
         return False
 
 
 def list_ollama_models() -> list[str]:
-    """Return names of locally installed Ollama models."""
+    """Return a verified inventory; failed inspection propagates to the CLI."""
     import httpx
 
     host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-    try:
-        r = httpx.get(f"{host}/api/tags", timeout=5.0)
-        r.raise_for_status()
-        return [m["name"] for m in r.json().get("models", [])]
-    except (httpx.HTTPError, KeyError, TypeError, ValueError):
-        return []
+    r = httpx.get(f"{host}/api/tags", timeout=5.0)
+    r.raise_for_status()
+    payload = r.json()
+    if not isinstance(payload, dict) or not isinstance(payload.get("models"), list):
+        raise ValueError("Ollama inventory response must contain a models list")
+    names = []
+    for model in payload["models"]:
+        if not isinstance(model, dict) or not isinstance(model.get("name"), str) or not model["name"].strip():
+            raise ValueError("Ollama inventory contains an invalid model name")
+        names.append(model["name"])
+    return names

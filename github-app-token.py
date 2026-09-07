@@ -169,7 +169,7 @@ def _read_cached_token(identity: str):
         )
         if expires_at.utcoffset() is None:
             return None
-    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):  # governance: allow-silent SF002: cache miss makes generate_token mint a replacement or fail
         return None
 
     # An entry written before this field existed has no provable provenance,
@@ -199,7 +199,7 @@ def _write_cached_token(identity: str, token: str, expires_at: str) -> None:
         # one first -- inside a 0700 dir this can only be our own leftover.
         try:
             os.unlink(tmp)
-        except FileNotFoundError:
+        except FileNotFoundError:  # governance: allow-silent SF001: temporary file already absent before exclusive creation
             pass
         fd = os.open(
             tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
