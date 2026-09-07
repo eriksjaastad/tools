@@ -42,7 +42,7 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 **Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore.
 
-**`gh-claude.sh` has been removed**, together with its allowance in the repository-owned `hooks/gh-identity-check.py` (#6782). Use `gha` or `gh-agent.sh` with a canonical role. The installed `~/.claude/hooks/gh-identity-check.py` belongs to user configuration and requires separate cleanup and verification; #6782 stays open until both portions are verified.
+**`gh-claude.sh` has been removed**, together with its repository and installed user-hook allowances (#6782, completed after tools PR #53 and user-config PR #61). Use `gha` or `gh-agent.sh` with a canonical role. Installed hook wiring remains machine-local.
 
 `gh-codex.sh` and `gh-gemini.sh` were removed in #46, together with `gh-agent.sh`'s old silent fallback to the retired `claude` identity. An unresolved identity now fails closed with a readable reason instead of exiting 1 with no output.
 
@@ -79,11 +79,11 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-scaffolding/RE
 | M3 | No API keys in code |
 | H1 | Subprocess uses `check=True` and `timeout` |
 
-**Only M1 and M3 are automated** — `governance/validators/absolute-path-check.py` and `secrets-scanner.py`, wired up by `governance-check.sh` along with a third validator, `api-wrapper-check.py`, that has no row in the table above. **M2 and H1 are manual.** Nothing in `governance/` scans for silent `except: pass`, so catching it is on you and the reviewer, not the pre-commit hook.
+**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. This repository's CI also runs `governance/silent-failure-gate.py` for M2 patterns SF001–SF003 against all tracked Python files. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**. The shared pre-commit validator list stays unchanged until other owners resolve their findings; see `governance/SILENT_FAILURE_ROLLOUT.md`.
 
 ## Definition of Done
 
-- [ ] Automated M1/M3 and API-wrapper checks pass; M2 and H1 reviewed manually
+- [ ] Automated M1/M3, API-wrapper and repository silent-failure checks pass; remaining M2/H1 reviewed manually
 - [ ] Tests pass for any touched component with a suite (e.g. `pytest integrity-warden/tests/` when editing integrity-warden; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed
