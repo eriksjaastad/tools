@@ -9,7 +9,7 @@ a failed request and returns `[]` to its caller.
 
 ## Dry-run evidence — 2026-09-06
 
-The [recorded report](silent-failure-2026-09-06.json) scans 1,295 tracked Python
+The [recorded report](silent-failure-2026-09-06.md) scans 1,295 tracked Python
 working-tree files across 37 immediate-child repositories/worktrees. All files
 were scanned; there were zero errors and 12 explicit warnings (11 zero-Python
 repositories and one unborn-HEAD warning). Findings: 150 SF001 plus 346 SF002,
