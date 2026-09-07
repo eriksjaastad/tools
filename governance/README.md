@@ -10,9 +10,10 @@ This governance system provides reusable git pre-commit hooks that can be instal
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
 - **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
 
-The standalone **Silent Failure Checker** and portfolio dry-run reporter are
-available for #6900 rollout review. They are not registered in the shared
-pre-commit gate; M2 still requires manual review. See
+The **Silent Failure Checker** runs through this repository's CI using
+`silent-failure-gate.py`. The portfolio reporter remains read-only, and the
+shared pre-commit validator list is unchanged pending owner triage. M2 review
+still covers behavior beyond the supported patterns. See
 [the rollout record](SILENT_FAILURE_ROLLOUT.md) before enabling enforcement.
 
 ## Directory Structure
@@ -86,20 +87,25 @@ $HOME/.local/bin/uv run validators/absolute-path-check.py file1.py file2.js
 
 ## Validators
 
-### Silent Failure Checker (not yet installed as a gate)
+### Silent Failure Checker and repository CI gate
 
-This standard-library Python AST scanner reports two syntactic patterns:
+This standard-library Python AST scanner reports three syntactic patterns:
 
 - `SF001`: exception handlers containing only inert statements such as `pass`,
   ellipsis or a docstring.
 - `SF002`: exception handlers returning empty/default values, including a
   logged failure followed by `return []`, `None`, zero or an empty constructor.
+- `SF003`: explicit empty-string fallbacks on `os.getenv` / `os.environ.get`,
+  including `or ""`. These are review candidates; optional configuration is
+  not automatically a defect. Required values should fail explicitly, and
+  intentional optional empty defaults need a local rationale.
 
 From the repository root:
 
 ```bash
 uv run governance/validators/silent-failure-check.py module.py
 uv run governance/validators/silent-failure-check.py --dry-run --json module.py
+uv run governance/silent-failure-gate.py
 uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json
 ```
 
@@ -107,6 +113,14 @@ The scanner accepts explicit `.py`/`.pyi` paths and does no recursive discovery.
 It exits `1` for findings and `2` for unreadable or invalid source. `--dry-run`
 makes findings nonblocking, but scanning errors still exit `2`. Non-Python
 paths are skipped. Output contains locations/rules, not source snippets.
+
+The CI gate enumerates all tracked `.py`/`.pyi` files in the selected repository.
+It returns 1 for findings and 2 for scan/enumeration errors, unsafe paths or no
+Python coverage. It scans working-tree content, appropriate to a CI checkout;
+it is not a staged-index pre-commit scanner. The isolated Git-hook regression
+demonstrates automatic invocation with matching staged/working-tree content,
+not protection against partially staged files. This change does not install a
+hook or modify the shared validator array.
 
 The portfolio reporter examines immediate child Git repositories, including
 worktrees, and only their tracked `.py` working-tree files. It records the
@@ -131,12 +145,19 @@ be an actual Python comment. A marker inside a string does not suppress findings
 Review the caller contract before using an exception; logging alone is not a
 reason to hide a failed operation behind empty results.
 
+For SF003, put the comment on the containing statement or its immediately
+preceding standalone line. A straightforward assignment followed immediately
+by `if not value: raise ...` is recognized as validation (diagnostic expression
+statements before the raise are allowed). Checking a client/container rather
+than the environment value, or returning before the raise, does not qualify.
+The rule does not resolve aliases, arbitrary validators, or distant data flow.
+
 This is a pattern scanner, not proof that error handling is correct. It does
 not resolve aliases, assigned fallback values, shadowed constructor names,
 implicit fallthrough, or full reachability. Returns in nested functions/classes
-belong to their own scope. Determining whether a configuration fallback is
-required or optional is also outside this version's scope. Those limitations
-and the unresolved portfolio findings remain part of #6900 before gate activation.
+belong to their own scope. Required/optional contracts outside the bounded
+patterns still need manual review. Existing portfolio findings must be resolved
+by their owners before enabling the shared gate in those repositories.
 
 ### Secrets Scanner
 

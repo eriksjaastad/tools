@@ -208,7 +208,7 @@ def test_required_env_empty_fallback_does_not_hide_key_error(silent_check):
 
 
 @pytest.mark.parametrize("source", [
-    "key = os.getenv('OPTIONAL_KEY', '')", "key = os.environ.get('OPTIONAL_KEY', '')",
+    "key = os.getenv('OPTIONAL_KEY')", "key = os.environ.get('OPTIONAL_KEY')",
     "key = os.environ['REQUIRED_KEY']", "key = os.environ['KEY'] or 'valid-default'",
     "value = options.get('title', '')", "value = thing['KEY'] or ''",
     "value = os.environ[dynamic_key] or ''",
