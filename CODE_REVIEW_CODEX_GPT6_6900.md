@@ -18,6 +18,12 @@ no CI configuration change is required. Governance's three validators pass;
 M2 and H1 were reviewed manually. Added subprocesses use checked exits,
 captured output, timeouts and temporary test repositories.
 
+The generated snapshot's 36 Git SHA-1 identifiers initially triggered the
+secrets scanner's generic 40-character AWS-key heuristic. They were verified
+as commit metadata. The snapshot is retained as fenced JSON in a Markdown
+review document, as the existing validator recommends for documentation;
+no secret-checking rule was relaxed. The CLI still produces machine JSON.
+
 **Skeptic:** SF001/SF002 are syntactic candidates. Required-versus-optional
 configuration defaults and assigned-value flow are explicitly unsupported.
 
