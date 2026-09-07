@@ -53,9 +53,9 @@ def should_exclude_path(pdf_path):
     return any(pattern in path_str for pattern in excluded_patterns)
 
 def extract_text_from_pdf(pdf_path):
-    """Extract text from PDF using PyMuPDF"""
+    """Extract text; read failures propagate to per-file conversion accounting."""
+    doc = pymupdf.open(pdf_path)
     try:
-        doc = pymupdf.open(pdf_path)
         text_content = []
         
         for page_num in range(len(doc)):
@@ -65,12 +65,9 @@ def extract_text_from_pdf(pdf_path):
             if text.strip():  # Only add non-empty pages
                 text_content.append(f"## Page {page_num + 1}\n\n{text}\n")
         
-        doc.close()
         return "\n".join(text_content)
-    
-    except Exception as e:
-        logging.error(f"Error extracting text from {pdf_path}: {str(e)}")
-        return None
+    finally:
+        doc.close()
 
 def create_markdown_content(pdf_path, extracted_text, base_dir):
     """Create well-formatted markdown content"""
@@ -120,7 +117,7 @@ def convert_pdf_to_markdown(pdf_path, base_dir):
         logger.info(f"✅ Successfully converted: {pdf_path} → {md_path}")
         return True
         
-    except Exception as e:
+    except Exception as e:  # governance: allow-silent SF002: main counts this failed conversion and exits nonzero
         logger.error(f"❌ Failed to convert {pdf_path}: {str(e)}")
         return False
 
@@ -138,8 +135,8 @@ def find_pdfs_to_convert(base_dir):
     
     return valid_pdfs
 
-def main():
-    """Main conversion function"""
+def main(argv=None):
+    """Convert every candidate; return 1 if any file fails, otherwise 0."""
     global logger
     logger = setup_logging()
     
@@ -149,7 +146,7 @@ def main():
     parser.add_argument('--base-dir', default='.', 
                        help='Base directory to search for PDFs (default: current directory)')
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     
     base_dir = Path(args.base_dir).resolve()
     logger.info(f"Starting PDF to Markdown conversion in: {base_dir}")
@@ -159,13 +156,13 @@ def main():
     
     if not pdfs_to_convert:
         logger.info("No PDFs found to convert.")
-        return
+        return 0
     
     if args.dry_run:
         logger.info("DRY RUN - Files that would be converted:")
         for pdf in pdfs_to_convert:
             logger.info(f"  {pdf}")
-        return
+        return 0
     
     # Convert PDFs
     successful_conversions = 0
@@ -185,6 +182,7 @@ def main():
     
     if failed_conversions > 0:
         logger.warning(f"Check the log file for details on failed conversions.")
+    return 1 if failed_conversions else 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -53,7 +53,7 @@ class PersistentShell:
 
         try:
             self.child.expect("\n", timeout=5)
-        except Exception:
+        except pexpect.TIMEOUT:  # governance: allow-silent SF001: initial banner is optional; command completion is checked separately
             pass
 
     def _clean_output(self, raw_output: str, command: str) -> str:
@@ -80,7 +80,7 @@ class PersistentShell:
 
             try:
                 self.child.read_nonblocking(size=8192, timeout=0.1)
-            except Exception:
+            except pexpect.TIMEOUT:  # governance: allow-silent SF001: no pending buffer output is expected before sending a command
                 pass
 
             wrapped = f'{command}; printf "\\n{SENTINEL}$?__\\n"\n'

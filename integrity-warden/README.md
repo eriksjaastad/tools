@@ -11,3 +11,10 @@ A suite of tools for maintaining ecosystem integrity, performing deep cleanups, 
 
 ## Documentation
 - [Fix Prompt Dependencies](fix-prompt-dependencies.md) - Guide for resolving prompt-related issues.
+
+## Audit completion
+
+The checker exits `0` only for a completed audit with no issues, and `1` when
+issues are found. Missing, unreadable, or invalid UTF-8 evidence stops the audit
+with `AUDIT INCOMPLETE` and exit `2`, identifying the checker and file. Fix the
+read failure and rerun; an incomplete audit cannot verify ecosystem integrity.

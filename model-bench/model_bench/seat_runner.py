@@ -369,10 +369,11 @@ class SeatRunner:
                 responses=responses,
             )
             judgments = _normalize_judgments(raw)
-        except Exception as exc:  # noqa: BLE001 - judge failures are run evidence
+        # governance: allow-silent SF002: affected results carry judge_error and the scorer rejects incomplete evidence
+        except Exception as exc:
             for result in case_results:
                 if result.model_id in responses:
-                    result.judge_error = str(exc)
+                    result.judge_error = str(exc) or type(exc).__name__
             return
 
         for result in case_results:
