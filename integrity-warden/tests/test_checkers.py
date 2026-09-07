@@ -8,7 +8,7 @@ from integrity_warden import (
     BaseChecker, WikiLinkChecker, MarkdownLinkChecker,
     AbsolutePathChecker, RelativePathChecker, ShellSourceChecker,
     PythonImportChecker, SymlinkChecker, CronChecker, GitHookChecker,
-    ScanContext, Issue, run_checks
+    ScanContext, Issue, run_checks, IncompleteAuditError
 )
 
 
@@ -26,24 +26,21 @@ class TestBaseCheckerReadFile:
         assert content == "Hello, World!"
     
     def test_read_nonexistent_file(self, tmp_path):
-        """Test reading a non-existent file returns None."""
+        """Missing evidence makes the audit incomplete."""
         test_file = tmp_path / "nonexistent.txt"
         
         checker = WikiLinkChecker()
-        content = checker._read_file(test_file)
-        
-        assert content is None
+        with pytest.raises(IncompleteAuditError, match="FileNotFoundError"):
+            checker._read_file(test_file)
     
     def test_read_binary_file(self, tmp_path):
-        """Test reading binary file with errors='ignore'."""
+        """Undecodable evidence must not silently drop bytes."""
         test_file = tmp_path / "binary.bin"
         test_file.write_bytes(b"\x00\x01\x02\xFF\xFE")
         
         checker = WikiLinkChecker()
-        content = checker._read_file(test_file)
-        
-        # Should return something (not None), even if garbled
-        assert content is not None
+        with pytest.raises(IncompleteAuditError, match="UnicodeDecodeError"):
+            checker._read_file(test_file)
     
     def test_read_large_file(self, tmp_path):
         """Test reading large files."""
@@ -658,9 +655,9 @@ class TestCronChecker:
             returncode=0,
             stdout="""# My crontab
 0 2 * * * /usr/local/bin/backup.sh
-0 9 * * 1 /home/user/scripts/weekly-check.sh
+0 9 * * 1 /home/user/scripts/weekly-check.sh # absolute path intentional: synthetic broken-path fixture
 30 * * * * /nonexistent/script.py
-@daily /home/user/maintenance.sh
+@daily /home/user/maintenance.sh # absolute path intentional: synthetic broken-path fixture
 """
         )
         
@@ -773,7 +770,7 @@ set -e
 
 # Source external scripts
 source ./scripts/validate.sh
-source /home/user/shared/lint.sh
+source /home/user/shared/lint.sh # absolute path intentional: synthetic broken-path fixture
 source /nonexistent/checker.sh
 """)
         
@@ -860,23 +857,17 @@ source ../utils/helpers.sh
 class TestBaseCheckerReadFilePermissionError:
     """Test BaseChecker._read_file() permission error handling."""
     
-    def test_read_file_permission_error(self, tmp_path):
-        """Test reading file with no read permissions returns None."""
+    def test_read_file_permission_error(self, tmp_path, monkeypatch):
+        """Permission failures remain explicit even when tests run as root."""
         test_file = tmp_path / "restricted.txt"
         test_file.write_text("Secret content")
         
-        # Remove read permissions
-        os.chmod(test_file, 0o000)
-        
-        try:
-            checker = WikiLinkChecker()
-            content = checker._read_file(test_file)
-            
-            # Should return None on permission error
-            assert content is None
-        finally:
-            # Restore permissions for cleanup
-            os.chmod(test_file, 0o644)
+        def unreadable(*args, **kwargs):
+            raise PermissionError("offline denied read")
+
+        monkeypatch.setattr(Path, "read_text", unreadable)
+        with pytest.raises(IncompleteAuditError, match="PermissionError"):
+            WikiLinkChecker()._read_file(test_file)
 
 
 

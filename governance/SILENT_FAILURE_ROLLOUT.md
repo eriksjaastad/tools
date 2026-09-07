@@ -1,5 +1,45 @@
 # Silent-failure enforcement rollout (#6900)
 
+## Repository enforcement — 2026-09-07
+
+#6981 resolves all 26 initial local findings; see the final dispositions in
+[the triage record](SILENT_FAILURE_TRIAGE.md). The `_tools` CI workflow now runs
+`silent-failure-gate.py` before tests, covering every tracked `.py`/`.pyi` file.
+The scan blocks on SF001–SF003 and on unreadable, invalid, missing or unsafe
+tracked input. No baseline or whole-file exemptions are used.
+
+SF003 adds explicit empty-string environment-fallback candidates. It recognizes
+`os.getenv` and `os.environ.get` defaults and `or ""`, but does not infer that
+every environment setting is required. Local reviewed optional contracts can
+be annotated. Immediate scalar validation ending in a raise is recognized;
+client/container checks, early returns and nested unvalidated lookups are not.
+Aliases, distant guards and arbitrary validators still require manual review.
+
+The isolated Git fixture proves automatic invocation: an ordinary commit with
+a logged failure returning `[]` is rejected, then corrected code passes. This
+fixture keeps staged and working-tree bytes equal. The gate is designed for CI
+checkout content, not partial staging; it is not installed as a pre-commit hook.
+The motivating external `web_search.py` failure shape remains covered offline.
+
+GitHub preflight found that `main` required only `check-label`. Publication must
+also register the existing `pytest` job as required, preserving `check-label`,
+and verify the resulting configuration. This makes a failed scan/test block
+normal PR merging. It does not grant this agent merge authority.
+
+[The updated portfolio comparison](silent-failure-2026-09-07.md) records the
+current scanner against the previous scanner on the same bytes of each file.
+The prospective `_tools` blocking set is clean. Other repositories' findings
+remain candidates needing their owners' decisions; new SF003 candidates are
+not automatically classified as defects.
+
+The shared `governance-check.sh` array and installed portfolio hooks are still
+unchanged. This repository can enforce its reviewed findings without activating
+a live shared hook on unreviewed projects. **#6900 remains open for portfolio
+owner triage and shared adoption**; #6981 can close after this PR merges.
+#6453 separately awaits authenticated dashboard evidence and is unaffected.
+
+## Historical initial rollout
+
 The approved sequence is a deterministic scanner, a read-only portfolio
 dry-run, and then blocking enforcement after findings and false positives are
 resolved. Logging an exception does not make an empty result a successful

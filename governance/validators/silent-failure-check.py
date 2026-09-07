@@ -3,15 +3,17 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Report syntactic Python failure-masking patterns; no gate is installed here.
+"""Report syntactic Python failure-masking patterns.
 
 SF001: exception handler containing only inert statements.
 SF002: exception handler returning an empty/default value, even after logging.
+SF003: environment lookup explicitly falling back to an empty string.
 
 This is not semantic analysis: aliases, assigned fallback values, arbitrary call
 results, implicit fallthrough, and conditional reachability are not resolved.
-Required-versus-optional configuration defaults also require application context
-and are outside these rules; no environment fallback rule is implemented.
+SF003 is a review candidate, not an inference that every environment value is
+required. Optional empty defaults need a local, reviewed rationale. Use a
+required lookup or validate missing values explicitly instead of hiding them.
 Constructor names are matched syntactically, without resolving shadowed builtins.
 Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
@@ -31,8 +33,9 @@ import tokenize
 MESSAGES = {
     "SF001": "Exception handler contains only inert statements.",
     "SF002": "Exception handler returns an empty/default value, potentially masking failure.",
+    "SF003": "Environment lookup has an empty-string fallback; validate required values or document an optional contract.",
 }
-SUPPRESSION = re.compile(r"#\s*governance: allow-silent (SF00[12]):\s*(\S.*)\Z")
+SUPPRESSION = re.compile(r"#\s*governance: allow-silent (SF00[123]):\s*(\S.*)\Z")
 SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 
 
@@ -170,6 +173,76 @@ def _suppressions(source: str) -> dict[int, tuple[str, bool, int]]:
     return comments
 
 
+def _env_lookup(node):
+    if not isinstance(node, ast.Call):
+        return False
+    return ast.unparse(node.func) in {"os.getenv", "os.environ.get"}
+
+
+def _empty_string(node):
+    return isinstance(node, ast.Constant) and node.value == ""
+
+
+def _empty_environment_fallback(node):
+    if _env_lookup(node):
+        return (len(node.args) >= 2 and _empty_string(node.args[1])) or any(
+            kw.arg == "default" and _empty_string(kw.value) for kw in node.keywords
+        )
+    return (
+        isinstance(node, ast.BoolOp) and isinstance(node.op, ast.Or)
+        and _empty_string(node.values[-1])
+        and any(_env_lookup(value) for value in node.values[:-1])
+    )
+
+
+def _statement(node, parents):
+    while not isinstance(node, ast.stmt) and node in parents:
+        node = parents[node]
+    return node
+
+
+def _immediately_validated(statement, parents, candidate):
+    """Recognize only a following `if not value: ...; raise` in the same block."""
+    if isinstance(statement, ast.Assign) and len(statement.targets) == 1:
+        target = statement.targets[0]
+    elif isinstance(statement, ast.AnnAssign):
+        target = statement.target
+    else:
+        return False
+    if not isinstance(target, ast.Name):
+        return False
+    if not _empty_environment_fallback(statement.value):
+        # Checking a client/result object does not validate credentials passed
+        # into its constructor, nor a tuple/list containing an empty value.
+        return False
+    child = candidate
+    while child is not statement.value:
+        parent = parents.get(child)
+        if not (isinstance(parent, ast.BoolOp) and isinstance(parent.op, ast.Or)
+                and child in parent.values
+                and all(_env_lookup(value) or _empty_string(value) for value in parent.values)):
+            return False
+        child = parent
+    parent = parents.get(statement)
+    if parent is None:
+        return False
+    for _, block in ast.iter_fields(parent):
+        if not isinstance(block, list) or statement not in block:
+            continue
+        index = block.index(statement) + 1
+        if index >= len(block) or not isinstance(block[index], ast.If):
+            continue
+        guard = block[index]
+        if (isinstance(guard.test, ast.UnaryOp) and isinstance(guard.test.op, ast.Not)
+                and isinstance(guard.test.operand, ast.Name) and guard.test.operand.id == target.id
+                and isinstance(guard.body[-1], ast.Raise)
+                and all(isinstance(part, ast.Expr)
+                        and not any(isinstance(item, (ast.Yield, ast.YieldFrom)) for item in ast.walk(part))
+                        for part in guard.body[:-1])):
+            return True
+    return False
+
+
 def scan_source(source: str, path: str = "<memory>") -> list[dict]:
     """Scan one source string. Parse/tokenization errors propagate to callers."""
     tree = ast.parse(source, filename=path)
@@ -193,6 +266,12 @@ def scan_source(source: str, path: str = "<memory>") -> list[dict]:
             findings.append(finding)
 
     for node in ast.walk(tree):
+        if _empty_environment_fallback(node):
+            # One candidate per statement. The rationale belongs to the
+            # statement, not to an enclosing exception or function.
+            statement = _statement(node, parents)
+            if not _immediately_validated(statement, parents, node):
+                add(statement, "SF003")
         if isinstance(node, ast.ExceptHandler):
             if all(_inert(statement) for statement in node.body):
                 add(node, "SF001")
