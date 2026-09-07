@@ -93,6 +93,61 @@ def test_empty_token_is_a_miss(token_module, token):
     assert token_module._read_cached_token("manager") is None
 
 
+@pytest.mark.parametrize("entry", [None, [], ["token"], 42, -42, True, "not an object"])
+def test_non_object_cache_entries_are_misses(token_module, entry):
+    token_module.CACHE_DIR.mkdir()
+    token_module._cache_path("manager").write_text(json.dumps(entry))
+    assert token_module._read_cached_token("manager") is None
+
+
+@pytest.mark.parametrize("expiry", [None, 42, -42, True, [], {}])
+def test_non_string_cache_expiry_is_a_miss(token_module, expiry):
+    write_entry(token_module, expires_at=expiry)
+    assert token_module._read_cached_token("manager") is None
+
+
+@pytest.mark.parametrize("expiry", ["2099-01-01T00:00:00", "2099-01-01", "2099-01-01 00:00:00"])
+def test_timezone_naive_cache_expiry_is_a_miss(token_module, expiry):
+    write_entry(token_module, expires_at=expiry)
+    assert token_module._read_cached_token("manager") is None
+
+
+@pytest.mark.parametrize("token", [42, -42, True, ["token"], {"value": "token"}, " ", "\t\n"])
+def test_non_string_or_blank_cached_token_is_a_miss(token_module, token):
+    write_entry(token_module, token=token)
+    assert token_module._read_cached_token("manager") is None
+
+
+@pytest.mark.parametrize(
+    "corruption",
+    ["array", "null", "numeric-expiry", "naive-expiry", "numeric-token", "blank-token"],
+)
+def test_malformed_cache_remints_once_then_reuses_replacement(token_module, monkeypatch, capsys, corruption):
+    entry = write_entry(token_module)
+    if corruption == "array":
+        entry = []
+    elif corruption == "null":
+        entry = None
+    elif corruption == "numeric-expiry":
+        entry["expires_at"] = 42
+    elif corruption == "naive-expiry":
+        entry["expires_at"] = "2099-01-01T00:00:00"
+    elif corruption == "numeric-token":
+        entry["token"] = 42
+    else:
+        entry["token"] = " \t\n"
+    token_module._cache_path("manager").write_text(json.dumps(entry))
+    mint = Mock(return_value=("new-offline-token", "2026-09-06T13:00:00Z"))
+    monkeypatch.setattr(token_module, "mint_token", mint)
+
+    assert token_module.generate_token("manager") == "new-offline-token"
+    assert token_module.generate_token("manager") == "new-offline-token"
+    mint.assert_called_once_with("manager")
+    assert json.loads(token_module._cache_path("manager").read_text())["token"] == "new-offline-token"
+    captured = capsys.readouterr()
+    assert captured.out == captured.err == ""
+
+
 def test_missing_file_is_a_miss(token_module):
     assert token_module._read_cached_token("manager") is None
 
