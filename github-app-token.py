@@ -156,9 +156,19 @@ def _read_cached_token(identity: str):
     try:
         with path.open() as fh:
             entry = json.load(fh)
+        if not isinstance(entry, dict):
+            return None
+        token = entry.get("token")
+        expiry = entry.get("expires_at")
+        if not isinstance(token, str) or not token.strip():
+            return None
+        if not isinstance(expiry, str):
+            return None
         expires_at = datetime.fromisoformat(
-            entry["expires_at"].replace("Z", "+00:00")
+            expiry.replace("Z", "+00:00")
         )
+        if expires_at.utcoffset() is None:
+            return None
     except (OSError, ValueError, KeyError, json.JSONDecodeError):
         return None
 
@@ -170,8 +180,7 @@ def _read_cached_token(identity: str):
     remaining = (expires_at - datetime.now(timezone.utc)).total_seconds()
     if remaining <= EXPIRY_SAFETY_MARGIN:
         return None
-    token = entry.get("token")
-    return token if token else None
+    return token
 
 
 def _write_cached_token(identity: str, token: str, expires_at: str) -> None:

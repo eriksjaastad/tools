@@ -151,4 +151,4 @@ Part of the `..` workspace.
 ## Related Documentation
 
 - [Project-workflow.md](../Project-workflow.md) - canonical project planning pipeline
-- [local-model-learnings.md](local-model-learnings.md) - local model notes
+- [local-model-learnings.md](local-model-learnings.md) - historical local model notes

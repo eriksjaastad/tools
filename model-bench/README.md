@@ -138,6 +138,23 @@ A LIVE replacement is suggested only when both incumbent and candidate have
 complete, fully valid, error-free evidence on the same case count. The report
 is advisory; changing a production pin requires a separate project decision.
 
+## Retained Ollama transport
+
+The [candidate registry](model_bench/registry.py) contains cloud models; Ollama
+generation candidates were removed after the July 2026 routing decision. A
+project can still declare an Ollama incumbent in its own `seats.yaml`.
+`model_from_pin` resolves that incumbent, and the
+[caller](model_bench/caller.py) sends its requests directly to Ollama's
+`/api/chat` endpoint. This preserves comparisons against project-owned pins.
+
+The endpoint comes from `OLLAMA_HOST`, defaulting to
+`http://localhost:11434`. Availability depends on the environment running the
+benchmark; the transport does not require a particular Mac or imply that an
+Ollama service is currently running. The retained legacy runner and CLI
+availability helpers remain separate from candidate selection. Historical
+reports under `results/` record the models tested at the time. Embedding
+services and the canonical seat contract are outside this routing change.
+
 ## Credentials
 
 Cloud calls use the provider environment variables expected by LiteLLM.
