@@ -10,12 +10,9 @@ Provides functions to extract session metadata, tool usage, and activity classif
 """
 
 import json
-import logging
-from datetime import datetime
+import stat
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
-
-logger = logging.getLogger(__name__)
 
 
 def read_stats_cache() -> dict:
@@ -32,20 +29,15 @@ def read_stats_cache() -> dict:
         - totalSessions: int
         - totalMessages: int
 
-    Returns empty dict if file doesn't exist or can't be parsed.
+    Raises on missing, unreadable, malformed, or incomplete cache evidence.
     """
     cache_path = Path.home() / ".claude" / "stats-cache.json"
 
-    if not cache_path.exists():
-        logger.warning(f"Stats cache not found at {cache_path}")
-        return {}
-
-    try:
-        with open(cache_path, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError) as e:
-        logger.warning(f"Failed to read stats cache: {e}")
-        return {}
+    with open(cache_path, "r") as f:
+        cache = json.load(f)
+    if not isinstance(cache, dict) or not isinstance(cache.get("modelUsage"), dict):
+        raise TypeError("Claude stats cache requires a modelUsage object")
+    return cache
 
 
 def get_token_totals() -> dict:
@@ -70,10 +62,19 @@ def get_token_totals() -> dict:
     - cacheCreationInputTokens -> cache_write_tokens
     """
     cache = read_stats_cache()
-    model_usage = cache.get("modelUsage", {})
+    model_usage = cache["modelUsage"]
 
     result = {}
     for model_id, usage in model_usage.items():
+        if not isinstance(model_id, str) or not model_id.strip() or not isinstance(usage, dict):
+            raise ValueError("Claude model usage requires a model ID and token counters")
+        for required in ("inputTokens", "outputTokens"):
+            if required not in usage:
+                raise ValueError(f"Claude model usage is missing {required}")
+        for field in ("inputTokens", "outputTokens", "cacheReadInputTokens", "cacheCreationInputTokens"):
+            value = usage.get(field, 0)
+            if type(value) is not int or value < 0:
+                raise ValueError(f"Claude model usage requires a nonnegative integer for {field}")
         result[model_id] = {
             "input_tokens": usage.get("inputTokens", 0),
             "output_tokens": usage.get("outputTokens", 0),
@@ -100,12 +101,25 @@ def _extract_project_name(session_path: Path) -> str:
 
 
 def _get_session_mtime(session_path: Path) -> str:
-    """Get file modification time as ISO format string."""
-    try:
-        mtime = session_path.stat().st_mtime
-        return datetime.fromtimestamp(mtime).isoformat()
-    except (OSError, ValueError):
-        return ""
+    """Get required modification metadata used for ordering and date filtering."""
+    mtime = session_path.stat().st_mtime
+    # Keep the existing local, timezone-free display format after explicit conversion.
+    return datetime.fromtimestamp(mtime, timezone.utc).astimezone().replace(tzinfo=None).isoformat()
+
+
+def _read_records(session_path: Path):
+    """Yield every JSONL record, rejecting corruption instead of partial counts."""
+    with open(session_path, "r") as file:
+        for number, line in enumerate(file, 1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(f"Invalid Claude session JSON at {session_path}:{number}") from error
+            if not isinstance(record, dict):
+                raise TypeError(f"Claude session record must be an object at {session_path}:{number}")
+            yield record
 
 
 def _classify_session(
@@ -139,11 +153,11 @@ def _classify_session(
     return "MIXED"
 
 
-def _parse_session_file(session_path: Path) -> Optional[dict]:
+def _parse_session_file(session_path: Path) -> dict:
     """
     Parse a single JSONL session file.
 
-    Returns session dict or None if file is corrupt/unreadable.
+    Returns a session dict; missing metadata and corrupt/unreadable files raise.
     """
     session_id = session_path.stem
     project = _extract_project_name(session_path)
@@ -158,53 +172,37 @@ def _parse_session_file(session_path: Path) -> Optional[dict]:
     read_tools_count = 0
     models_used = set()
 
-    try:
-        with open(session_path, "r") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-
-                try:
-                    obj = json.loads(line)
-                except json.JSONDecodeError:
-                    logger.warning(f"Corrupt JSON in {session_path}: {line[:100]}")
-                    continue
-
-                # Count messages
-                if "message" in obj:
-                    msg = obj["message"]
-                    role = msg.get("role")
-
-                    if role == "user":
-                        user_messages += 1
-                    elif role == "assistant":
-                        assistant_messages += 1
-
-                    # Extract tool calls from assistant content blocks
-                    if role == "assistant":
-                        content = msg.get("content", [])
-                        if isinstance(content, list):
-                            for block in content:
-                                if isinstance(block, dict) and block.get("type") == "tool_use":
-                                    tool_name = block.get("name")
-                                    if tool_name:
-                                        tool_calls[tool_name] = tool_calls.get(tool_name, 0) + 1
-
-                                        if tool_name in write_tools_set:
-                                            write_tools_count += 1
-                                        elif tool_name in read_tools_set:
-                                            read_tools_count += 1
-
-                    # Extract model info from metadata if available
-                    if "metadata" in obj and isinstance(obj["metadata"], dict):
-                        model = obj["metadata"].get("model")
-                        if model:
-                            models_used.add(model)
-
-    except IOError as e:
-        logger.warning(f"Failed to read session file {session_path}: {e}")
-        return None
+    for obj in _read_records(session_path):
+        if "message" not in obj:
+            continue
+        msg = obj["message"]
+        if not isinstance(msg, dict):
+            raise TypeError(f"Claude message must be an object in {session_path}")
+        role = msg.get("role")
+        if role == "user":
+            user_messages += 1
+        elif role == "assistant":
+            assistant_messages += 1
+            content = msg.get("content", [])
+            if not isinstance(content, (list, str)):
+                raise TypeError(f"Claude assistant content must be text or a list in {session_path}")
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "tool_use":
+                        tool_name = block.get("name")
+                        if not isinstance(tool_name, str) or not tool_name:
+                            raise ValueError(f"Claude tool call requires a name in {session_path}")
+                        tool_calls[tool_name] = tool_calls.get(tool_name, 0) + 1
+                        if tool_name in write_tools_set:
+                            write_tools_count += 1
+                        elif tool_name in read_tools_set:
+                            read_tools_count += 1
+        if "metadata" in obj and isinstance(obj["metadata"], dict):
+            model = obj["metadata"].get("model")
+            if model:
+                if not isinstance(model, str):
+                    raise ValueError(f"Claude model metadata must be a string in {session_path}")
+                models_used.add(model)
 
     category = _classify_session(write_tools_count, read_tools_count, tool_calls)
 
@@ -218,11 +216,11 @@ def _parse_session_file(session_path: Path) -> Optional[dict]:
         "write_tools": write_tools_count,
         "read_tools": read_tools_count,
         "category": category,
-        "models_used": sorted(list(models_used)),
+        "models_used": sorted(models_used),
     }
 
 
-def read_sessions(since_date: Optional[str] = None) -> list:
+def read_sessions(since_date: str | None = None) -> list:
     """
     Read individual session JSONL files from ~/.claude/projects/.
 
@@ -247,45 +245,30 @@ def read_sessions(since_date: Optional[str] = None) -> list:
     """
     projects_dir = Path.home() / ".claude" / "projects"
 
-    if not projects_dir.exists():
-        logger.warning(f"Projects directory not found at {projects_dir}")
-        return []
-
     # Parse since_date if provided
     since_timestamp = None
-    if since_date:
-        try:
-            since_dt = datetime.fromisoformat(since_date)
-            since_timestamp = since_dt.timestamp()
-        except ValueError:
-            logger.warning(f"Invalid date format for since_date: {since_date}")
-            return []
+    if since_date is not None:
+        since_dt = datetime.fromisoformat(since_date)
+        since_timestamp = since_dt.timestamp()
 
     sessions = []
 
-    # Find all .jsonl files in project directories
-    for jsonl_path in projects_dir.glob("*/*.jsonl"):
-        # Check if file is newer than since_date
-        if since_timestamp:
-            try:
-                mtime = jsonl_path.stat().st_mtime
-                if mtime <= since_timestamp:
-                    continue
-            except OSError:
-                logger.warning(f"Failed to get mtime for {jsonl_path}")
+    # Explicit enumeration propagates directory-read failures; glob may omit them.
+    for project_dir in sorted(projects_dir.iterdir()):
+        if not stat.S_ISDIR(project_dir.stat().st_mode):
+            continue
+        for jsonl_path in sorted(project_dir.iterdir()):
+            if jsonl_path.suffix != ".jsonl":
                 continue
-
-        session = _parse_session_file(jsonl_path)
-        if session:
-            sessions.append(session)
+            if since_timestamp is not None and jsonl_path.stat().st_mtime <= since_timestamp:
+                continue
+            sessions.append(_parse_session_file(jsonl_path))
 
     return sessions
 
 
 if __name__ == "__main__":
     # Quick summary when run directly
-    logging.basicConfig(level=logging.INFO)
-
     print("=" * 60)
     print("Claude Code Session Reader - Summary")
     print("=" * 60)
@@ -293,7 +276,7 @@ if __name__ == "__main__":
     # Stats cache
     cache = read_stats_cache()
     if cache:
-        print(f"\nStats Cache:")
+        print("\nStats Cache:")
         print(f"  Last computed: {cache.get('lastComputedDate', 'N/A')}")
         print(f"  Total sessions: {cache.get('totalSessions', 0)}")
         print(f"  Total messages: {cache.get('totalMessages', 0)}")
@@ -303,7 +286,7 @@ if __name__ == "__main__":
     # Token totals
     tokens = get_token_totals()
     if tokens:
-        print(f"\nToken Usage by Model:")
+        print("\nToken Usage by Model:")
         for model_id, usage in tokens.items():
             total_input = usage["input_tokens"] + usage["cache_read_tokens"]
             total_output = usage["output_tokens"] + usage["cache_write_tokens"]
@@ -331,7 +314,7 @@ if __name__ == "__main__":
             projects[proj] = projects.get(proj, 0) + 1
 
         top_projects = sorted(projects.items(), key=lambda x: x[1], reverse=True)[:3]
-        print(f"  Top projects:")
+        print("  Top projects:")
         for proj, count in top_projects:
             print(f"    {proj}: {count} sessions")
     else:

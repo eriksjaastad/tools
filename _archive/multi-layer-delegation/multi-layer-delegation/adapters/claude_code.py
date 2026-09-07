@@ -126,7 +126,7 @@ def parse_claude_output(raw_output: str) -> dict:
                 "artifacts": structured.get("artifacts", []),
                 "notes": structured.get("notes"),
             }
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError):  # governance: allow-silent SF001: optional structured parsing falls back to preserved assistant text below
         pass
 
     # Extract cost info if available

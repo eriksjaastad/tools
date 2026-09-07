@@ -14,6 +14,7 @@ from model_bench.seat_runner import (
     SeatRunner,
     ValidityResult,
 )
+from model_bench.seat_scorer import score_seat_run
 
 
 def _model(model_id: str) -> ModelEntry:
@@ -74,6 +75,29 @@ class FakeJudge:
             }
             for model_id, response in responses.items()
         }
+
+
+@pytest.mark.parametrize("failure", [RuntimeError("judge unavailable"), RuntimeError()])
+def test_judge_failure_remains_structured_in_scorecard(failure):
+    def failed_judge(**kwargs):
+        raise failure
+
+    runner = SeatRunner(
+        caller=FakeCaller({"incumbent": "valid response"}),
+        validator=lambda **kwargs: ValidityResult(True),
+        judge=failed_judge,
+        cost_estimator=lambda *args: 0.0,
+    )
+    run = runner.run(
+        seat=_seat(), cases=[{"id": "case-1", "prompt": "Judge this"}],
+        candidates=[_model("incumbent")],
+    )
+    assert run.results[0].judge_error == (str(failure) or "RuntimeError")
+    assert run.results[0].judge_score is None
+    scorecard = score_seat_run(run)
+    assert scorecard.candidates["incumbent"].errors == 1
+    assert scorecard.candidates["incumbent"].judged_cases == 0
+    assert scorecard.recommendation.status == "no_recommendation"
 
 
 def _validator(**kwargs) -> ValidityResult:

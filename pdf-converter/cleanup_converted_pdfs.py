@@ -64,15 +64,12 @@ def check_pdf_for_cleanup(pdf_path):
     
     if md_path.exists():
         # Additional check: make sure the .md file has content
-        try:
-            with open(md_path, 'r', encoding='utf-8') as f:
-                content = f.read().strip()
-                if len(content) > 100:  # Has substantial content
-                    return True, f"Markdown file exists with {len(content)} characters"
-                else:
-                    return False, f"Markdown file exists but is too small ({len(content)} characters)"
-        except Exception as e:
-            return False, f"Error reading markdown file: {str(e)}"
+        with open(md_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if len(content) > 100:  # Has substantial content
+                return True, f"Markdown file exists with {len(content)} characters"
+            else:
+                return False, f"Markdown file exists but is too small ({len(content)} characters)"
     else:
         return False, "No corresponding markdown file found"
 
@@ -86,12 +83,12 @@ def delete_pdf_safely(pdf_path, dry_run=False):
             pdf_path.unlink()
             logger.info(f"✅ Deleted: {pdf_path}")
             return True
-    except Exception as e:
+    except OSError as e:  # governance: allow-silent SF002: main counts this failed deletion and exits nonzero
         logger.error(f"❌ Failed to delete {pdf_path}: {str(e)}")
         return False
 
-def main():
-    """Main cleanup function"""
+def main(argv=None):
+    """Keep processing eligible files; inspection/deletion failures return 1."""
     global logger
     logger = setup_logging()
     
@@ -101,7 +98,7 @@ def main():
     parser.add_argument('--base-dir', default='..', 
                        help='Base directory to search for PDFs (default: parent directory)')
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     
     base_dir = Path(args.base_dir).resolve()
     logger.info(f"Starting PDF cleanup in: {base_dir}")
@@ -114,14 +111,21 @@ def main():
     
     if not candidate_pdfs:
         logger.info("No PDFs found to check for cleanup.")
-        return
+        return 0
     
     # Check each PDF for cleanup eligibility
     pdfs_to_delete = []
     pdfs_to_keep = []
+    failed_checks = 0
     
     for pdf_path in candidate_pdfs:
-        can_delete, reason = check_pdf_for_cleanup(pdf_path)
+        try:
+            can_delete, reason = check_pdf_for_cleanup(pdf_path)
+        except (OSError, UnicodeError) as e:
+            failed_checks += 1
+            pdfs_to_keep.append(pdf_path)
+            logger.error(f"❌ Could not verify {pdf_path.name}; keeping PDF: {e}")
+            continue
         
         if can_delete:
             pdfs_to_delete.append(pdf_path)
@@ -133,16 +137,17 @@ def main():
     logger.info(f"\nSummary:")
     logger.info(f"  📄 PDFs eligible for deletion: {len(pdfs_to_delete)}")
     logger.info(f"  🔒 PDFs to keep: {len(pdfs_to_keep)}")
+    logger.info(f"  ❌ Failed eligibility checks: {failed_checks}")
     
     if not pdfs_to_delete:
         logger.info("No PDFs are eligible for deletion.")
-        return
+        return 1 if failed_checks else 0
     
     if args.dry_run:
         logger.info("\nDRY RUN - PDFs that would be deleted:")
         for pdf in pdfs_to_delete:
             logger.info(f"  {pdf}")
-        return
+        return 1 if failed_checks else 0
     
     # Confirm deletion if not dry run
     print(f"\nReady to delete {len(pdfs_to_delete)} PDF files.")
@@ -151,7 +156,7 @@ def main():
     
     if response not in ['yes', 'y']:
         logger.info("Deletion cancelled by user.")
-        return
+        return 1 if failed_checks else 0
     
     # Delete PDFs
     successful_deletions = 0
@@ -167,15 +172,16 @@ def main():
     logger.info(f"\n🎉 Cleanup Summary:")
     logger.info(f"  ✅ Successfully deleted: {successful_deletions}")
     logger.info(f"  ❌ Failed to delete: {failed_deletions}")
-    logger.info(f"  🔒 PDFs kept (no markdown): {len(pdfs_to_keep)}")
+    logger.info(f"  🔒 PDFs kept (ineligible or check failed): {len(pdfs_to_keep)}")
+    logger.info(f"  ❌ Failed eligibility checks: {failed_checks}")
     logger.info(f"  📊 Total checked: {len(candidate_pdfs)}")
     
     if failed_deletions > 0:
         logger.warning(f"Check the log file for details on failed deletions.")
+    return 1 if failed_deletions or failed_checks else 0
 
 if __name__ == "__main__":
-    main()
-
+    sys.exit(main())
 
 
 

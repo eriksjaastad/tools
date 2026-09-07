@@ -14,45 +14,40 @@ Usage:
 
 import argparse
 import sys
-from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add route directory to path for imports
 _route_dir = Path(__file__).resolve().parent
 sys.path.insert(0, str(_route_dir))
 
-from claude_reader import read_sessions as claude_sessions, get_token_totals as claude_totals
-from codex_reader import read_sessions as codex_sessions, get_token_totals as codex_totals
+from claude_reader import get_token_totals as claude_totals
+from claude_reader import read_sessions as claude_sessions
+from codex_reader import get_token_totals as codex_totals
 from pricing import (
     compute_shadow_cost,
     compute_subscription_value,
     format_cost,
     load_registry,
-    get_model_pricing,
 )
 
 
 def cmd_summary(args):
     """Show shadow cost summary."""
-    # Determine date range
-    since = None
-    label = "All time"
-    if args.week:
-        since = (datetime.now() - timedelta(days=7)).isoformat()
-        label = "Last 7 days"
-    elif args.month:
-        since = (datetime.now() - timedelta(days=30)).isoformat()
-        label = "Last 30 days"
+    if args.week or args.month:
+        raise ValueError("Date-limited summaries are unavailable: Claude stats contain aggregate totals. Use summary --all.")
 
-    print(f"\n  SHADOW COST SUMMARY — {label}")
+    # Resolve both sources before rendering any total or partial provider result.
+    claude_tok = claude_totals()
+    codex_tok = codex_totals()
+
+    print("\n  SHADOW COST SUMMARY — All recorded usage")
     print(f"  {'=' * 55}")
 
     # Claude totals
-    claude_tok = claude_totals()
     total_shadow = 0.0
 
     if claude_tok:
-        print(f"\n  CLAUDE CODE")
+        print("\n  CLAUDE CODE")
         print(f"  {'-' * 55}")
         for model_id, tokens in sorted(claude_tok.items()):
             cost = compute_shadow_cost(
@@ -73,9 +68,8 @@ def cmd_summary(args):
             print(f"    Shadow cost: {format_cost(cost)}")
 
     # Codex totals
-    codex_tok = codex_totals()
     if codex_tok:
-        print(f"\n  CODEX CLI")
+        print("\n  CODEX CLI")
         print(f"  {'-' * 55}")
         for model_id, tokens in sorted(codex_tok.items()):
             cost = compute_shadow_cost(
@@ -102,7 +96,7 @@ def cmd_summary(args):
     registry = load_registry()
     subs = registry.get("subscriptions", {})
     if subs:
-        print(f"\n  SUBSCRIPTION VALUE")
+        print("\n  SUBSCRIPTION VALUE")
         print(f"  {'-' * 55}")
         # Figure out which subscriptions have usage
         sub_costs = []
@@ -183,7 +177,7 @@ def cmd_estimate(args):
 
     if not candidates:
         print(f"\n  No models found for role '{role}'")
-        print(f"  Available roles: planner, coder, reviewer, floor_manager, reader")
+        print("  Available roles: planner, coder, reviewer, floor_manager, reader")
         return
 
     # Sort by output price (dominant cost)
@@ -261,17 +255,22 @@ def main():
 
     args = parser.parse_args()
 
-    if args.command == "summary":
-        cmd_summary(args)
-    elif args.command == "sessions":
-        cmd_sessions(args)
-    elif args.command == "estimate":
-        cmd_estimate(args)
-    elif args.command == "models":
-        cmd_models(args)
-    else:
-        parser.print_help()
+    try:
+        if args.command == "summary":
+            cmd_summary(args)
+        elif args.command == "sessions":
+            cmd_sessions(args)
+        elif args.command == "estimate":
+            cmd_estimate(args)
+        elif args.command == "models":
+            cmd_models(args)
+        else:
+            parser.print_help()
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        print(f"route: unable to complete {args.command}: {error}", file=sys.stderr)
+        return 2
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

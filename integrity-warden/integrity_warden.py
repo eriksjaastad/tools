@@ -25,9 +25,13 @@ import argparse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set
 
 logger = logging.getLogger(__name__)
+
+
+class IncompleteAuditError(RuntimeError):
+    """A required source could not be read, so the audit cannot be complete."""
 
 
 # =============================================================================
@@ -176,13 +180,14 @@ class BaseChecker(ABC):
         """
         pass
 
-    def _read_file(self, file_path: Path) -> Optional[str]:
-        """Safely read a file's contents."""
+    def _read_file(self, file_path: Path) -> str:
+        """Read required evidence or fail the audit instead of skipping it."""
         try:
-            return file_path.read_text(encoding="utf-8", errors="ignore")
-        except Exception as e:
-            logger.warning("Failed to read file %s: %s", file_path, e)
-            return None
+            return file_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            raise IncompleteAuditError(
+                f"{self.name} could not read {file_path} ({type(error).__name__})"
+            ) from error
 
     def _relative_path(self, file_path: Path, ctx: ScanContext) -> str:
         """Get path relative to root for display."""
@@ -916,7 +921,11 @@ To add a new checker:
     print(f"Checkers: {len(CHECKERS)} registered")
     print(f"Excluding: {', '.join(sorted(EXCLUDE_DIRS))}")
 
-    issues = run_checks(root_path, args.verbose)
+    try:
+        issues = run_checks(root_path, args.verbose)
+    except IncompleteAuditError as error:
+        print(f"AUDIT INCOMPLETE: {error}")
+        return 2
     print_report(issues, args.verbose)
 
     return 1 if issues else 0

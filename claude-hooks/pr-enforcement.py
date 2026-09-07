@@ -5,6 +5,8 @@ Fires after `gh pr create` commands to enforce PR quality standards:
 1. Warns if no --label flag was included
 2. Detects multi-concern PRs (mixed conventional commit types)
 3. Reminds to run CI checks
+
+Returns a nonzero status if Git inspection could not complete the review.
 """
 import json
 import re
@@ -27,6 +29,7 @@ def main():
         sys.exit(0)
 
     warnings = []
+    inspection_failed = False
 
     # Check 1: label included?
     if "--label" not in command:
@@ -44,25 +47,29 @@ def main():
             capture_output=True,
             text=True,
             timeout=5,
+            check=True,
         )
-        if result.returncode == 0:
-            messages = result.stdout.strip().split("\n")
-            types_found = set()
-            for msg in messages:
-                match = re.match(
-                    r"^(feat|fix|docs|chore|refactor|test|style|perf|ci|build)",
-                    msg,
-                )
-                if match:
-                    types_found.add(match.group(1))
-            if len(types_found) > 1:
-                warnings.append(
-                    f"WARNING: Multi-concern PR detected: commit types "
-                    f"[{', '.join(sorted(types_found))}]. "
-                    f"Consider splitting into separate PRs."
-                )
-    except Exception:
-        pass
+        messages = result.stdout.strip().split("\n")
+        types_found = set()
+        for msg in messages:
+            match = re.match(
+                r"^(feat|fix|docs|chore|refactor|test|style|perf|ci|build)",
+                msg,
+            )
+            if match:
+                types_found.add(match.group(1))
+        if len(types_found) > 1:
+            warnings.append(
+                f"WARNING: Multi-concern PR detected: commit types "
+                f"[{', '.join(sorted(types_found))}]. "
+                f"Consider splitting into separate PRs."
+            )
+    except (OSError, subprocess.SubprocessError) as error:
+        inspection_failed = True
+        warnings.append(
+            "WARNING: Multi-concern check unavailable: Git inspection failed "
+            f"({type(error).__name__}). Check origin/main and rerun the review."
+        )
 
     # Check 3: remind about CI checks
     if "pr checks" not in command and "--watch" not in command:
@@ -73,7 +80,7 @@ def main():
     if warnings:
         print("\n".join(warnings), file=sys.stderr)
 
-    sys.exit(0)
+    sys.exit(1 if inspection_failed else 0)
 
 
 if __name__ == "__main__":

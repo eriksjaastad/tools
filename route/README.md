@@ -5,8 +5,7 @@ A shared tool that reads session data from Claude Code, Codex CLI, and Gemini CL
 ## Usage
 
 ```bash
-route summary                    # This month's shadow costs by model
-route summary --week             # Last 7 days
+route summary --all               # All recorded shadow costs by model
 route sessions                   # List recent sessions with classification
 route sessions --type coding     # Filter by type (coding/talking/research/mixed)
 route estimate --role coder      # What would a coding task cost on each model?
@@ -19,6 +18,30 @@ route estimate --role coder      # What would a coding task cost on each model?
 | Claude Code | `~/.claude/projects/*/*.jsonl` | Session transcripts with tool calls |
 | Codex CLI | `~/.codex/sessions/**/*.jsonl` | Session logs with token_count events |
 | Gemini/Antigravity | `~/.gemini/antigravity/` | Protobuf (TBD) |
+
+Claude totals come from `~/.claude/stats-cache.json`; its `modelUsage` object
+is aggregated and may lag recent sessions. Codex totals use the last cumulative
+token event in each session, attributed to the explicit top-level `model` in
+`~/.codex/config.toml`. That current configuration is an estimation assumption,
+not proof of the model used by every historical session.
+Native `token_count` updates with explicit `info: null` and nonempty
+`rate_limits` metadata carry no new usage; they preserve the last cumulative
+count. A session containing only rate-limit updates still lacks usage evidence.
+
+Readers raise on missing, unreadable, malformed, or incomplete evidence. The
+CLI prints a diagnostic and exits 2 without a summary total or session list.
+An existing empty session directory, or a stats cache with an explicit empty
+`modelUsage` object, is valid zero usage. A missing source, absent Codex token
+event, invalid timestamp, or missing pricing-model configuration is unavailable
+evidence, not zero usage. Repair or finish writing the source before retrying;
+concurrently written incomplete JSONL records also fail explicitly.
+
+Session mtimes are required for Claude ordering and date filters. Reader APIs
+reject invalid dates; Codex session timestamps must carry a timezone, while a
+requested date without one means UTC. The Claude reader keeps its existing
+local-time date interpretation. `summary --week` and `summary --month` exit 2
+because aggregate Claude statistics cannot establish those ranges. Use
+`summary --all`; a filtered label must not conceal all-time totals.
 
 ## Session Classification
 
@@ -93,7 +116,7 @@ not establish retirement, so their pricing and recommendation roles remain.
 ### Tests
 
 ```bash
-uv run --with pytest pytest route/test_pricing.py -q
+uv run --python 3.12 --with pytest pytest route/test_pricing.py route/test_readers.py -q
 ```
 
 Only pytest and the standard library are needed. The benchmark coverage test
