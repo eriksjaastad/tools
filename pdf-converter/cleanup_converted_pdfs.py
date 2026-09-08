@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["send2trash>=1.8,<2"]
+# ///
 """
 PDF Cleanup Script
 Safely removes PDF files that have been successfully converted to markdown.
@@ -73,6 +77,15 @@ def check_pdf_for_cleanup(pdf_path):
     else:
         return False, "No corresponding markdown file found"
 
+def validate_scope(pdf_path, base_dir):
+    """Refuse escaped/symlinked inputs, including their conversion evidence."""
+    for path in (pdf_path, pdf_path.with_suffix('.md')):
+        if path.is_symlink() or not path.resolve().is_relative_to(base_dir):
+            raise OSError(f"Path is outside cleanup scope or is a symlink: {path}")
+        if (path == pdf_path or path.exists()) and not path.is_file():
+            raise OSError(f"Not a regular file: {path}")
+
+
 def delete_pdf_safely(pdf_path, dry_run=False):
     """Safely delete a PDF file"""
     try:
@@ -80,27 +93,30 @@ def delete_pdf_safely(pdf_path, dry_run=False):
             logger.info(f"[DRY RUN] Would delete: {pdf_path}")
             return True
         else:
-            pdf_path.unlink()
+            from send2trash import send2trash
+            send2trash(str(pdf_path))
             logger.info(f"✅ Deleted: {pdf_path}")
             return True
-    except OSError as e:  # governance: allow-silent SF002: main counts this failed deletion and exits nonzero
+    except (OSError, ImportError) as e:  # governance: allow-silent SF002: main counts this failed deletion and exits nonzero
         logger.error(f"❌ Failed to delete {pdf_path}: {str(e)}")
         return False
 
 def main(argv=None):
     """Keep processing eligible files; inspection/deletion failures return 1."""
     global logger
-    logger = setup_logging()
     
     parser = argparse.ArgumentParser(description='Clean up successfully converted PDFs')
     parser.add_argument('--dry-run', action='store_true', 
                        help='Show what would be deleted without actually deleting')
-    parser.add_argument('--base-dir', default='..', 
-                       help='Base directory to search for PDFs (default: parent directory)')
+    parser.add_argument('--base-dir', required=True,
+                       help='Explicit directory to search recursively for PDFs')
     
     args = parser.parse_args(argv)
     
     base_dir = Path(args.base_dir).resolve()
+    if not base_dir.is_dir():
+        parser.error('--base-dir must name an existing directory')
+    logger = setup_logging()
     logger.info(f"Starting PDF cleanup in: {base_dir}")
     
     if args.dry_run:
@@ -120,6 +136,7 @@ def main(argv=None):
     
     for pdf_path in candidate_pdfs:
         try:
+            validate_scope(pdf_path, base_dir)
             can_delete, reason = check_pdf_for_cleanup(pdf_path)
         except (OSError, UnicodeError) as e:
             failed_checks += 1
@@ -150,7 +167,7 @@ def main(argv=None):
         return 1 if failed_checks else 0
     
     # Confirm deletion if not dry run
-    print(f"\nReady to delete {len(pdfs_to_delete)} PDF files.")
+    print(f"\nReady to move {len(pdfs_to_delete)} PDF files to Trash under {base_dir}.")
     print("These PDFs have been successfully converted to markdown.")
     response = input("Continue? (yes/no): ").lower().strip()
     
@@ -163,6 +180,15 @@ def main(argv=None):
     failed_deletions = 0
     
     for pdf_path in pdfs_to_delete:
+        try:
+            validate_scope(pdf_path, base_dir)
+            eligible, _ = check_pdf_for_cleanup(pdf_path)
+            if not eligible:
+                raise OSError('Markdown evidence changed after confirmation')
+        except (OSError, UnicodeError) as e:
+            failed_deletions += 1
+            logger.error(f"Keeping {pdf_path}: {e}")
+            continue
         if delete_pdf_safely(pdf_path, dry_run=False):
             successful_deletions += 1
         else:
@@ -182,7 +208,5 @@ def main(argv=None):
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
 
 
