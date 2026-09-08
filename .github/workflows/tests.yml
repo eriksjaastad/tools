@@ -23,12 +23,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
 
       - name: Block silent-failure patterns in tracked Python
         run: uv run --python 3.12 governance/silent-failure-gate.py
+
+      - name: Check changed Python deletion sites
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: uv run --python 3.12 governance/validators/source-deletion-check.py --base "$PR_BASE_SHA"
 
       - name: Run test suites
         env:
