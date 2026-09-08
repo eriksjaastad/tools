@@ -230,6 +230,18 @@ def test_temporary_directory_cannot_prove_ancestor_or_symlink_traversal(reposito
     'from .tempfile import mkstemp\nimport os\nfd, p = mkstemp()\nos.unlink(p)\n',
     'import tempfile, os\nfrom user_factory import *\nfd, p = tempfile.mkstemp()\nos.unlink(p)\n',
     'import tempfile, os\ndef cleanup():\n    fd, p = tempfile.mkstemp()\n    os.unlink(p)\nfrom user_factory import *\ncleanup()\n',
+    'import tempfile as factory, os\nfor item in items:\n    fd, p = factory.mkstemp()\n    os.unlink(p)\n    import foreign as factory\n',
+    'import tempfile, os\nf = tempfile.NamedTemporaryFile()\ng = f\ng.name = user_path\nos.unlink(f.name)\n',
+    'from os import remove\nif condition:\n    remove = custom\nremove(path)\n',
+    'import os, shutil\nif condition:\n    erase = os.remove\nelse:\n    erase = shutil.rmtree\nerase(path)\n',
+    'import tempfile\np: (p := user_path) = tempfile.mkdtemp()\np.unlink()\n',
+    'import tempfile, os\ndef cleanup():\n    fd,p=tempfile.mkstemp()\n    os.unlink(p)\ndef g(x: (tempfile := user_factory)):\n    pass\ncleanup()\n',
+    'with context() as slots[p.unlink()]:\n    pass\n',
+    'for slots[p.unlink()] in values:\n    pass\n',
+    '[None for slots[p.unlink()] in values]\n',
+    'f = lambda p=user_path.unlink(): None\n',
+    'import os\nfor item in items:\n    os.remove(user_path)\n    import custom as os\n',
+    'import tempfile, os\nfor item in items:\n    fd,p=tempfile.mkstemp()\n    os.unlink(p)\n    from foreign import *\n',
 ])
 def test_review_found_syntax_and_evaluation_order_gaps(repository, source):
     stage(repository, source)

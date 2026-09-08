@@ -41,7 +41,8 @@ def symbol(node, env):
     if isinstance(node, ast.Attribute):
         base = symbol(node.value, env)
         if base.startswith(("import:", "uncertain:")):
-            return base + "." + node.attr
+            prefix, identities = base.split(":", 1)
+            return prefix + ":" + "|".join(part + "." + node.attr for part in identities.split("|"))
     return UNKNOWN
 
 
@@ -87,6 +88,15 @@ def assign(target, binding, env):
         for child in target.elts:
             assign(child, UNKNOWN, env)
     elif isinstance(target, (ast.Attribute, ast.Subscript)):
+        root = target.value
+        while isinstance(root, (ast.Attribute, ast.Subscript)):
+            root = root.value
+        binding = env.get(root.id, UNKNOWN) if isinstance(root, ast.Name) else UNKNOWN
+        if binding in {FILE_OBJECT, DIR_OBJECT}:
+            # Mutable .name metadata is shared by local object aliases.
+            for name, candidate in list(env.items()):
+                if candidate == binding:
+                    env[name] = UNKNOWN
         assign(target.value, UNKNOWN, env)
 
 
@@ -95,7 +105,13 @@ def merge(*branches):
     for name in set().union(*(branch.keys() for branch in branches)):
         values = {branch.get(name, UNKNOWN) for branch in branches}
         concrete = values - {NONE}
-        result[name] = next(iter(concrete)) if len(concrete) == 1 else NONE if not concrete else UNKNOWN
+        if len(concrete) == 1:
+            result[name] = next(iter(concrete))
+        else:
+            imports = {part for binding in concrete if binding.startswith(("import:", "uncertain:"))
+                       for part in binding.split(":", 1)[1].split("|")}
+            # Keep possible destructive callees without granting origin proof.
+            result[name] = "uncertain:" + "|".join(sorted(imports)) if imports else NONE if not concrete else UNKNOWN
     return result
 
 
@@ -103,7 +119,10 @@ def written_names(node):
     """Conservative invalidation, including writes through attributes."""
     names = set()
     for child in ast.walk(node):
-        if isinstance(child, (ast.Name, ast.Attribute, ast.Subscript)) and isinstance(child.ctx, (ast.Store, ast.Del)):
+        if isinstance(child, (ast.Import, ast.ImportFrom)):
+            names.update(alias.asname or (alias.name.split(".")[0] if isinstance(child, ast.Import) else alias.name)
+                         for alias in child.names)
+        elif isinstance(child, (ast.Name, ast.Attribute, ast.Subscript)) and isinstance(child.ctx, (ast.Store, ast.Del)):
             while isinstance(child, (ast.Attribute, ast.Subscript)):
                 child = child.value
             if isinstance(child, ast.Name):
@@ -145,6 +164,15 @@ def scope_writes(statements):
             if hasattr(node, "args"):
                 pending.extend(node.args.defaults)
                 pending.extend(x for x in node.args.kw_defaults if x is not None)
+                for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs,
+                            node.args.vararg, node.args.kwarg):
+                    if arg is not None and arg.annotation is not None:
+                        pending.append(arg.annotation)
+                if getattr(node, "returns", None) is not None:
+                    pending.append(node.returns)
+            if isinstance(node, ast.ClassDef):
+                pending.extend(node.bases)
+                pending.extend(node.keywords)
             continue
         if isinstance(node, (ast.Name, ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)):
             names.update(written_names(node))
@@ -152,6 +180,12 @@ def scope_writes(statements):
             names.add(node.name)
         pending.extend(ast.iter_child_nodes(node))
     return names
+
+
+def invalidate(env, names):
+    for name in list(env) if "*" in names else names:
+        binding = env.get(name, UNKNOWN)
+        env[name] = binding.replace("import:", "uncertain:", 1) if binding.startswith(("import:", "uncertain:")) else UNKNOWN
 
 
 class Analyzer:
@@ -172,6 +206,8 @@ class Analyzer:
         if node is None:
             return
         if isinstance(node, ast.Lambda):
+            for default in (*node.args.defaults, *node.args.kw_defaults):
+                self.expression(default, env, scope)
             # Captured paths may be rebound before the lambda executes.
             local = self.inherited(env)
             for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs):
@@ -196,10 +232,10 @@ class Analyzer:
             local = dict(env)
             if isinstance(node, ast.GeneratorExp):
                 local = self.inherited(env)
-            for name in written_names(node):
-                local[name] = UNKNOWN
+            invalidate(local, written_names(node))
             for generator in node.generators:
                 self.expression(generator.iter, local, scope)
+                self.expression(generator.target, local, scope)
                 assign(generator.target, UNKNOWN, local)
                 for condition in generator.ifs:
                     self.expression(condition, local, scope)
@@ -220,7 +256,8 @@ class Analyzer:
             return
         # Python resolves the callee/receiver before evaluating arguments.
         self.expression(node.func, env, scope)
-        name = symbol(node.func, env).removeprefix("import:").removeprefix("uncertain:")
+        identities = set(symbol(node.func, env).removeprefix("import:").removeprefix("uncertain:").split("|"))
+        name = next(iter(sorted(identities & DELETE)), "")
         deleting = name in DELETE
         method = False
         path_binding = UNKNOWN
@@ -241,7 +278,7 @@ class Analyzer:
                 path_binding = binding
         if deleting:
             self.deletions[node.end_lineno] += 1
-        if deleting and (path_binding not in {FILE, DIR, CHILD} or name == "os.removedirs"):
+        if deleting and (path_binding not in {FILE, DIR, CHILD} or "os.removedirs" in identities):
             comment_col = self.comments.get(node.end_lineno)
             # A same-line rationale covers exactly one deletion call. If a
             # line contains two calls, neither may borrow the other's reason.
@@ -289,8 +326,6 @@ class Analyzer:
             elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
                 binding = value(stmt.value, env)
                 mkstemp = isinstance(stmt.value, ast.Call) and symbol(stmt.value.func, env) == "import:tempfile.mkstemp"
-                if isinstance(stmt, ast.AnnAssign):
-                    self.expression(stmt.annotation, env, scope)
                 self.expression(stmt.value, env, scope)
                 targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
                 for target in targets:
@@ -301,6 +336,8 @@ class Analyzer:
                         assign(target.elts[1], FILE, env)
                     else:
                         assign(target, binding, env)
+                if isinstance(stmt, ast.AnnAssign):
+                    self.expression(stmt.annotation, env, scope)
             elif isinstance(stmt, ast.If):
                 self.expression(stmt.test, env, scope)
                 context = scope + ("if:" + ast.dump(stmt.test, include_attributes=False),)
@@ -311,6 +348,7 @@ class Analyzer:
                     binding = value(item.context_expr, local)
                     self.expression(item.context_expr, local, scope)
                     if item.optional_vars:
+                        self.expression(item.optional_vars, local, scope)
                         assign(item.optional_vars, DIR if binding == DIR_OBJECT else binding, local)
                 env = self.block(stmt.body, local, scope, observed)
             elif isinstance(stmt, (ast.Try, ast.TryStar)):
@@ -330,9 +368,9 @@ class Analyzer:
                 self.expression(stmt.iter if hasattr(stmt, "iter") else stmt.test, env, scope)
                 local = dict(env)
                 # A later iteration may see any binding written in the body.
-                for name in written_names(stmt):
-                    local[name] = UNKNOWN
+                invalidate(local, written_names(stmt))
                 if hasattr(stmt, "target"):
+                    self.expression(stmt.target, local, scope)
                     assign(stmt.target, UNKNOWN, local)
                 body = self.block(stmt.body, local, scope, observed)
                 env = merge(env, self.block(stmt.orelse, body, scope, observed))
