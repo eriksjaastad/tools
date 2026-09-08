@@ -207,3 +207,35 @@ def test_changed_python_symlink_fails_visibly(repository):
 def test_temporary_directory_cannot_prove_ancestor_or_symlink_traversal(repository, body):
     stage(repository, 'import tempfile, os\nfrom pathlib import Path\nroot = tempfile.mkdtemp()\n' + body)
     assert check(repository).returncode == 1
+
+
+@pytest.mark.parametrize("source", [
+    'from os import remove\ndef unrelated():\n    remove = 123\ndef cleanup(path):\n    remove(path)\n',
+    'import os\nos = os\ndef cleanup(path):\n    os.remove(path)\n',
+    'import os\nos.remove((os := user_path))\n',
+    'import os, tempfile\nfd, p = tempfile.mkstemp()\n[(os.unlink(p), (p := user_path)) for _ in range(2)]\n',
+    'import os, tempfile\nfd,p=tempfile.mkstemp()\n(p := user_path) if condition else (p := tempfile.mkdtemp())\nos.unlink(p)\n',
+    'import os, tempfile\np = user_path\ncondition and (p := tempfile.mkdtemp())\nos.unlink(p)\n',
+    'try:\n    work()\nexcept choose(p.unlink()):\n    pass\n',
+    'def f(x: p.unlink()):\n    pass\n',
+    'def f() -> p.unlink():\n    pass\n',
+    'x: p.unlink()\n',
+    'import tempfile\np.unlink((p := tempfile.mkdtemp()))\n',
+    'import tempfile, os\np = user_path\nos.unlink(p, dir_fd=(p := tempfile.mkdtemp()))\n',
+    'import tempfile, os\np = user_path\n0 > 1 > (p := tempfile.mkdtemp())\nos.unlink(p)\n',
+    'slots[p.unlink()] = result\n',
+    'import tempfile, os\nmaker = user_factory\np = maker((maker := tempfile.mkdtemp))\nos.unlink(p)\n',
+    'import tempfile, os\nmaker = user_factory\nos.unlink(maker((maker := tempfile.mkdtemp)))\n',
+    'import tempfile, os\ndef cleanup():\n    fd, p = tempfile.mkstemp()\n    os.unlink(p)\nfrom user_factory import tempfile\ncleanup()\n',
+    'from .tempfile import mkstemp\nimport os\nfd, p = mkstemp()\nos.unlink(p)\n',
+    'import tempfile, os\nfrom user_factory import *\nfd, p = tempfile.mkstemp()\nos.unlink(p)\n',
+    'import tempfile, os\ndef cleanup():\n    fd, p = tempfile.mkstemp()\n    os.unlink(p)\nfrom user_factory import *\ncleanup()\n',
+])
+def test_review_found_syntax_and_evaluation_order_gaps(repository, source):
+    stage(repository, source)
+    assert check(repository).returncode == 1
+
+
+def test_unrelated_local_shadow_preserves_legitimate_atomic_cleanup(repository):
+    stage(repository, 'import tempfile, os\ndef unrelated():\n    tempfile = 1\ndef cleanup():\n    name = None\n    try:\n        fd, name = tempfile.mkstemp()\n        os.replace(name, destination)\n    finally:\n        if name is not None:\n            os.unlink(name)\n')
+    assert check(repository).returncode == 0

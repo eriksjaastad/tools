@@ -40,7 +40,7 @@ def symbol(node, env):
         return env.get(node.id, UNKNOWN)
     if isinstance(node, ast.Attribute):
         base = symbol(node.value, env)
-        if base.startswith("import:"):
+        if base.startswith(("import:", "uncertain:")):
             return base + "." + node.attr
     return UNKNOWN
 
@@ -117,30 +117,87 @@ def written_names(node):
     return names
 
 
+def scope_writes(statements):
+    """Future writes in this scope, excluding unrelated nested locals."""
+    names = set()
+    imports = {}
+    pending = list(statements)
+    while pending:
+        node = pending.pop()
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            for alias in node.names:
+                if alias.name == "*":
+                    names.add("*")
+                key = alias.asname or (alias.name.split(".")[0] if isinstance(node, ast.Import) else alias.name)
+                identity = ("." * node.level + (node.module or "") + "." if isinstance(node, ast.ImportFrom) else "") + alias.name
+                if key in imports and imports[key] != identity:
+                    names.add(key)
+                imports[key] = identity
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+            if hasattr(node, "name"):
+                names.add(node.name)
+            declarations = set()
+            for child in ast.walk(node):
+                if isinstance(child, (ast.Global, ast.Nonlocal)):
+                    declarations.update(child.names)
+            names.update(written_names(node) & declarations)
+            pending.extend(getattr(node, "decorator_list", []))
+            if hasattr(node, "args"):
+                pending.extend(node.args.defaults)
+                pending.extend(x for x in node.args.kw_defaults if x is not None)
+            continue
+        if isinstance(node, (ast.Name, ast.Attribute, ast.Subscript)) and isinstance(node.ctx, (ast.Store, ast.Del)):
+            names.update(written_names(node))
+        elif isinstance(node, (ast.MatchAs, ast.MatchStar, ast.ExceptHandler)) and node.name:
+            names.add(node.name)
+        pending.extend(ast.iter_child_nodes(node))
+    return names
+
+
 class Analyzer:
     def __init__(self, source):
         self.findings = []
         self.deletions = Counter()
         self.comments = {}
-        self.unstable = written_names(ast.parse(source))
+        self.scopes = []
         for token in tokenize.generate_tokens(io.StringIO(source).readline):
             if token.type == tokenize.COMMENT and EXCEPTION.fullmatch(token.string):
                 self.comments[token.start[0]] = token.start[1]
+
+    def inherited(self, env):
+        return {key: (val.replace("import:", "uncertain:", 1) if key in self.scopes[-1] or "*" in self.scopes[-1] else val)
+                for key, val in env.items() if val.startswith(("import:", "uncertain:"))}
 
     def expression(self, node, env, scope):
         if node is None:
             return
         if isinstance(node, ast.Lambda):
             # Captured paths may be rebound before the lambda executes.
-            local = {key: val for key, val in env.items() if val.startswith("import:") and key not in self.unstable}
+            local = self.inherited(env)
             for arg in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs):
                 local[arg.arg] = UNKNOWN
             self.expression(node.body, local, scope + ("lambda",))
             return
+        if isinstance(node, ast.IfExp):
+            self.expression(node.test, env, scope)
+            left, right = dict(env), dict(env)
+            self.expression(node.body, left, scope)
+            self.expression(node.orelse, right, scope)
+            env.update(merge(left, right))
+            return
+        if isinstance(node, (ast.BoolOp, ast.Compare)):
+            states = []
+            for part in node.values if isinstance(node, ast.BoolOp) else [node.left, *node.comparators]:
+                self.expression(part, env, scope)
+                states.append(dict(env))
+            env.update(merge(*states))
+            return
         if isinstance(node, (ast.ListComp, ast.SetComp, ast.DictComp, ast.GeneratorExp)):
             local = dict(env)
             if isinstance(node, ast.GeneratorExp):
-                local = {key: val for key, val in env.items() if val.startswith("import:") and key not in self.unstable}
+                local = self.inherited(env)
+            for name in written_names(node):
+                local[name] = UNKNOWN
             for generator in node.generators:
                 self.expression(generator.iter, local, scope)
                 assign(generator.target, UNKNOWN, local)
@@ -153,23 +210,38 @@ class Analyzer:
                     assign(child.target, UNKNOWN, env)
             return
         if isinstance(node, ast.NamedExpr):
+            binding = value(node.value, env)
             self.expression(node.value, env, scope)
-            assign(node.target, value(node.value, env), env)
+            assign(node.target, binding, env)
             return
-        for child in ast.iter_child_nodes(node):
-            self.expression(child, env, scope)
         if not isinstance(node, ast.Call):
+            for child in ast.iter_child_nodes(node):
+                self.expression(child, env, scope)
             return
-        name = symbol(node.func, env).removeprefix("import:")
-        path = node.args[0] if node.args else next((k.value for k in node.keywords if k.arg in {"path", "name"}), None)
+        # Python resolves the callee/receiver before evaluating arguments.
+        self.expression(node.func, env, scope)
+        name = symbol(node.func, env).removeprefix("import:").removeprefix("uncertain:")
         deleting = name in DELETE
+        method = False
+        path_binding = UNKNOWN
         if isinstance(node.func, ast.Attribute) and node.func.attr in {"unlink", "rmdir", "rmtree"}:
             deleting = True
             if name not in DELETE:
-                path = node.func.value
+                method = True
+                path_binding = value(node.func.value, env)
+        for index, arg in enumerate(node.args):
+            binding = value(arg, env)
+            self.expression(arg, env, scope)
+            if index == 0 and not method:
+                path_binding = binding
+        for keyword in node.keywords:
+            binding = value(keyword.value, env)
+            self.expression(keyword.value, env, scope)
+            if not node.args and not method and keyword.arg in {"path", "name"}:
+                path_binding = binding
         if deleting:
             self.deletions[node.end_lineno] += 1
-        if deleting and (value(path, env) not in {FILE, DIR, CHILD} or name == "os.removedirs"):
+        if deleting and (path_binding not in {FILE, DIR, CHILD} or name == "os.removedirs"):
             comment_col = self.comments.get(node.end_lineno)
             # A same-line rationale covers exactly one deletion call. If a
             # line contains two calls, neither may borrow the other's reason.
@@ -177,43 +249,58 @@ class Analyzer:
             key = (scope, ast.dump(node, include_attributes=False))
             self.findings.append((node.lineno, node.end_lineno, key, exempt))
 
-    def block(self, statements, env, scope=(), observed=None):
+    def block(self, statements, env, scope=(), observed=None, new_scope=False):
+        pushed = new_scope or not self.scopes
+        if pushed:
+            self.scopes.append(scope_writes(statements))
         env = dict(env)
         for stmt in statements:
             if isinstance(stmt, (ast.Import, ast.ImportFrom)):
                 for alias in stmt.names:
+                    if alias.name == "*":
+                        env = {key: val.replace("import:", "uncertain:", 1) if val.startswith(("import:", "uncertain:")) else UNKNOWN
+                               for key, val in env.items()}
+                        continue
                     if isinstance(stmt, ast.Import):
                         env[alias.asname or alias.name.split(".")[0]] = "import:" + (alias.name if alias.asname else alias.name.split(".")[0])
                     else:
-                        env[alias.asname or alias.name] = "import:" + (stmt.module or "") + "." + alias.name
+                        env[alias.asname or alias.name] = "import:" + "." * stmt.level + (stmt.module or "") + "." + alias.name
             elif isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                 # Do not infer captured path lifetime across function calls.
-                local = {key: val for key, val in env.items() if val.startswith("import:") and key not in self.unstable}
+                local = self.inherited(env)
                 for decorator in stmt.decorator_list:
                     self.expression(decorator, env, scope)
                 if hasattr(stmt, "args"):
                     for default in (*stmt.args.defaults, *stmt.args.kw_defaults):
                         self.expression(default, env, scope)
                     for arg in (*stmt.args.posonlyargs, *stmt.args.args, *stmt.args.kwonlyargs):
+                        self.expression(arg.annotation, env, scope)
                         local[arg.arg] = UNKNOWN
                     for arg in (stmt.args.vararg, stmt.args.kwarg):
                         if arg:
+                            self.expression(arg.annotation, env, scope)
                             local[arg.arg] = UNKNOWN
+                    self.expression(stmt.returns, env, scope)
                 else:
                     for base in (*stmt.bases, *stmt.keywords):
                         self.expression(base, env, scope)
-                self.block(stmt.body, local, scope + (stmt.name,))
+                self.block(stmt.body, local, scope + (stmt.name,), new_scope=True)
                 env[stmt.name] = UNKNOWN
             elif isinstance(stmt, (ast.Assign, ast.AnnAssign)):
+                binding = value(stmt.value, env)
+                mkstemp = isinstance(stmt.value, ast.Call) and symbol(stmt.value.func, env) == "import:tempfile.mkstemp"
+                if isinstance(stmt, ast.AnnAssign):
+                    self.expression(stmt.annotation, env, scope)
                 self.expression(stmt.value, env, scope)
                 targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
                 for target in targets:
+                    self.expression(target, env, scope)
                     if (isinstance(target, (ast.Tuple, ast.List)) and len(target.elts) == 2
-                            and isinstance(stmt.value, ast.Call) and symbol(stmt.value.func, env) == "import:tempfile.mkstemp"):
+                            and mkstemp):
                         assign(target.elts[0], UNKNOWN, env)
                         assign(target.elts[1], FILE, env)
                     else:
-                        assign(target, value(stmt.value, env), env)
+                        assign(target, binding, env)
             elif isinstance(stmt, ast.If):
                 self.expression(stmt.test, env, scope)
                 context = scope + ("if:" + ast.dump(stmt.test, include_attributes=False),)
@@ -221,8 +308,8 @@ class Analyzer:
             elif isinstance(stmt, (ast.With, ast.AsyncWith)):
                 local = dict(env)
                 for item in stmt.items:
-                    self.expression(item.context_expr, local, scope)
                     binding = value(item.context_expr, local)
+                    self.expression(item.context_expr, local, scope)
                     if item.optional_vars:
                         assign(item.optional_vars, DIR if binding == DIR_OBJECT else binding, local)
                 env = self.block(stmt.body, local, scope, observed)
@@ -232,6 +319,7 @@ class Analyzer:
                 branches = [self.block(stmt.orelse, body, scope, states)]
                 for handler in stmt.handlers:
                     local = merge(*states)
+                    self.expression(handler.type, local, scope)
                     if handler.name:
                         local[handler.name] = UNKNOWN
                     branches.append(self.block(handler.body, local, scope, states))
@@ -267,6 +355,8 @@ class Analyzer:
                         assign(target, UNKNOWN, env)
             if observed is not None:
                 observed.append(dict(env))
+        if pushed:
+            self.scopes.pop()
         return env
 
 
