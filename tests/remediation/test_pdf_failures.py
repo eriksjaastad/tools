@@ -34,10 +34,54 @@ def converter(monkeypatch):
 
 @pytest.fixture
 def cleanup(monkeypatch):
+    monkeypatch.setitem(sys.modules, "send2trash", SimpleNamespace(
+        send2trash=lambda path: Path(path).rename(str(path) + ".trashed")))
     module = load_pdf_module("cleanup_converted_pdfs")
     module.logger = logging.getLogger("pdf-cleanup-test")
     monkeypatch.setattr(module, "setup_logging", lambda: module.logger)
     return module
+
+
+def test_cleanup_requires_explicit_scope(cleanup, monkeypatch, tmp_path):
+    source = eligible_pdf(tmp_path, "outside.pdf")
+    child = tmp_path / "child"
+    child.mkdir()
+    monkeypatch.chdir(child)
+    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
+    with pytest.raises(SystemExit) as exc:
+        cleanup.main([])
+    assert exc.value.code == 2
+    assert source.exists()
+
+
+def test_cleanup_keeps_recoverable_pdf(cleanup, monkeypatch, tmp_path, capsys):
+    source = eligible_pdf(tmp_path, "original.pdf")
+    recovery = tmp_path / "recovered.pdf"
+    monkeypatch.setitem(sys.modules, "send2trash", SimpleNamespace(send2trash=lambda path: Path(path).rename(recovery)))
+    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
+    assert cleanup.main(["--base-dir", str(tmp_path)]) == 0
+    assert recovery.exists()
+    assert str(tmp_path.resolve()) in capsys.readouterr().out
+
+
+def test_cleanup_missing_trash_support_keeps_pdf(cleanup, monkeypatch, tmp_path):
+    source = eligible_pdf(tmp_path, "original.pdf")
+    monkeypatch.setitem(sys.modules, "send2trash", None)
+    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
+    assert cleanup.main(["--base-dir", str(tmp_path)]) == 1
+    assert source.exists()
+
+
+def test_cleanup_refuses_symlink_escape(cleanup, monkeypatch, tmp_path):
+    outside = eligible_pdf(tmp_path, "outside.pdf")
+    selected = tmp_path / "selected"
+    selected.mkdir()
+    link = selected / "link.pdf"
+    link.symlink_to(outside)
+    link.with_suffix(".md").write_text("a" * 101)
+    monkeypatch.setattr("builtins.input", lambda prompt: "yes")
+    assert cleanup.main(["--base-dir", str(selected)]) == 1
+    assert link.is_symlink() and outside.exists()
 
 
 def test_extraction_error_propagates_and_closes_document(converter):
@@ -120,14 +164,14 @@ def test_cleanup_mixed_deletions_continue_and_count_failure(cleanup, monkeypatch
     good = eligible_pdf(tmp_path, "good.pdf")
     monkeypatch.setattr(cleanup, "find_convertible_pdfs", lambda base: [denied, good])
     monkeypatch.setattr("builtins.input", lambda prompt: "yes")
-    real_unlink = Path.unlink
+    real_trash = sys.modules["send2trash"].send2trash
 
-    def unlink(path, *args, **kwargs):
-        if path == denied:
+    def trash(path):
+        if Path(path) == denied:
             raise PermissionError("deletion refused")
-        return real_unlink(path, *args, **kwargs)
+        return real_trash(path)
 
-    monkeypatch.setattr(Path, "unlink", unlink)
+    monkeypatch.setattr(sys.modules["send2trash"], "send2trash", trash)
     with caplog.at_level(logging.INFO):
         assert cleanup.main(["--base-dir", str(tmp_path)]) == 1
     assert denied.exists() and not good.exists()
@@ -175,7 +219,7 @@ def test_cleanup_successful_modes_exit_zero(cleanup, monkeypatch, tmp_path, mode
 
 def test_delete_unexpected_programming_errors_propagate(cleanup, monkeypatch, tmp_path):
     source = eligible_pdf(tmp_path, "input.pdf")
-    monkeypatch.setattr(Path, "unlink", Mock(side_effect=RuntimeError("unexpected")))
+    monkeypatch.setattr(sys.modules["send2trash"], "send2trash", Mock(side_effect=RuntimeError("unexpected")))
     with pytest.raises(RuntimeError, match="unexpected"):
         cleanup.delete_pdf_safely(source)
 
