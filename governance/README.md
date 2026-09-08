@@ -9,6 +9,7 @@ This governance system provides reusable git pre-commit hooks that can be instal
 - **Secrets Scanner**: Blocks commits containing API keys, tokens, and other secrets
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
 - **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
+- **Source Deletion Checker**: Blocks new or edited permanent Python deletion sites without temporary ownership or a local rationale
 
 The **Silent Failure Checker** runs through this repository's CI using
 `silent-failure-gate.py`. The portfolio reporter remains read-only, and the
@@ -86,6 +87,55 @@ $HOME/.local/bin/uv run validators/absolute-path-check.py file1.py file2.js
 ```
 
 ## Validators
+
+### Source Deletion Checker
+
+The shared pre-commit entrypoint checks staged Git blobs, including partially
+staged files and renames. Unstaged source cannot hide an unsafe staged call.
+This repository's existing CI runs the same scanner against the PR base and
+committed HEAD. Deleted files are skipped; changed Python symlinks, unreadable
+Git objects, invalid encoding, and parse failures fail visibly (`DS000`, exit 2).
+
+```bash
+uv run governance/validators/source-deletion-check.py
+uv run governance/validators/source-deletion-check.py --base origin/main
+```
+
+`DS001` (exit 1) covers imported `os.remove`, `os.unlink`, `os.rmdir`,
+`os.removedirs`, `shutil.rmtree`, their direct import/assignment aliases, and
+Path-style `unlink`/`rmdir`/`rmtree` methods. It compares unsafe call structure,
+scope, occurrence count and edited lines with the baseline. An unrelated edit
+does not force cleanup of historical calls, but changing a temporary binding
+into an unknown path makes its formerly safe call reportable. This does not
+prove semantic equivalence of unchanged historical code.
+
+Prefer recoverable removal through an existing trash or review-directory
+mechanism. Automatic temporary cleanup exemptions require a locally tracked
+`tempfile` origin: the path returned by `mkstemp` (never its file descriptor),
+`mkdtemp`, a named temporary file's name, or a temporary-directory context.
+Direct aliases, `Path`/`str` conversion, and one literal child of a created
+temporary directory preserve this proof. Nested children, parent traversal,
+unknown joins, captured paths, and rebinding do not. `os.removedirs` always
+needs review because it also removes ancestors. Branches, repeated loops,
+exception paths and comprehensions conservatively invalidate uncertain
+bindings; an optional temporary initialized to `None` is supported.
+
+When permanent removal is necessary and ownership is established outside the
+supported local analysis, document the specific reason on the call's final
+line. One actual Python comment covers one deletion call only:
+
+```python
+fixture.unlink()  # governance: allow-delete DS001: disposable fixture created exclusively by this test
+```
+
+Exceptions are reviewable explanations, not authorization to delete user
+data. Blank reasons and markers inside strings do not suppress findings.
+The scanner never imports or executes source. It is bounded static analysis,
+not a sandbox: dynamic dispatch, reflective calls, arbitrary library behavior,
+runtime monkeypatching and filesystem races still require code review. It does
+not infer ownership from variable names or literal `/tmp` paths. Conservative
+findings should be addressed with recoverable removal or a precise local
+rationale, not a broad ignore or an extra bypass mechanism.
 
 ### Silent Failure Checker and repository CI gate
 
