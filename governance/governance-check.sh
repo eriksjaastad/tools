@@ -31,10 +31,16 @@ if [ $# -gt 0 ]; then
     STAGED_FILES=("$@")
 else
     # Get staged files from git (compatible with older bash)
+    STAGED_LIST=$(mktemp)
+    trap 'rm -f "$STAGED_LIST"' EXIT
+    if ! git diff --cached --name-only -z --diff-filter=ACMRT > "$STAGED_LIST"; then
+        echo "Error: could not discover staged files" >&2
+        exit 1
+    fi
     STAGED_FILES=()
-    while IFS= read -r file; do
+    while IFS= read -r -d '' file; do
         STAGED_FILES+=("$file")
-    done < <(git diff --cached --name-only --diff-filter=ACM)
+    done < "$STAGED_LIST"
 fi
 
 # Exit early if no files to check
@@ -53,6 +59,7 @@ VALIDATORS=(
     "secrets-scanner.py"
     "absolute-path-check.py"
     "api-wrapper-check.py"
+    "source-deletion-check.py"
 )
 
 # Ecosystem-level validators (not file-based). Empty since 2026-09-01.
@@ -81,7 +88,8 @@ for validator in "${VALIDATORS[@]}"; do
     VALIDATOR_PATH="$VALIDATORS_DIR/$validator"
     
     if [ ! -f "$VALIDATOR_PATH" ]; then
-        echo -e "${YELLOW}⚠ Validator not found: $validator (skipping)${NC}"
+        echo -e "${RED}Validator not found: $validator${NC}" >&2
+        OVERALL_STATUS=1
         continue
     fi
     
