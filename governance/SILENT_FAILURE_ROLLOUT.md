@@ -26,7 +26,8 @@ also register the existing `pytest` job as required, preserving `check-label`,
 and verify the resulting configuration. This makes a failed scan/test block
 normal PR merging. It does not grant this agent merge authority.
 
-[The updated portfolio comparison](silent-failure-2026-09-07.md) records the
+The updated portfolio comparison (2026-09-07, regenerate per "Reproducing the
+evidence" below) records the
 current scanner against the previous scanner on the same bytes of each file.
 The prospective `_tools` blocking set is clean. Other repositories' findings
 remain candidates needing their owners' decisions; new SF003 candidates are
@@ -49,7 +50,8 @@ a failed request and returns `[]` to its caller.
 
 ## Dry-run evidence — 2026-09-06
 
-The [recorded report](silent-failure-2026-09-06.md) scans 1,295 tracked Python
+The recorded report (2026-09-06, regenerate per "Reproducing the evidence"
+below) scans 1,295 tracked Python
 working-tree files across 37 immediate-child repositories/worktrees. All files
 were scanned; there were zero errors and 12 explicit warnings (11 zero-Python
 repositories and one unborn-HEAD warning). Findings: 150 SF001 plus 346 SF002,
@@ -139,3 +141,23 @@ was suppressed during this rollout.
 
 Until these conditions are met, #6900 remains incomplete even when the scanner
 and dry-run tooling are ready for review.
+
+## Reproducing the evidence
+
+The dated reports cited above are **not committed**. The portfolio reporter walks
+every repository under `~/projects` and writes the real filesystem path of every
+file it scans, including private client work; two such reports were committed to
+this public repository on 2026-09-06/07 and exposed a client's repository names
+and paths (#7085). Reporter output is now gitignored (#7091).
+
+Regenerate into the ignored output directory:
+
+```bash
+mkdir -p governance/reports
+uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json \
+  > governance/reports/silent-failure-$(date +%F).json
+```
+
+The figures quoted above are the values those runs produced on their dates; a
+fresh run will differ as the portfolio changes. Treat anything the reporter
+writes as local evidence — read it, cite its numbers, never commit it.
