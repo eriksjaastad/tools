@@ -50,6 +50,15 @@ Rules:
 
 - **All GitHub write operations go through `gh-agent.sh` / the `gha` wrapper**, never bare `gh`. A PreToolUse hook enforces this.
 - **Never set `git config user.name` / `user.email` by hand.** This repo's `.git/config` already resolves to `manager-identity[bot]`. `--auto` picks `manager` inside a project dir and `architect` at `~/projects` root; `auxesis-coder` is never auto-picked.
+- **`gha` is a shell alias and does not exist inside a script file.** It expands to
+  `_tools/gh-agent.sh --auto` only in an interactive shell. Inside `bash script.sh` it is
+  `command not found`, so every call returns nothing — and a loop that greps that empty
+  output reports a clean sweep over zero data instead of failing. This silently produced
+  false "no findings" results during the #7085 audit. **In any script, call
+  `"$HOME/projects/_tools/gh-agent.sh" --auto` by path.** And check status, not
+  emptiness — noting that `$?` after a pipe reports the *last* command, so
+  `cmd | head` returns 0 even when `cmd` was not found. Use `set -o pipefail`, or
+  test `${PIPESTATUS[0]}`, or capture output before filtering it.
 - **Never let a `gh` call run with an empty `GH_TOKEN`.** An empty value is not treated as "no credentials" — `gh` reads it as unset and falls through to Erik's personal keyring, authenticating as `eriksjaastad` while the git author still says `<something>[bot]`. Any wrapper that builds a token in a subshell must explicitly test it is non-empty before invoking `gh`. Do not rely on `set -e` alone.
 - **Token cache:** installation tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) and reused until 300s before the expiry GitHub reports. Each entry carries a `config` fingerprint of its `IDENTITY_MAP` tuple, so repointing an identity re-mints instead of serving the superseded App's token. A Doppler secret rotated **in place** under an unchanged suffix is **not** caught — after that kind of change, pass `--no-cache` or clear the cache directory. Any corrupt, expired, or drifted entry is treated as a miss, never as a failure.
 
