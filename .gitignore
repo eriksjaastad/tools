@@ -200,3 +200,13 @@ pdf-converter/logs/
 .claude/
 # Session memory - never source, never committed (#6783)
 PROGRESS.md
+
+# Scan-report output — never committed (#7091).
+# The portfolio reporters walk every repo under ~/projects and write the real
+# filesystem path of every file they touch, including private client work. Two
+# such reports were committed to this PUBLIC repo on 2026-09-06/07 and exposed a
+# client's repository names and paths (#7085). Generate them, read them, leave
+# them untracked.
+governance/reports/
+integrity-warden/*_report.txt
+integrity-warden/current_status.txt

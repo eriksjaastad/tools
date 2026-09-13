@@ -156,8 +156,15 @@ From the repository root:
 uv run governance/validators/silent-failure-check.py module.py
 uv run governance/validators/silent-failure-check.py --dry-run --json module.py
 uv run governance/silent-failure-gate.py
-uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json
+mkdir -p governance/reports  # output is gitignored (#7091) — never commit it
+uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json \
+  > governance/reports/silent-failure-$(date +%F).json
 ```
+
+The portfolio reporter writes the real filesystem path of every file it scans,
+across every repository under `~/projects` — including private client work. Its
+output is gitignored and must stay that way; committing it to this public
+repository is what caused #7085.
 
 The scanner accepts explicit `.py`/`.pyi` paths and does no recursive discovery.
 It exits `1` for findings and `2` for unreadable or invalid source. `--dry-run`
