@@ -5,6 +5,10 @@ fields below are Git commit identifiers, not credentials. Source text
 and exception contents are excluded. This snapshot is documentation; generate
 fresh machine-readable JSON with the reporter when comparing a later sweep.
 
+Repository and path identifiers for one private client engagement are
+redacted to `redacted-client/repo-a` and `redacted-client/repo-b` (#7085).
+Finding counts, rule IDs, line numbers and columns are unchanged.
+
 ```json
 {
   "errors": [
@@ -221,27 +225,27 @@ fresh machine-readable JSON with the reporter when comparing a later sweep.
     {"column":13,"line":100,"message":"Exception handler contains only inert statements.","path":"cortana-personal-ai/scripts/safety/query_logger.py","rule":"SF001"},
     {"column":13,"line":126,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"cortana-personal-ai/scripts/training/generate_dpo_pairs.py","rule":"SF002"},
     {"column":13,"line":179,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"cortana-personal-ai/scripts/training/generate_pairs.py","rule":"SF002"},
-    {"column":17,"line":223,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiki-top-accounts/server/collector_server.py","rule":"SF001"},
-    {"column":17,"line":724,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiki-top-accounts/server/collector_server.py","rule":"SF001"},
-    {"column":5,"line":1508,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiki-top-accounts/server/collector_server.py","rule":"SF001"},
-    {"column":13,"line":90,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiki-top-accounts/server/export_xlsx.py","rule":"SF001"},
-    {"column":9,"line":106,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/catalog.py","rule":"SF002"},
-    {"column":17,"line":157,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiky-thumbs/catalog.py","rule":"SF001"},
-    {"column":17,"line":166,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiky-thumbs/catalog.py","rule":"SF001"},
-    {"column":9,"line":262,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/catalog.py","rule":"SF002"},
-    {"column":13,"line":77,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/categories.py","rule":"SF002"},
-    {"column":9,"line":294,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/dashboard.py","rule":"SF002"},
-    {"column":5,"line":163,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiky-thumbs/grab.py","rule":"SF001"},
-    {"column":9,"line":185,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/grab.py","rule":"SF002"},
-    {"column":9,"line":172,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/import_worklist.py","rule":"SF002"},
-    {"column":9,"line":144,"message":"Exception handler contains only inert statements.","path":"fci/fci-kwiky-thumbs/ingest.py","rule":"SF001"},
-    {"column":9,"line":66,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/linkscan.py","rule":"SF002"},
-    {"column":9,"line":40,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/made.py","rule":"SF002"},
-    {"column":13,"line":225,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/review_service/app.py","rule":"SF002"},
-    {"column":13,"line":235,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/review_service/app.py","rule":"SF002"},
-    {"column":9,"line":22,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/review_service/origins.py","rule":"SF002"},
-    {"column":9,"line":54,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/worklist.py","rule":"SF002"},
-    {"column":9,"line":96,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"fci/fci-kwiky-thumbs/worklist.py","rule":"SF002"},
+    {"column":17,"line":223,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-b/server/collector_server.py","rule":"SF001"},
+    {"column":17,"line":724,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-b/server/collector_server.py","rule":"SF001"},
+    {"column":5,"line":1508,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-b/server/collector_server.py","rule":"SF001"},
+    {"column":13,"line":90,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-b/server/export_xlsx.py","rule":"SF001"},
+    {"column":9,"line":106,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/catalog.py","rule":"SF002"},
+    {"column":17,"line":157,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-a/catalog.py","rule":"SF001"},
+    {"column":17,"line":166,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-a/catalog.py","rule":"SF001"},
+    {"column":9,"line":262,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/catalog.py","rule":"SF002"},
+    {"column":13,"line":77,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/categories.py","rule":"SF002"},
+    {"column":9,"line":294,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/dashboard.py","rule":"SF002"},
+    {"column":5,"line":163,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-a/grab.py","rule":"SF001"},
+    {"column":9,"line":185,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/grab.py","rule":"SF002"},
+    {"column":9,"line":172,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/import_worklist.py","rule":"SF002"},
+    {"column":9,"line":144,"message":"Exception handler contains only inert statements.","path":"redacted-client/repo-a/ingest.py","rule":"SF001"},
+    {"column":9,"line":66,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/linkscan.py","rule":"SF002"},
+    {"column":9,"line":40,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/made.py","rule":"SF002"},
+    {"column":13,"line":225,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/review_service/app.py","rule":"SF002"},
+    {"column":13,"line":235,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/review_service/app.py","rule":"SF002"},
+    {"column":9,"line":22,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/review_service/origins.py","rule":"SF002"},
+    {"column":9,"line":54,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/worklist.py","rule":"SF002"},
+    {"column":9,"line":96,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"redacted-client/repo-a/worklist.py","rule":"SF002"},
     {"column":9,"line":125,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"flo-fi/shared/scripts/flux_kontext.py","rule":"SF002"},
     {"column":13,"line":153,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"holoscape/tools/router/router.py","rule":"SF002"},
     {"column":13,"line":156,"message":"Exception handler returns an empty/default value, potentially masking failure.","path":"holoscape/tools/router/router.py","rule":"SF002"},
@@ -523,7 +527,7 @@ fresh machine-readable JSON with the reporter when comparing a later sweep.
     {"head":"b4e88a9b0de7bb7786ffdb3546f25746f1204bc6","head_state":"committed","name":"book-library","scanned_python_files":0,"tracked_dirty":false,"tracked_python_files":0},
     {"head":"f06d9115834456aa8b78c98684cb81e8ecc893ab","head_state":"committed","name":"cortana-personal-ai","scanned_python_files":29,"tracked_dirty":false,"tracked_python_files":29},
     {"head":"026b9648fb06d79867d25baeb479989602d9944e","head_state":"committed","name":"eriksjaastad","scanned_python_files":0,"tracked_dirty":true,"tracked_python_files":0},
-    {"head":"cafc480da4d19fda087eb0925de74a5ef30b7eb3","head_state":"committed","name":"fci","scanned_python_files":59,"tracked_dirty":false,"tracked_python_files":59},
+    {"head":"cafc480da4d19fda087eb0925de74a5ef30b7eb3","head_state":"committed","name":"redacted-client","scanned_python_files":59,"tracked_dirty":false,"tracked_python_files":59},
     {"head":"b9daa02f1838e386df02b8e0718d9b7bffa7ecf1","head_state":"committed","name":"flo-fi","scanned_python_files":10,"tracked_dirty":false,"tracked_python_files":10},
     {"head":null,"head_state":"unborn","name":"health-tracker","scanned_python_files":0,"tracked_dirty":false,"tracked_python_files":0},
     {"head":"d24b49df0830b258d75fdb2c01ab57dffa861554","head_state":"committed","name":"holoscape","scanned_python_files":14,"tracked_dirty":false,"tracked_python_files":14},

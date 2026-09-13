@@ -7,6 +7,10 @@ The `_tools` prospective blocking set has 0 findings.
 These are syntactic candidates, not confirmed defect counts. No external files
 were edited and no blanket exemptions were added.
 
+Repository and path identifiers for one private client engagement are
+redacted to `redacted-client/repo-a` and `redacted-client/repo-b` (#7085).
+Finding counts, rule IDs, line numbers and columns are unchanged.
+
 The old and new scanners read the same source for each file. New SF003 candidates
 require owner review of required/optional contracts. The JSON includes locations,
 rule IDs, revisions, dirty-state evidence and comparison counts without source
@@ -22,7 +26,7 @@ snippets or credential values. Working-tree revisions may change concurrently.
 | `analyze-youtube-videos` | 0 | 11 | 0 | Owner review required; shared gate inactive |
 | `auxesis-research-labs` | 2 | 3 | 2 | Owner review required; shared gate inactive |
 | `cortana-personal-ai` | 9 | 14 | 0 | Owner review required; shared gate inactive |
-| `fci` | 8 | 13 | 0 | Owner review required; shared gate inactive |
+| `redacted-client` | 8 | 13 | 0 | Owner review required; shared gate inactive |
 | `flo-fi` | 0 | 1 | 0 | Owner review required; shared gate inactive |
 | `holoscape` | 1 | 6 | 0 | Owner review required; shared gate inactive |
 | `hypocrisynow` | 6 | 38 | 3 | Owner review required; shared gate inactive |
@@ -2207,147 +2211,147 @@ snippets or credential values. Working-tree revisions may change concurrently.
       "column": 17,
       "line": 223,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiki-top-accounts/server/collector_server.py",
+      "path": "redacted-client/repo-b/server/collector_server.py",
       "rule": "SF001"
     },
     {
       "column": 17,
       "line": 724,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiki-top-accounts/server/collector_server.py",
+      "path": "redacted-client/repo-b/server/collector_server.py",
       "rule": "SF001"
     },
     {
       "column": 5,
       "line": 1508,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiki-top-accounts/server/collector_server.py",
+      "path": "redacted-client/repo-b/server/collector_server.py",
       "rule": "SF001"
     },
     {
       "column": 13,
       "line": 90,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiki-top-accounts/server/export_xlsx.py",
+      "path": "redacted-client/repo-b/server/export_xlsx.py",
       "rule": "SF001"
     },
     {
       "column": 9,
       "line": 106,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/catalog.py",
+      "path": "redacted-client/repo-a/catalog.py",
       "rule": "SF002"
     },
     {
       "column": 17,
       "line": 157,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiky-thumbs/catalog.py",
+      "path": "redacted-client/repo-a/catalog.py",
       "rule": "SF001"
     },
     {
       "column": 17,
       "line": 166,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiky-thumbs/catalog.py",
+      "path": "redacted-client/repo-a/catalog.py",
       "rule": "SF001"
     },
     {
       "column": 9,
       "line": 262,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/catalog.py",
+      "path": "redacted-client/repo-a/catalog.py",
       "rule": "SF002"
     },
     {
       "column": 13,
       "line": 77,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/categories.py",
+      "path": "redacted-client/repo-a/categories.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 294,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/dashboard.py",
+      "path": "redacted-client/repo-a/dashboard.py",
       "rule": "SF002"
     },
     {
       "column": 5,
       "line": 163,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiky-thumbs/grab.py",
+      "path": "redacted-client/repo-a/grab.py",
       "rule": "SF001"
     },
     {
       "column": 9,
       "line": 185,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/grab.py",
+      "path": "redacted-client/repo-a/grab.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 172,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/import_worklist.py",
+      "path": "redacted-client/repo-a/import_worklist.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 144,
       "message": "Exception handler contains only inert statements.",
-      "path": "fci/fci-kwiky-thumbs/ingest.py",
+      "path": "redacted-client/repo-a/ingest.py",
       "rule": "SF001"
     },
     {
       "column": 9,
       "line": 66,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/linkscan.py",
+      "path": "redacted-client/repo-a/linkscan.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 40,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/made.py",
+      "path": "redacted-client/repo-a/made.py",
       "rule": "SF002"
     },
     {
       "column": 13,
       "line": 225,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/review_service/app.py",
+      "path": "redacted-client/repo-a/review_service/app.py",
       "rule": "SF002"
     },
     {
       "column": 13,
       "line": 235,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/review_service/app.py",
+      "path": "redacted-client/repo-a/review_service/app.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 22,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/review_service/origins.py",
+      "path": "redacted-client/repo-a/review_service/origins.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 54,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/worklist.py",
+      "path": "redacted-client/repo-a/worklist.py",
       "rule": "SF002"
     },
     {
       "column": 9,
       "line": 96,
       "message": "Exception handler returns an empty/default value, potentially masking failure.",
-      "path": "fci/fci-kwiky-thumbs/worklist.py",
+      "path": "redacted-client/repo-a/worklist.py",
       "rule": "SF002"
     },
     {
@@ -4679,7 +4683,7 @@ snippets or credential values. Working-tree revisions may change concurrently.
     {
       "head": "cafc480da4d19fda087eb0925de74a5ef30b7eb3",
       "head_state": "committed",
-      "name": "fci",
+      "name": "redacted-client",
       "scanned_python_files": 59,
       "tracked_dirty": false,
       "tracked_python_files": 59
