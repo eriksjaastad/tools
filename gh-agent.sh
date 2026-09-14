@@ -6,6 +6,7 @@ if [ "$#" -lt 1 ]; then
   echo "   or: $0 <identity> -- git <args...>" >&2
   echo "   or: $0 --auto <gh args...>" >&2
   echo "   or: $0 --auto -- git <args...>" >&2
+  echo "   or: $0 --auto whoami" >&2
   echo "" >&2
   echo "Identities:" >&2
   echo "  architect     — cross-repo planning/review (auto-picked at ~/projects root)" >&2
@@ -54,6 +55,37 @@ export GIT_AUTHOR_NAME="$botname"
 export GIT_AUTHOR_EMAIL="$botname@users.noreply.github.com"
 export GIT_COMMITTER_NAME="$botname"
 export GIT_COMMITTER_EMAIL="$botname@users.noreply.github.com"
+
+# `whoami` answers "which identity am I about to act as?" from values this
+# script already holds. GitHub offers no endpoint that can answer it for an
+# installation token: `gh api user` returns 403 because such a token is not a
+# user, and `gh api /app` returns 401 because that route wants a signed JWT.
+# Both failures read like a broken wrapper and neither is.
+#
+# It makes no `gh` call and never prints the token, but it is NOT free: it
+# runs after resolution, so a cold token cache still costs a Doppler read and
+# a real mint (github-app-token.py: generate_token -> mint_token). That is
+# deliberate — whoami then also proves the whole credential chain works, and
+# it reuses the one fail-closed path above instead of forking identity
+# resolution into a second implementation that could drift from it.
+#
+# `gh` has no `whoami` subcommand today, so this shadows nothing. If it ever
+# ships one, this intercept will silently shadow it with different output —
+# revisit here rather than assuming the comment is still true.
+if [ "${1:-}" = "whoami" ]; then
+  shift
+  # Refuse trailing args rather than ignoring them: `gha whoami --json` must
+  # not exit 0 having quietly printed a format the caller did not ask for.
+  if [ "$#" -ne 0 ]; then
+    echo "gh-agent: whoami takes no arguments (got: $*)" >&2
+    exit 1
+  fi
+  printf 'identity:   %s\n' "$identity"
+  printf 'bot:        %s\n' "$botname"
+  printf 'git author: %s <%s>\n' "$GIT_AUTHOR_NAME" "$GIT_AUTHOR_EMAIL"
+  printf 'cwd:        %s\n' "$PWD"
+  exit 0
+fi
 
 if [ "${1:-}" = "--" ]; then
   shift
