@@ -151,6 +151,19 @@ def test_whoami_never_prints_the_token(wrapper):
     assert "offline-token" not in result.stdout + result.stderr
 
 
+@pytest.mark.parametrize("extra", [["--json"], ["extra"], ["--json", "--jq", ".identity"]])
+def test_whoami_rejects_trailing_arguments_instead_of_ignoring_them(wrapper, extra):
+    invoke, tmp_path = wrapper
+    result = invoke("manager", "whoami", *extra,
+                    bundle="manager\nmanager-identity[bot]\noffline-token\n",
+                    expected_code=1)
+    # Exiting 0 having printed a format the caller did not request is the
+    # failure mode here: `gha whoami --json | jq` would break far from the cause.
+    assert "whoami takes no arguments" in result.stderr
+    assert "identity:" not in result.stdout
+    assert not (tmp_path / "gh-call.json").exists()
+
+
 def test_whoami_fails_closed_when_identity_cannot_be_resolved(wrapper):
     invoke, tmp_path = wrapper
     result = invoke("manager", "whoami", bundle="", status=1,

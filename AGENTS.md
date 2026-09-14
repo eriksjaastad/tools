@@ -66,8 +66,12 @@ Rules:
   that works because of it will fail silently somewhere else. Call by path anyway.
 - **To ask which identity you are about to act as, run `gha whoami`** (or
   `gh-agent.sh --auto whoami` in a script). It prints the resolved identity, bot login,
-  git author, and the cwd that drove `--auto`, using values the wrapper already has —
-  no network call and no token in the output. **Do not probe GitHub for this.**
+  git author, and the cwd that drove `--auto`. It makes no `gh` API call and never puts
+  the token in its output — but it is **not** free: it runs after identity resolution,
+  so on a cold token cache it still costs a Doppler read and a live mint, exactly like
+  any other invocation. That is deliberate (it doubles as a check that the credential
+  chain works), but do not call it in a loop believing it is local. It takes no
+  arguments and rejects any it is given. **Do not probe GitHub for this.**
   `gh api user` returns `403 Resource not accessible by integration` because an
   installation token is not a user, and `gh api /app` returns `401` because that route
   wants a signed JWT. Both read like a broken wrapper and neither is.
