@@ -6,6 +6,7 @@ if [ "$#" -lt 1 ]; then
   echo "   or: $0 <identity> -- git <args...>" >&2
   echo "   or: $0 --auto <gh args...>" >&2
   echo "   or: $0 --auto -- git <args...>" >&2
+  echo "   or: $0 --auto whoami" >&2
   echo "" >&2
   echo "Identities:" >&2
   echo "  architect     — cross-repo planning/review (auto-picked at ~/projects root)" >&2
@@ -54,6 +55,21 @@ export GIT_AUTHOR_NAME="$botname"
 export GIT_AUTHOR_EMAIL="$botname@users.noreply.github.com"
 export GIT_COMMITTER_NAME="$botname"
 export GIT_COMMITTER_EMAIL="$botname@users.noreply.github.com"
+
+# `whoami` answers "which identity am I about to act as?" without a network
+# call. GitHub offers no endpoint that can answer it for us: `gh api user`
+# returns 403 because an installation token is not a user, and `gh api /app`
+# returns 401 because that route wants a signed JWT, not an installation
+# token. Both failures read like a broken wrapper and are not. The bundle
+# above already resolved every value, so print those. `gh` has no `whoami`
+# subcommand, so this shadows nothing.
+if [ "${1:-}" = "whoami" ]; then
+  printf 'identity:   %s\n' "$identity"
+  printf 'bot:        %s\n' "$botname"
+  printf 'git author: %s <%s>\n' "$GIT_AUTHOR_NAME" "$GIT_AUTHOR_EMAIL"
+  printf 'cwd:        %s\n' "$PWD"
+  exit 0
+fi
 
 if [ "${1:-}" = "--" ]; then
   shift
