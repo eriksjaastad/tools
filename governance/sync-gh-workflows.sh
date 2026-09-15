@@ -174,6 +174,67 @@ print('\n'.join(out))
 "
 }
 
+ARCHIVED_QUERY_LIMIT=500
+
+drop_archived_repos() {
+  # Filter archived repos out of a baked-in list, on stdin, one name per line.
+  #
+  # The canonical arrays below are hand-maintained, and archiving a repo and
+  # editing this script are two unrelated actions with different triggers -- so
+  # the lists drift. On 2026-09-15 ten of PR_LABEL_ROLLOUT_REPOS' 29 entries
+  # were already archived (#7177). Deleting those ten would have fixed the
+  # occurrence, not the pattern.
+  #
+  # Every skip is LOGGED. A filter that silently shrinks a list is worse than
+  # the stale list it replaces: the run looks clean and you never learn the
+  # entry is dead.
+  local names archived
+  names="$(cat)"
+  [[ -n "$names" ]] || return 0
+
+  # Check gh's exit status explicitly. Swallowing it with `|| true` would make
+  # "the query failed" and "nothing is archived" the same silent code path, so a
+  # transient auth or network blip would disable this filter with no trace --
+  # the run would look clean while writing to archived repos anyway.
+  local repo_json
+  if ! repo_json="$(gh repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
+      --json name,isArchived 2>/dev/null)"; then
+    echo "WARNING: could not list repos for '$OWNER' -- archived filter DISABLED," >&2
+    echo "         passing all targets through unfiltered. Writes to archived repos" >&2
+    echo "         will fail individually rather than being skipped." >&2
+    printf '%s\n' "$names"
+    return 0
+  fi
+
+  # `gh repo list --limit N` truncates silently with nothing on stderr. If we got
+  # exactly N back, repos beyond the cutoff are invisible and would be treated as
+  # active. Say so rather than quietly returning a wrong answer.
+  local repo_count
+  repo_count="$(jq 'length' <<< "$repo_json")"
+  if [[ "$repo_count" -ge "$ARCHIVED_QUERY_LIMIT" ]]; then
+    echo "WARNING: repo list hit the --limit $ARCHIVED_QUERY_LIMIT ceiling; results may be" >&2
+    echo "         truncated and archived repos past the cutoff will not be skipped." >&2
+  fi
+
+  archived="$(jq -r '.[] | select(.isArchived) | .name' <<< "$repo_json")"
+
+  if [[ -z "$archived" ]]; then
+    echo "note: no archived repos found for '$OWNER'; nothing filtered" >&2
+    printf '%s\n' "$names"
+    return 0
+  fi
+
+  local name
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    if grep -qxF "$name" <<< "$archived"; then
+      echo "[$name] skip: archived, no write attempted" >&2
+    else
+      printf '%s\n' "$name"
+    fi
+  done <<< "$names"
+}
+
 resolve_targets() {
   if [[ -n "${TARGETS_INPUT:-}" ]]; then
     printf '%s\n' "$TARGETS_INPUT"
@@ -185,11 +246,11 @@ resolve_targets() {
       if [[ "$USE_ALL_ACTIVE" == "1" ]]; then
         get_active_repos
       else
-        printf '%s\n' "${PR_LABEL_ROLLOUT_REPOS[@]}"
+        printf '%s\n' "${PR_LABEL_ROLLOUT_REPOS[@]}" | drop_archived_repos
       fi
       ;;
     delete-dead-claude-review)
-      printf '%s\n' "${DEAD_CLAUDE_REVIEW_REPOS[@]}"
+      printf '%s\n' "${DEAD_CLAUDE_REVIEW_REPOS[@]}" | drop_archived_repos
       ;;
     rename-default-branch)
       printf '%s\n' "${BRANCH_RENAMES[@]}"
