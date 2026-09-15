@@ -174,6 +174,8 @@ print('\n'.join(out))
 "
 }
 
+ARCHIVED_QUERY_LIMIT=500
+
 drop_archived_repos() {
   # Filter archived repos out of a baked-in list, on stdin, one name per line.
   #
@@ -190,12 +192,34 @@ drop_archived_repos() {
   names="$(cat)"
   [[ -n "$names" ]] || return 0
 
-  archived="$(gh repo list "$OWNER" --limit 200 --json name,isArchived \
-    --jq '.[] | select(.isArchived) | .name' 2>/dev/null || true)"
+  # Check gh's exit status explicitly. Swallowing it with `|| true` would make
+  # "the query failed" and "nothing is archived" the same silent code path, so a
+  # transient auth or network blip would disable this filter with no trace --
+  # the run would look clean while writing to archived repos anyway.
+  local repo_json
+  if ! repo_json="$(gh repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
+      --json name,isArchived 2>/dev/null)"; then
+    echo "WARNING: could not list repos for '$OWNER' -- archived filter DISABLED," >&2
+    echo "         passing all targets through unfiltered. Writes to archived repos" >&2
+    echo "         will fail individually rather than being skipped." >&2
+    printf '%s\n' "$names"
+    return 0
+  fi
+
+  # `gh repo list --limit N` truncates silently with nothing on stderr. If we got
+  # exactly N back, repos beyond the cutoff are invisible and would be treated as
+  # active. Say so rather than quietly returning a wrong answer.
+  local repo_count
+  repo_count="$(jq 'length' <<< "$repo_json")"
+  if [[ "$repo_count" -ge "$ARCHIVED_QUERY_LIMIT" ]]; then
+    echo "WARNING: repo list hit the --limit $ARCHIVED_QUERY_LIMIT ceiling; results may be" >&2
+    echo "         truncated and archived repos past the cutoff will not be skipped." >&2
+  fi
+
+  archived="$(jq -r '.[] | select(.isArchived) | .name' <<< "$repo_json")"
 
   if [[ -z "$archived" ]]; then
-    # Could not reach GitHub, or nothing is archived. Fail OPEN: pass the list
-    # through untouched rather than silently skipping every repo.
+    echo "note: no archived repos found for '$OWNER'; nothing filtered" >&2
     printf '%s\n' "$names"
     return 0
   fi
