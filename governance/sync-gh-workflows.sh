@@ -174,6 +174,43 @@ print('\n'.join(out))
 "
 }
 
+drop_archived_repos() {
+  # Filter archived repos out of a baked-in list, on stdin, one name per line.
+  #
+  # The canonical arrays below are hand-maintained, and archiving a repo and
+  # editing this script are two unrelated actions with different triggers -- so
+  # the lists drift. On 2026-09-15 ten of PR_LABEL_ROLLOUT_REPOS' 29 entries
+  # were already archived (#7177). Deleting those ten would have fixed the
+  # occurrence, not the pattern.
+  #
+  # Every skip is LOGGED. A filter that silently shrinks a list is worse than
+  # the stale list it replaces: the run looks clean and you never learn the
+  # entry is dead.
+  local names archived
+  names="$(cat)"
+  [[ -n "$names" ]] || return 0
+
+  archived="$(gh repo list "$OWNER" --limit 200 --json name,isArchived \
+    --jq '.[] | select(.isArchived) | .name' 2>/dev/null || true)"
+
+  if [[ -z "$archived" ]]; then
+    # Could not reach GitHub, or nothing is archived. Fail OPEN: pass the list
+    # through untouched rather than silently skipping every repo.
+    printf '%s\n' "$names"
+    return 0
+  fi
+
+  local name
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    if grep -qxF "$name" <<< "$archived"; then
+      echo "[$name] skip: archived, no write attempted" >&2
+    else
+      printf '%s\n' "$name"
+    fi
+  done <<< "$names"
+}
+
 resolve_targets() {
   if [[ -n "${TARGETS_INPUT:-}" ]]; then
     printf '%s\n' "$TARGETS_INPUT"
@@ -185,11 +222,11 @@ resolve_targets() {
       if [[ "$USE_ALL_ACTIVE" == "1" ]]; then
         get_active_repos
       else
-        printf '%s\n' "${PR_LABEL_ROLLOUT_REPOS[@]}"
+        printf '%s\n' "${PR_LABEL_ROLLOUT_REPOS[@]}" | drop_archived_repos
       fi
       ;;
     delete-dead-claude-review)
-      printf '%s\n' "${DEAD_CLAUDE_REVIEW_REPOS[@]}"
+      printf '%s\n' "${DEAD_CLAUDE_REVIEW_REPOS[@]}" | drop_archived_repos
       ;;
     rename-default-branch)
       printf '%s\n' "${BRANCH_RENAMES[@]}"
