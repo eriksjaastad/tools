@@ -40,7 +40,7 @@ def validate_seats_file(path: Path):
 
 
 def _install_validator(projects_root: Path, source: str = VALIDATOR_SOURCE) -> Path:
-    repo = projects_root / "project-scaffolding"
+    repo = projects_root / "_archive" / "project-scaffolding"
     module = repo / "scaffold" / "seats.py"
     module.parent.mkdir(parents=True)
     module.write_text(source)

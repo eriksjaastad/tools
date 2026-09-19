@@ -41,11 +41,11 @@ The portfolio root defaults to `~/projects`. Set `PROJECTS_ROOT` or pass
 ## Contract and discovery
 
 The current `seats.v1` contract and validator live in the sibling
-`project-scaffolding` repository. Discovery:
+`_archive/project-scaffolding` repository (archived 2026-09-19). Discovery:
 
 1. checks only immediate child repositories under the portfolio root;
 2. finds root-level `seats.yaml` files deterministically;
-3. imports the canonical `project-scaffolding/scaffold/seats.py` validator;
+3. imports the canonical `_archive/project-scaffolding/scaffold/seats.py` validator;
 4. rejects malformed YAML, unknown fields, duplicate project IDs, path
    traversal, and missing fixture/schema/context/label files as hard errors.
 
