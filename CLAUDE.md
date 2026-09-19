@@ -95,7 +95,7 @@ Rules:
 
 ## Code Review Standards
 
-Reviews follow the portfolio-wide protocol at `~/projects/project-scaffolding/REVIEWS_AND_GOVERNANCE_PROTOCOL.md` (canonical source — do not fork). Key checks:
+Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEWS_AND_GOVERNANCE_PROTOCOL.md` (canonical source — do not fork). Key checks:
 
 | ID | Check |
 |----|-------|
