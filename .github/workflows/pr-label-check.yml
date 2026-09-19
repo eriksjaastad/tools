@@ -1,31 +1,90 @@
-name: "PR: Require Type Label"
+name: "PR: Type Label"
+
+# Derives the PR's type label from its conventional-commit title and applies
+# it. Only fails when the title carries no recognizable type.
+#
+# Why derive instead of enforce: the old version ran on `opened` and failed if
+# no label was present yet -- which is strictly before an agent can add one as
+# a second step. A red run was the designed outcome of the normal path, and the
+# house rule "create the label before opening the PR" existed only to dodge it.
+#
+# An existing type label always wins, so `security`, `hotfix` and `enhancement`
+# stay available as manual overrides. Labels applied here use GITHUB_TOKEN,
+# which by design does not re-trigger workflows, so this does not loop.
 
 on:
   pull_request:
-    types: [opened, labeled, unlabeled, synchronize]
+    types: [opened, edited, reopened, labeled, unlabeled, synchronize]
 
 permissions:
-  pull-requests: read
+  pull-requests: write
 
 jobs:
+  # The job id MUST stay `check-label`. It is the status-check context name, and
+  # six repos list `check-label` as a required check in branch protection:
+  # tools, project-tracker, holoscape, flo-fi, muffinpanrecipes,
+  # analyze-youtube-videos. Renaming it leaves those required checks permanently
+  # pending and makes every PR in those repos unmergeable.
+  # (The other twelve are private on a free plan, where branch protection is a
+  # paid feature and the API returns 403 -- they have none to break.)
   check-label:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for type label
+      - name: Derive type label from PR title
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
           REPO: ${{ github.repository }}
         run: |
-          LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          set -euo pipefail
+
           TYPES="feature enhancement bug chore refactor docs test hotfix security perf"
+
+          # An existing type label wins -- manual overrides are never clobbered.
+          LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
           for type in $TYPES; do
             if echo "$LABELS" | grep -qx "$type"; then
-              echo "Found type label: $type"
+              echo "Type label already present: $type"
               exit 0
             fi
           done
-          echo "Missing type label on PR #${PR_NUMBER}"
-          echo "Every PR must have one of: feature, enhancement, bug, chore, refactor, docs, test, hotfix, security, perf"
-          echo "Add one with: gh pr edit $PR_NUMBER --add-label feature"
-          exit 1
+
+          # Parse the conventional-commit type: "feat:", "fix(scope):", "docs!:"
+          # PR_TITLE is read as data via an env var, never interpolated into
+          # this script, so a title cannot inject shell.
+          COMMIT_TYPE=$(printf '%s' "$PR_TITLE" \
+            | sed -n -E 's/^[[:space:]]*([a-zA-Z]+)(\([^)]*\))?!?:.*/\1/p' \
+            | tr '[:upper:]' '[:lower:]')
+
+          case "$COMMIT_TYPE" in
+            feat)                  LABEL=feature     ;;
+            fix)                   LABEL=bug         ;;
+            docs)                  LABEL=docs        ;;
+            chore)                 LABEL=chore       ;;
+            refactor)              LABEL=refactor    ;;
+            test)                  LABEL=test        ;;
+            perf)                  LABEL=perf        ;;
+            ci|build|style)        LABEL=chore       ;;
+            # enhancement / hotfix / security have no commit-prefix mapping by
+            # design -- they are deliberate manual overrides. The
+            # already-labelled branch above lets them through untouched.
+            *)
+              echo "::error::PR #${PR_NUMBER} title has no recognizable type: \"${PR_TITLE}\""
+              echo "Title must start with a conventional-commit type, e.g. 'feat: add X (#1234)'."
+              echo "Recognized: feat fix docs chore refactor test perf ci build style"
+              echo "Or set a type label by hand: $TYPES"
+              exit 1
+              ;;
+          esac
+
+          echo "Title type '${COMMIT_TYPE}' -> label '${LABEL}'"
+
+          if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"; then
+            echo "::error::Could not apply label '${LABEL}' to PR #${PR_NUMBER}."
+            echo "Most likely the label does not exist in ${REPO}, or the token lacks write access (fork PR)."
+            echo "Create it with: gha label create ${LABEL} --repo ${REPO}"
+            exit 1
+          fi
+
+          echo "Applied type label: ${LABEL}"
