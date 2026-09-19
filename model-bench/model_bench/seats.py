@@ -178,14 +178,14 @@ def _require_directory(path: Path, description: str) -> Path:
 
 def _load_validator(projects_root: Path, validator_repo: Path | None) -> Validator:
     if validator_repo is None:
-        repo = projects_root / "project-scaffolding"
+        repo = projects_root / "_archive" / "project-scaffolding"
     else:
         repo = validator_repo.expanduser().resolve()
 
     module_path = repo / "scaffold" / "seats.py"
     if not module_path.is_file():
         raise SeatDiscoveryError(
-            "project-scaffolding seats.v1 validator not found at "
+            "_archive/project-scaffolding seats.v1 validator not found at "
             f"{module_path}; supply the portfolio projects root or validator_repo"
         )
 
