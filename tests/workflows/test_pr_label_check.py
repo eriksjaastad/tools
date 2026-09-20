@@ -13,6 +13,7 @@ while disagreeing with what actually runs in CI.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -40,8 +41,8 @@ CANONICAL_LABELS = {
 }
 
 GH_STUB = """#!/usr/bin/env bash
-# Stand-in for `gh`. Serves the label list from PR_LABELS_FIXTURE and records
-# every `pr edit` invocation to GH_EDIT_LOG so the test can assert on it.
+# Stand-in for `gh`. Serves the live PR view (title + labels) from the JSON at
+# PR_VIEW_JSON and records every `pr edit` invocation to GH_EDIT_LOG.
 set -euo pipefail
 
 if [ "${1:-}" = "pr" ] && [ "${2:-}" = "view" ]; then
@@ -49,7 +50,8 @@ if [ "${1:-}" = "pr" ] && [ "${2:-}" = "view" ]; then
     echo "gh: simulated API failure" >&2
     exit 1
   fi
-  printf '%s' "${PR_LABELS_FIXTURE:-}"
+  # The script reads title and labels together, live, as one JSON document.
+  cat "$PR_VIEW_JSON"
   exit 0
 fi
 
@@ -96,16 +98,19 @@ def harness(tmp_path):
 
     edit_log = tmp_path / "edits.log"
     edit_log.touch()
+    view_json = tmp_path / "prview.json"
 
     def run(title: str, labels: tuple[str, ...] = (), **overrides):
+        view_json.write_text(
+            json.dumps({"title": title, "labels": [{"name": n} for n in labels]})
+        )
         env = dict(os.environ)
         env.update(
             PATH=f"{bindir}:{env['PATH']}",
             GH_TOKEN="stub",
             PR_NUMBER="1",
-            PR_TITLE=title,
             REPO="eriksjaastad/tools",
-            PR_LABELS_FIXTURE="\n".join(labels),
+            PR_VIEW_JSON=str(view_json),
             GH_EDIT_LOG=str(edit_log),
         )
         env.update({k: str(v) for k, v in overrides.items()})
@@ -138,6 +143,56 @@ def test_workflow_job_id_is_check_label():
 def test_workflow_requests_write_permission():
     doc = yaml.safe_load(WORKFLOW.read_text())
     assert doc["permissions"]["pull-requests"] == "write"
+
+
+def test_title_is_read_live_not_from_the_event_payload():
+    """Codex P2: github.event.pull_request.title is frozen at trigger time.
+
+    A PR retitled twice in quick succession could have a queued run derive from
+    the obsolete title, overwrite the newer run's label, and still report
+    success. Reading the title live means every run acts on current state, so
+    concurrent runs converge instead of fighting.
+    """
+    doc = yaml.safe_load(WORKFLOW.read_text())
+    step = doc["jobs"]["check-label"]["steps"][0]
+    assert "PR_TITLE" not in step.get("env", {}), (
+        "the event-payload title must not be reintroduced as an env var"
+    )
+    run = step["run"]
+    assert "--json title,labels" in run, "title and labels must be read together, live"
+
+
+def test_remediation_names_only_the_labels_that_actually_work():
+    """Codex P2: the old message listed all ten labels as a way out.
+
+    Only enhancement/hotfix/security short-circuit before title derivation.
+    Hand-adding `chore` or `bug` to a PR whose title cannot be parsed does NOT
+    rescue it -- the next run fails on the same title and the required check
+    stays stuck, even though the maintainer did what the error told them.
+    """
+    run = _run_block()
+    remediation = run.split("no recognizable type")[1].split("exit 1")[0]
+    assert "$MANUAL_ONLY" in remediation
+    assert "$TYPES" not in remediation, "listing all ten here is a dead-end instruction"
+
+
+def test_hand_applied_override_rescues_an_unparseable_title(harness):
+    """The escape hatch the remediation message points at must actually work."""
+    proc, edits = harness("deps: bump something", labels=("security",))
+    assert proc.returncode == 0
+    assert "Manual override label present" in proc.stdout
+    assert edits == ""
+
+
+def test_hand_applied_derived_label_does_not_rescue_an_unparseable_title(harness):
+    """The complement, and the reason the message had to change.
+
+    This is the dead end a maintainer hit by following the old instructions.
+    Pinned so the behaviour and the message can never drift apart again.
+    """
+    proc, _ = harness("deps: bump something", labels=("chore",))
+    assert proc.returncode == 1
+    assert "no recognizable type" in proc.stdout
 
 
 def test_allowlist_has_not_drifted():

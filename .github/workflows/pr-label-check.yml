@@ -45,7 +45,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -58,9 +57,26 @@ jobs:
           # a title correction re-derives them.
           AUTO_MAPPED="feature bug chore refactor docs test perf"
 
+          # Title and labels are read LIVE, together, in one call -- not taken
+          # from the event payload. github.event.pull_request.title is frozen at
+          # trigger time, so a PR retitled twice in quick succession could have
+          # a queued run derive from an obsolete title, overwrite the newer
+          # run's label, and still report success. Reading both here means
+          # every run acts on current state and concurrent runs converge on the
+          # same answer instead of fighting. One call, so the title and the
+          # labels cannot disagree with each other.
+          #
+          # Deliberately NOT paired with `concurrency: cancel-in-progress`.
+          # `check-label` is a required check in six repos, and a cancelled run
+          # can land as the latest status for its context, which blocks a merge
+          # until something else re-triggers it. The live read is the fix Codex
+          # asked for first and carries no such risk.
+          #
           # A `gh pr view` failure aborts here under `set -e` rather than being
-          # mistaken for "this PR has no labels". Empty output means no labels.
-          LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          # mistaken for "this PR has no labels". Empty labels means no labels.
+          PR_JSON=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json title,labels)
+          PR_TITLE=$(printf '%s' "$PR_JSON" | jq -r '.title')
+          LABELS=$(printf '%s' "$PR_JSON" | jq -r '.labels[].name')
 
           for type in $MANUAL_ONLY; do
             if echo "$LABELS" | grep -qx "$type"; then
@@ -90,9 +106,16 @@ jobs:
             # already-labelled branch above lets them through untouched.
             *)
               echo "::error::PR #${PR_NUMBER} title has no recognizable type: \"${PR_TITLE}\""
-              echo "Title must start with a conventional-commit type, e.g. 'feat: add X (#1234)'."
-              echo "Recognized: feat fix docs chore refactor test perf ci build style"
-              echo "Or set a type label by hand: $TYPES"
+              echo "Fix it by retitling the PR to start with a conventional-commit type:"
+              echo "  feat fix docs chore refactor test perf ci build style"
+              echo "e.g. 'feat: add X (#1234)'. The title is what lands in the merge commit."
+              # Only the three override labels short-circuit before this point.
+              # Listing all ten here used to send maintainers into a dead end:
+              # hand-adding `chore` or `bug` does NOT bypass derivation, so the
+              # next run failed again and the required check stayed stuck even
+              # though they had followed the instructions.
+              echo "Alternatively, hand-apply one of the three override labels, which skip"
+              echo "title derivation entirely: $MANUAL_ONLY"
               exit 1
               ;;
           esac
