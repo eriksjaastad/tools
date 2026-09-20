@@ -54,11 +54,17 @@ if [ "${1:-}" = "pr" ] && [ "${2:-}" = "view" ]; then
 fi
 
 if [ "${1:-}" = "pr" ] && [ "${2:-}" = "edit" ]; then
-  if [ "${GH_EDIT_FAILS:-0}" = "1" ]; then
-    echo "gh: simulated 403" >&2
+  shift 2
+  # Failure is selectable per call, not global. A global switch made the
+  # "add succeeded, remove failed" branch unreachable, so it went untested.
+  case " $* " in
+    *" --add-label "*) kind=add ;;
+    *)                 kind=remove ;;
+  esac
+  if [ "${GH_EDIT_FAILS:-0}" = "1" ] || [ "${GH_EDIT_FAILS:-}" = "$kind" ]; then
+    echo "gh: simulated failure on $kind" >&2
     exit 1
   fi
-  shift 2
   echo "$*" >> "$GH_EDIT_LOG"
   exit 0
 fi
@@ -290,10 +296,35 @@ def test_api_read_failure_is_not_mistaken_for_no_labels(harness):
 
 
 def test_label_write_failure_explains_the_fork_case(harness):
-    proc, _ = harness("feat: x", GH_EDIT_FAILS=1)
+    proc, _ = harness("feat: x", GH_EDIT_FAILS="add")
     assert proc.returncode == 1
     assert "Could not apply label" in proc.stdout
     assert "read-only token" in proc.stdout
+
+
+def test_failing_to_remove_a_stray_label_does_not_fail_the_check(harness):
+    """The check's contract is met once the right label is on; cleanup is not.
+
+    `check-label` is a required status check in six repos. Hard-failing here
+    would block a merge over a spare label on the strength of a transient rate
+    limit, when the state left behind -- correct label plus a duplicate -- is
+    exactly what this workflow produced for months before it cleaned up at all.
+    """
+    proc, edits = harness(
+        "fix: retitled from feat", labels=("feature",), GH_EDIT_FAILS="remove"
+    )
+    assert proc.returncode == 0, "a cosmetic cleanup failure must not block a merge"
+    assert "--add-label bug" in edits, "the label that matters still got applied"
+    assert "::warning::" in proc.stdout
+    assert "::error::" not in proc.stdout
+
+
+def test_add_failure_still_fails_the_check(harness):
+    """The complement: failing to apply the label IS a real failure."""
+    proc, edits = harness("fix: x", labels=("feature",), GH_EDIT_FAILS="add")
+    assert proc.returncode == 1
+    assert "::error::" in proc.stdout
+    assert "--remove-label" not in edits, "must not strip the old label after a failed add"
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash required")

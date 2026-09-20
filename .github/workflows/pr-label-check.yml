@@ -1,7 +1,9 @@
 name: "PR: Type Label"
 
 # Derives the PR's type label from its conventional-commit title and applies
-# it. Only fails when the title carries no recognizable type.
+# it. Fails on exactly two things: a title with no recognizable type, and being
+# unable to apply the label. Failing to tidy up a leftover duplicate label is a
+# warning, not a failure -- see the note on that branch at the bottom.
 #
 # Why derive instead of enforce: the old version ran on `opened` and failed if
 # no label was present yet -- which is strictly before an agent can add one as
@@ -130,10 +132,17 @@ jobs:
           fi
 
           if [ ${#STALE[@]} -gt 0 ]; then
+            # Deliberately a warning, not an error. By this point the check's
+            # actual contract -- "this PR carries the label its title implies"
+            # -- is already met. Removing a leftover duplicate is cosmetic, and
+            # `check-label` is a required check in six repos, so hard-failing
+            # here would block a merge over a spare label on the strength of a
+            # transient rate limit. Leaving the duplicate is exactly what this
+            # workflow did for months before it learned to clean up at all.
             if ! gh pr edit "$PR_NUMBER" --repo "$REPO" "${STALE[@]}"; then
-              echo "::error::Applied '${LABEL}' but could not remove the stale label(s) on PR #${PR_NUMBER}."
-              echo "The PR now carries more than one type label. Remove the extra by hand."
-              exit 1
+              echo "::warning::Applied '${LABEL}' but could not remove the stale label(s) on PR #${PR_NUMBER}."
+              echo "The PR carries more than one type label. Harmless; remove the extra by hand."
+            else
+              echo "Removed stale derived label(s)."
             fi
-            echo "Removed stale derived label(s)."
           fi
