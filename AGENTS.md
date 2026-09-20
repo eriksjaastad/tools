@@ -112,3 +112,107 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 - [ ] Tests pass for any touched component with a suite (e.g. `pytest integrity-warden/tests/` when editing integrity-warden; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed
+
+<!-- BEGIN runtime-doctor:shared:code-review-rules -->
+## Code Review Rules
+
+> **Authored once, here. Propagated into every repo's `AGENTS.md` so the reviewer sees it
+> in-repo.** Do not hand-copy this into a project file — if it is missing from a repo, that
+> is a propagation bug, not a licence to paste.
+
+These are the standards every PR is reviewed against, by whoever or whatever is reviewing.
+They are written provider-neutral on purpose: Codex, Claude and any future reviewer read the
+same list.
+
+### Gate 0 — mechanical scan
+
+A failure prevents a PASS, but does not end the review. Complete all independent
+checks and the judgment audit, then report the supported findings together.
+If a failure prevents a check from running, identify that coverage gap.
+
+| ID | Check |
+|----|-------|
+| M1 | **Portable paths.** Flag machine-specific paths wired into executable code/config or prescribed setup commands. Illustrative examples, incident evidence, and committed data breadcrumbs are not runtime dependencies; do not reject them merely for spelling a path. |
+| M2 | **No swallowed unexpected failures.** Flag `except: pass` when it hides an operation failure from the caller. Explicit best-effort or expected-absence handling is valid when the documented contract is preserved. |
+| M3 | No real API keys, tokens, or credentials in files. Secrets come from Doppler. Clearly synthetic test fixtures and documented placeholders are permitted. |
+| M4 | No unresolved placeholders in rendered deliverables or runtime configuration. Source templates and literal test fixtures may intentionally contain placeholders. |
+| M5 | No JS redeclarations in `*/static/*.js`. If the diff touches any, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit 0 = pass. Skip when the diff has no static JS. |
+
+### Judgment checks — what automation cannot see
+
+| ID | Check |
+|----|-------|
+| T1 | **Inverse test audit.** Not "do tests pass" but *what do the passing tests never exercise*. Name the dark territory. |
+| T2 | **No weak assertions.** `isinstance(x, T)` or `x is not None` alone asserts almost nothing. |
+| E1 | **Status contracts are truthful.** Check the documented exit/status protocol. A hook that returns a deny decision in JSON with exit 0 is valid when its caller consumes that protocol. |
+| E2 | **No silent failure returns.** `return []` or `return ""` on a failed operation, with nothing logged, is a defect — the caller cannot tell empty from broken. |
+| H1 | **Subprocess integrity.** Use a timeout and handle failure through `check=True` or explicit validation of expected return codes. Expected nonzero results must remain usable; unexpected failures must not silently become success. |
+| H5 | **CASCADE DELETE documented.** Foreign-key relationships are spelled out before any `DELETE` lands. |
+| H7 | **No unrequested auto-cleanup.** A "helpful" destructive addition nobody asked for is a defect, not a bonus. |
+
+### Scope and authorisation
+
+- **Was this behaviour actually requested?** If no, reject it — however good it is.
+- **Does the change stay inside the task it claims?** Scope creep is a finding.
+- **Can every change trace to a requirement?** If it traces to nothing, say so.
+
+### Review in blast-radius order
+
+A Tier 1 defect propagates into every downstream project, so it is read first.
+
+- **Tier 1** — `templates/`, `AGENTS.md`, `CLAUDE.md`: propagation sources.
+- **Tier 2** — `scripts/`, `scaffold/`: execution critical.
+- **Tier 3** — `docs/`, `patterns/`, rules files: human reference, no code impact.
+
+### Verdict
+
+Local and delegated review reports end in **PASS** or **FAIL**, pinned to the
+**exact commit SHA** reviewed. State that SHA in the verdict; a new commit requires
+a fresh review. A local or sub-agent PASS does not replace the Codex GitHub gate.
+
+Classify GitHub review evidence under `pt info get pr_merge_policy` and the
+**PR review and merge policy** in `~/projects/Project-workflow.md`: a clean review
+object, completed summary, or fresh connector thumbs-up observed on an unchanged
+recorded head can qualify under that procedure without a literal PASS token.
+The evidence must identify the current commit and clear findings. Pending, missing, ambiguous,
+or stale evidence does not pass. An explicitly authorized exception is recorded
+as an exception, never as a PASS.
+
+### How to report
+
+Shape, not standards. Drip-fed findings cost a full cycle each — a new commit
+invalidates the prior review, so a five-finding diff becomes five reviews.
+
+- **One review per request, covering the whole diff.** Every finding, most
+  severe first, each with `file:line` and a concrete failure scenario. Never
+  hold one back for a later round.
+- **Separate evidence from uncertainty.** Findings need a concrete failure
+  scenario. Report unverified concerns as questions or coverage gaps, not defects.
+  A review with no supported findings is valid; do not manufacture issues.
+- **Rank use-case breakage above hypothetical hardening.** A P2 that silently
+  breaks the primary workflow outranks a serious-looking edge case nobody hits.
+  Say which class a finding is in.
+- **Say where the change is too strict** — where it refuses, blocks or rejects
+  something it should accept. Implementers cannot see this in their own work, so
+  it is the direction least likely to be found without you.
+- **If the diff answers your previous findings, say so**, and check whether those
+  fixes opened adjacent surface. Most late-round defects live there.
+
+### Review convergence
+
+- **Review the behavior, not only the changed lines.** Trace affected callers,
+  consumers, and execution paths. When a defect appears, inspect related forms
+  before submitting the review; group examples with the same root cause.
+- **Check both failure and legitimate use.** For parsers and filters, cover the
+  relevant syntax variants, wrappers, normalization, and safe counterparts. For
+  synchronization and conversion, check round trips and preservation of authored
+  content. Select cases from the actual contract; unrelated exhaustive audits are
+  outside the PR's scope.
+- **Verify fixes against history.** Compare relevant behavior with the base and
+  previous reviewed revision. Distinguish incomplete fixes, newly introduced
+  regressions, and pre-existing issues outside the changed behavior. On follow-up
+  reviews, verify prior findings and adjacent effects, retaining whole-diff context.
+- **Aim to converge in two or three reviews.** If the same defect family returns,
+  reassess the implementation and test coverage before another narrow patch.
+  The target never waives a finding, required check, or exact-head review.
+<!-- END runtime-doctor:shared:code-review-rules -->
