@@ -97,31 +97,43 @@ jobs:
 
           echo "Title type '${COMMIT_TYPE}' -> label '${LABEL}'"
 
-          if echo "$LABELS" | grep -qx "$LABEL"; then
-            echo "Type label already correct: ${LABEL}"
-            exit 0
-          fi
-
-          # A title edit can change the type (feat: -> fix:). Drop the label the
-          # old title produced so the PR does not keep a stale one alongside the
-          # new one. Manual overrides never reach here.
-          STALE=""
+          # Collect every derived label that is NOT the one the title implies.
+          # This runs whether or not the correct label is already present: a PR
+          # can carry the right label AND a leftover wrong one, and that pair
+          # would otherwise never be cleaned up. Built as an array so a label
+          # containing a space, a dash or a glob character can never word-split
+          # into an argument to gh. Nothing but the seven fixed names can reach
+          # it today; the array keeps that true if the list is ever extended.
+          STALE=()
           for type in $AUTO_MAPPED; do
-            if echo "$LABELS" | grep -qx "$type"; then
-              echo "Removing stale derived label: ${type}"
-              STALE="$STALE --remove-label $type"
+            if [ "$type" != "$LABEL" ] && echo "$LABELS" | grep -qx "$type"; then
+              echo "Stale derived label to remove: ${type}"
+              STALE+=(--remove-label "$type")
             fi
           done
 
-          # STALE is intentionally unquoted: it must word-split into flag pairs,
-          # and expands to nothing when empty.
-          if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL" $STALE; then
-            echo "::error::Could not apply label '${LABEL}' to PR #${PR_NUMBER}."
-            echo "Most likely the label does not exist in ${REPO}, or the token lacks write access."
-            echo "Fork PRs get a read-only token regardless of this workflow's permissions block,"
-            echo "so an outside contributor's PR must be labelled by a maintainer."
-            echo "Create a missing label with: gha label create ${LABEL} --repo ${REPO}"
-            exit 1
+          if echo "$LABELS" | grep -qx "$LABEL"; then
+            echo "Type label already correct: ${LABEL}"
+          else
+            # Added in its own call, BEFORE any removal, so a failure here
+            # leaves the PR with whatever label it already had rather than
+            # stripping it and then failing to add the replacement.
+            if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"; then
+              echo "::error::Could not apply label '${LABEL}' to PR #${PR_NUMBER}."
+              echo "Most likely the label does not exist in ${REPO}, or the token lacks write access."
+              echo "Fork PRs get a read-only token regardless of this workflow's permissions block,"
+              echo "so an outside contributor's PR must be labelled by a maintainer."
+              echo "Create a missing label with: gha label create ${LABEL} --repo ${REPO}"
+              exit 1
+            fi
+            echo "Applied type label: ${LABEL}"
           fi
 
-          echo "Applied type label: ${LABEL}"
+          if [ ${#STALE[@]} -gt 0 ]; then
+            if ! gh pr edit "$PR_NUMBER" --repo "$REPO" "${STALE[@]}"; then
+              echo "::error::Applied '${LABEL}' but could not remove the stale label(s) on PR #${PR_NUMBER}."
+              echo "The PR now carries more than one type label. Remove the extra by hand."
+              exit 1
+            fi
+            echo "Removed stale derived label(s)."
+          fi

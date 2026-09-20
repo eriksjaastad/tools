@@ -192,12 +192,18 @@ def test_unrecognizable_title_fails_loudly(harness, title):
     assert edits == "", "must not label a PR it could not classify"
 
 
-def test_title_cannot_inject_shell(harness):
-    """PR_TITLE is attacker-influenced on any repo taking outside PRs."""
-    proc, edits = harness("fix: $(touch /tmp/pwned-7344) `id`; rm -rf /")
+def test_title_cannot_inject_shell(harness, tmp_path):
+    """PR_TITLE is attacker-influenced on any repo taking outside PRs.
+
+    The canary lives under tmp_path, not /tmp: a literal path would survive a
+    regression and then keep failing this test on that machine forever, long
+    after the underlying bug was fixed.
+    """
+    canary = tmp_path / "pwned"
+    proc, edits = harness(f"fix: $(touch {canary}) `id`; rm -rf /")
     assert proc.returncode == 0
     assert "--add-label bug" in edits
-    assert not Path("/tmp/pwned-7344").exists()
+    assert not canary.exists()
 
 
 # --- existing labels ------------------------------------------------------
@@ -224,6 +230,46 @@ def test_stale_derived_label_is_swapped_after_a_title_edit(harness):
     assert proc.returncode == 0
     assert "--add-label bug" in edits
     assert "--remove-label feature" in edits
+
+
+def test_add_happens_before_remove(harness):
+    """Order matters: a failed add must not leave the PR with no type label.
+
+    If the removal ran first and the add then failed, a PR that had `feature`
+    would end up with nothing at all -- worse than when the job started.
+    """
+    proc, edits = harness("fix: retitled from feat", labels=("feature",))
+    assert proc.returncode == 0
+    lines = edits.splitlines()
+    add_at = next(i for i, ln in enumerate(lines) if "--add-label" in ln)
+    rm_at = next(i for i, ln in enumerate(lines) if "--remove-label" in ln)
+    assert add_at < rm_at
+
+
+def test_correct_label_alongside_a_stray_one_is_cleaned_up(harness):
+    """The reason the removal loop cannot sit behind the already-correct exit.
+
+    A PR carrying both `feature` (correct for its title) and a leftover `chore`
+    would otherwise keep both forever -- no later event would ever clean it.
+    """
+    proc, edits = harness("feat: x", labels=("feature", "chore"))
+    assert proc.returncode == 0
+    assert "--remove-label chore" in edits
+    assert "--add-label" not in edits, "correct label was already present"
+
+
+def test_hand_set_derived_label_is_overridden_by_the_title(harness):
+    """Documents a deliberate design choice, so a future change is a decision.
+
+    Hand-setting `chore` on a `feat:`-titled PR does NOT stick: the seven
+    derived labels are tied to the title. To recategorize, edit the title --
+    which is also what lands in the merge commit. `enhancement`, `hotfix` and
+    `security` exist for the cases that genuinely need a human override.
+    """
+    proc, edits = harness("feat: still a feature", labels=("chore",))
+    assert proc.returncode == 0
+    assert "--add-label feature" in edits
+    assert "--remove-label chore" in edits
 
 
 def test_unrelated_non_type_labels_survive(harness):
