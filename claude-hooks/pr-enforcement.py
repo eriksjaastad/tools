@@ -2,9 +2,11 @@
 """PR Enforcement Hook - PostToolUse
 
 Fires after `gh pr create` commands to enforce PR quality standards:
-1. Warns if no --label flag was included
-2. Detects multi-concern PRs (mixed conventional commit types)
-3. Reminds to run CI checks
+1. Detects multi-concern PRs (mixed conventional commit types)
+2. Reminds to run CI checks
+
+Type labels are not checked here -- pr-label-check.yml derives them from the
+PR title (#7344).
 
 Returns a nonzero status if Git inspection could not complete the review.
 """
@@ -31,16 +33,11 @@ def main():
     warnings = []
     inspection_failed = False
 
-    # Check 1: label included?
-    if "--label" not in command:
-        warnings.append(
-            "WARNING: PR created WITHOUT a label. "
-            "Add one of: feature enhancement bug chore refactor docs "
-            "test hotfix security perf "
-            "(e.g. gha pr edit <number> --add-label chore)"
-        )
+    # No label check here. Since #7344 the pr-label-check workflow derives the
+    # type label from the PR's conventional-commit title and applies it, so a
+    # missing --label is not a defect and warning about it was noise.
 
-    # Check 2: multi-concern PR?
+    # Check: multi-concern PR?
     try:
         result = subprocess.run(
             ["git", "log", "origin/main..HEAD", "--format=%s"],
@@ -71,7 +68,7 @@ def main():
             f"({type(error).__name__}). Check origin/main and rerun the review."
         )
 
-    # Check 3: remind about CI checks
+    # Check: remind about CI checks
     if "pr checks" not in command and "--watch" not in command:
         warnings.append(
             "REMINDER: Run `gha pr checks <number> --watch` to wait for CI"

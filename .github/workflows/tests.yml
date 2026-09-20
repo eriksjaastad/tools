@@ -6,9 +6,10 @@ name: Tests
 # bundles merge-on-green, and landing in this repo stays manual (Erik's call,
 # 2026-09-01). This job only reports.
 #
-# Includes governance, integrity-warden, authentication, identity-hook and
-# route pricing regressions. Authentication executables are stubbed; these
-# suites do not mint live tokens or call providers.
+# Includes governance, integrity-warden, authentication, identity-hook,
+# pr-label-check workflow and route pricing regressions. Authentication
+# executables are stubbed; these suites do not mint live tokens or call
+# providers.
 
 on:
   pull_request:
@@ -42,11 +43,13 @@ jobs:
           PYTHONPATH: model-bench:integrity-warden
         run: |
           uv run --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
-            --with 'httpx>=0.27,<1' --with 'typer>=0.12,<1' --with 'rich>=13,<15' pytest \
+            --with 'httpx>=0.27,<1' --with 'typer>=0.12,<1' --with 'rich>=13,<15' \
+            --with 'PyYAML>=6,<7' pytest \
             governance/validators/tests/ \
             integrity-warden/tests/ \
             tests/auth/ \
             tests/hooks/ \
+            tests/workflows/ \
             tests/remediation/ \
             route/test_pricing.py \
             route/test_readers.py \
