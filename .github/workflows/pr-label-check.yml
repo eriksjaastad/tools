@@ -8,9 +8,18 @@ name: "PR: Type Label"
 # a second step. A red run was the designed outcome of the normal path, and the
 # house rule "create the label before opening the PR" existed only to dodge it.
 #
-# An existing type label always wins, so `security`, `hotfix` and `enhancement`
-# stay available as manual overrides. Labels applied here use GITHUB_TOKEN,
-# which by design does not re-trigger workflows, so this does not loop.
+# `security`, `hotfix` and `enhancement` have no commit-prefix mapping and are
+# deliberate human judgement calls, so once present they are left alone. The
+# seven derived labels stay tied to the title: correcting a title from `feat:`
+# to `fix:` swaps `feature` for `bug` rather than leaving both.
+#
+# Labels applied here use GITHUB_TOKEN, which by design does not re-trigger
+# workflows, so this does not loop.
+#
+# Fork PRs get a read-only token regardless of the permissions block below --
+# that is enforced by GitHub, not chosen here -- so an outside contributor's PR
+# cannot be self-labelled and needs a maintainer. These are single-owner repos
+# today; revisit if any of them starts taking outside contributions.
 
 on:
   pull_request:
@@ -40,12 +49,20 @@ jobs:
           set -euo pipefail
 
           TYPES="feature enhancement bug chore refactor docs test hotfix security perf"
+          # These three have no commit-prefix mapping. They are deliberate human
+          # judgement calls, so once set they are never touched.
+          MANUAL_ONLY="enhancement hotfix security"
+          # These are derived from the title, so the title stays their truth and
+          # a title correction re-derives them.
+          AUTO_MAPPED="feature bug chore refactor docs test perf"
 
-          # An existing type label wins -- manual overrides are never clobbered.
+          # A `gh pr view` failure aborts here under `set -e` rather than being
+          # mistaken for "this PR has no labels". Empty output means no labels.
           LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
-          for type in $TYPES; do
+
+          for type in $MANUAL_ONLY; do
             if echo "$LABELS" | grep -qx "$type"; then
-              echo "Type label already present: $type"
+              echo "Manual override label present: $type -- leaving it alone."
               exit 0
             fi
           done
@@ -80,10 +97,30 @@ jobs:
 
           echo "Title type '${COMMIT_TYPE}' -> label '${LABEL}'"
 
-          if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"; then
+          if echo "$LABELS" | grep -qx "$LABEL"; then
+            echo "Type label already correct: ${LABEL}"
+            exit 0
+          fi
+
+          # A title edit can change the type (feat: -> fix:). Drop the label the
+          # old title produced so the PR does not keep a stale one alongside the
+          # new one. Manual overrides never reach here.
+          STALE=""
+          for type in $AUTO_MAPPED; do
+            if echo "$LABELS" | grep -qx "$type"; then
+              echo "Removing stale derived label: ${type}"
+              STALE="$STALE --remove-label $type"
+            fi
+          done
+
+          # STALE is intentionally unquoted: it must word-split into flag pairs,
+          # and expands to nothing when empty.
+          if ! gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL" $STALE; then
             echo "::error::Could not apply label '${LABEL}' to PR #${PR_NUMBER}."
-            echo "Most likely the label does not exist in ${REPO}, or the token lacks write access (fork PR)."
-            echo "Create it with: gha label create ${LABEL} --repo ${REPO}"
+            echo "Most likely the label does not exist in ${REPO}, or the token lacks write access."
+            echo "Fork PRs get a read-only token regardless of this workflow's permissions block,"
+            echo "so an outside contributor's PR must be labelled by a maintainer."
+            echo "Create a missing label with: gha label create ${LABEL} --repo ${REPO}"
             exit 1
           fi
 
