@@ -1,6 +1,6 @@
 # CLAUDE.md - _tools
 
-> Mirror of [`AGENTS.md`](AGENTS.md). Any agent system — Claude, Codex, or otherwise — reads the same rules here. **Change one, mirror it to the other.**
+> Project-specific instructions are mirrored between `CLAUDE.md` and `AGENTS.md`. Change those instructions in both. The generated `runtime-doctor:shared:code-review-rules` block is present only in `AGENTS.md`: Claude inherits the authored rules from `~/projects/CLAUDE.md`, while GitHub Codex needs them inside this repository.
 >
 > Portfolio-wide rules (Kanban, Git workflow, secrets, `rm`) live in `~/projects/CLAUDE.md` and are deliberately not restated here.
 
@@ -102,7 +102,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 | M1 | No hardcoded `/Users/` or `/home/` paths |
 | M2 | No silent `except: pass` patterns |
 | M3 | No API keys in code |
-| H1 | Subprocess uses `check=True` and `timeout` |
+| H1 | Subprocess has a timeout and handles failure with `check=True` or explicit validation of expected return codes |
 
 **M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. This repository's CI also runs `governance/silent-failure-gate.py` for M2 patterns SF001–SF003 against all tracked Python files. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**. The shared pre-commit validator list stays unchanged until other owners resolve their findings; see `governance/SILENT_FAILURE_ROLLOUT.md`.
 
