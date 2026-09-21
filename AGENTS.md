@@ -136,7 +136,7 @@ If a failure prevents a check from running, identify that coverage gap.
 | M2 | **No swallowed unexpected failures.** Flag `except: pass` when it hides an operation failure from the caller. Explicit best-effort or expected-absence handling is valid when the documented contract is preserved. |
 | M3 | No real API keys, tokens, or credentials in files. Secrets come from Doppler. Clearly synthetic test fixtures and documented placeholders are permitted. |
 | M4 | No unresolved placeholders in rendered deliverables or runtime configuration. Source templates and literal test fixtures may intentionally contain placeholders. |
-| M5 | No JS redeclarations in `*/static/*.js`. If the diff touches any, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit 0 = pass. Skip when the diff has no static JS. |
+| M5 | No JS redeclarations in changed `.js` files beneath any directory named `static`, at any depth (including nested subdirectories). If the diff touches any, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit 0 = pass. Skip when the diff has no static JS. |
 
 ### Judgment checks — what automation cannot see
 
@@ -170,13 +170,20 @@ Local and delegated review reports end in **PASS** or **FAIL**, pinned to the
 **exact commit SHA** reviewed. State that SHA in the verdict; a new commit requires
 a fresh review. A local or sub-agent PASS does not replace the Codex GitHub gate.
 
-Classify GitHub review evidence under `pt info get pr_merge_policy` and the
-**PR review and merge policy** in `~/projects/Project-workflow.md`: a clean review
-object, completed summary, or fresh connector thumbs-up observed on an unchanged
-recorded head can qualify under that procedure without a literal PASS token.
-The evidence must identify the current commit and clear findings. Pending, missing, ambiguous,
-or stale evidence does not pass. An explicitly authorized exception is recorded
-as an exception, never as a PASS.
+GitHub reviewers report supported findings or a clean result in the integration's
+normal format. Reviewing code does not require access to workstation tools or
+merge-policy mirrors.
+
+Agents publishing or merging a PR must follow the complete
+[PR review and merge policy](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/pr-review-policy.md).
+Local installations also expose that same policy through `pt info get pr_merge_policy`
+and `~/projects/Project-workflow.md`. A clean review object, completed summary, or
+fresh connector thumbs-up observed on an unchanged recorded head can qualify under
+that procedure without a literal PASS token. The evidence must identify the current
+commit and clear findings. Pending, missing, ambiguous, or stale evidence does not
+pass. If the complete policy is unavailable, stop publication or merging; this does
+not prevent a reviewer from completing the code review. An explicitly authorized
+exception is recorded as an exception, never as a PASS.
 
 ### How to report
 
