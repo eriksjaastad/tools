@@ -42,12 +42,7 @@ jobs:
         env:
           CONTENT_GUARD_PATTERNS: ${{ secrets.CONTENT_GUARD_PATTERNS }}
         run: |
-          if [ -n "$CONTENT_GUARD_PATTERNS" ]; then
-            git ls-files | xargs uv run --python 3.12 governance/validators/content-guard.py
-          else
-            echo "⚠️  CONTENT_GUARD_PATTERNS not configured, skipping content guard check"
-            echo "This check will be enforced once the secret is configured in the repository."
-          fi
+          git ls-files -z | xargs -0 uv run --python 3.12 governance/validators/content-guard.py
 
       - name: Run test suites
         env:

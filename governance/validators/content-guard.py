@@ -44,7 +44,8 @@ CHECK_EXTENSIONS = {
     '.sql', '.ini', '.cfg', '.conf',
 }
 
-# Patterns to skip (these directories/files are never checked)
+# Patterns to skip (untracked/generated/vendor/binary areas only)
+# Tests are NOT exempt - they are committed public content that can leak identifiers
 SKIP_PATH_PATTERNS = [
     r'\.git/',
     r'node_modules/',
@@ -55,10 +56,6 @@ SKIP_PATH_PATTERNS = [
     r'site-packages/',
     r'\.env$',
     r'\.log$',
-    r'(?:^|/)tests?/',
-    r'(?:^|/)test_[^/]*\.py$',
-    r'(?:^|/)[^/]*_test\.py$',
-    r'\.test\.[jt]sx?$',
 ]
 
 
@@ -82,15 +79,15 @@ def load_patterns() -> list[str]:
     patterns = []
     
     # Try environment variable first
-    env_patterns = os.getenv('CONTENT_GUARD_PATTERNS', '').strip()
+    env_patterns = os.getenv('CONTENT_GUARD_PATTERNS')  # governance: allow-silent SF003: optional configuration checked explicitly below
     if env_patterns:
-        patterns.extend([p.strip() for p in env_patterns.split('\n') if p.strip()])
+        patterns.extend([p.strip() for p in env_patterns.strip().split('\n') if p.strip()])
     
     # Try patterns file
-    patterns_file = os.getenv('CONTENT_GUARD_PATTERNS_FILE', '').strip()
+    patterns_file = os.getenv('CONTENT_GUARD_PATTERNS_FILE')  # governance: allow-silent SF003: optional configuration checked explicitly below
     if patterns_file:
         try:
-            file_path = Path(patterns_file).expanduser()
+            file_path = Path(patterns_file.strip()).expanduser()
             if file_path.exists():
                 content = file_path.read_text().strip()
                 patterns.extend([p.strip() for p in content.split('\n') if p.strip()])
@@ -124,17 +121,19 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
 
 
 def main():
-    # Load patterns
+    # Load patterns - fail closed if not configured
     patterns = load_patterns()
     
     if not patterns:
-        print("\n⚠️  Content guard is not configured", file=sys.stderr)
+        print("\n🚨 CONTENT GUARD NOT CONFIGURED - BLOCKING COMMIT", file=sys.stderr)
         print("", file=sys.stderr)
         print("Set CONTENT_GUARD_PATTERNS (newline-separated) or", file=sys.stderr)
         print("CONTENT_GUARD_PATTERNS_FILE (path to patterns file).", file=sys.stderr)
         print("", file=sys.stderr)
-        print("This validator cannot run without patterns to check.", file=sys.stderr)
-        sys.exit(2)
+        print("This is a fail-closed gate: commits are blocked until patterns", file=sys.stderr)
+        print("are configured. Configure the repository secret or environment", file=sys.stderr)
+        print("variable, then retry.", file=sys.stderr)
+        sys.exit(1)
     
     if len(sys.argv) < 2:
         print("Usage: content-guard.py <file1> [file2] ...", file=sys.stderr)
