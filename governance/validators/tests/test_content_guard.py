@@ -61,6 +61,7 @@ class TestPatternLoading:
         monkeypatch.delenv('CONTENT_GUARD_PATTERNS_FILE', raising=False)
         
         patterns = guard.load_patterns()
+        # Empty patterns will cause main() to exit 1 (fail-closed)
         assert patterns == []
 
     def test_handles_missing_file_gracefully(self, guard, monkeypatch):
@@ -137,11 +138,12 @@ class TestFileFiltering:
         assert guard.should_check_file(Path("settings.json"))
         assert guard.should_check_file(Path("config.toml"))
 
-    def test_test_directories_skipped(self, guard):
-        assert not guard.should_check_file(Path("tests/test_app.py"))
-        assert not guard.should_check_file(Path("app/test/fixtures.py"))
-        assert not guard.should_check_file(Path("test_utils.py"))
-        assert not guard.should_check_file(Path("utils_test.py"))
+    def test_test_files_are_checked(self, guard):
+        # Tests are committed public content and CAN leak identifiers
+        assert guard.should_check_file(Path("tests/test_app.py"))
+        assert guard.should_check_file(Path("app/test/fixtures.py"))
+        assert guard.should_check_file(Path("test_utils.py"))
+        assert guard.should_check_file(Path("utils_test.py"))
 
     def test_git_directory_skipped(self, guard):
         assert not guard.should_check_file(Path(".git/config"))

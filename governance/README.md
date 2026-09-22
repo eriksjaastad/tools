@@ -248,12 +248,13 @@ by their owners before enabling the shared gate in those repositories.
 
 **Detects**: Any case-insensitive occurrence of configured patterns in tracked files
 
-**Skips**: Test directories, `.git/`, `node_modules/`, virtual environments
+**Scans**: All tracked files including tests (committed public content can leak identifiers)
+
+**Skips**: Only untracked/generated/vendor areas (`.git/`, `node_modules/`, virtual environments)
 
 **Exit codes**:
 - `0`: No forbidden content detected (pass)
-- `1`: Forbidden content detected (block commit)
-- `2`: Configuration error (no patterns available)
+- `1`: Forbidden content detected OR patterns not configured (fail-closed gate)
 
 **Example**:
 ```bash
