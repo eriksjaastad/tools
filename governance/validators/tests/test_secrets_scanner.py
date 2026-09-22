@@ -7,6 +7,67 @@ validator test modules rather than duplicated here.
 import pytest
 
 
+class TestGitHubTokenDetection:
+    """Regression coverage for #7182: GitHub App installation token format
+    changed 2026-04-27 to support stateless tokens (ghs_<APPID>_<JWT>).
+    The new format includes dots and can be ~520 chars, not exactly 36."""
+
+    @pytest.mark.parametrize("token", [
+        "ghs_" + "a" * 36,
+        "ghs_" + "Z" * 40,
+        "ghs_" + "x" * 100,
+        "ghs_16_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.BBBBBB.CCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+        "ghs_123456_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+    ])
+    def test_new_ghs_format_detected(self, scanner, token):
+        findings = scanner.scan_for_secrets(f"TOKEN = '{token}'")
+        assert len(findings) == 1
+        assert findings[0]["type"] == "GitHub Server Token"
+
+    @pytest.mark.parametrize("token", [
+        "ghp_" + "a" * 36,
+        "ghp_" + "Z" * 40,
+    ])
+    def test_ghp_format_with_variable_length(self, scanner, token):
+        findings = scanner.scan_for_secrets(f"TOKEN = '{token}'")
+        assert len(findings) == 1
+        assert findings[0]["type"] == "GitHub Personal Access Token"
+
+    @pytest.mark.parametrize("token", [
+        "gho_" + "a" * 36,
+        "gho_" + "b" * 50,
+    ])
+    def test_gho_format_with_variable_length(self, scanner, token):
+        findings = scanner.scan_for_secrets(f"TOKEN = '{token}'")
+        assert len(findings) == 1
+        assert findings[0]["type"] == "GitHub OAuth Token"
+
+    def test_ghs_with_dots_and_underscores_detected(self, scanner):
+        token = "ghs_16_ABC.DEF_GHI-JKL." + "x" * 50
+        findings = scanner.scan_for_secrets(f"export GH_TOKEN={token}")
+        assert len(findings) == 1
+        assert findings[0]["type"] == "GitHub Server Token"
+
+    def test_old_ghs_format_still_detected(self, scanner):
+        token = "ghs_" + "A" * 36
+        findings = scanner.scan_for_secrets(f"GH_TOKEN='{token}'")
+        assert len(findings) == 1
+        assert findings[0]["type"] == "GitHub Server Token"
+
+    def test_no_false_positive_on_ghs_prefix_alone(self, scanner):
+        findings = scanner.scan_for_secrets("ghs_short")
+        assert len(findings) == 0
+
+    def test_multiple_github_tokens_detected(self, scanner):
+        content = f"""
+        OLD_TOKEN = 'ghs_{"A" * 36}'
+        NEW_TOKEN = 'ghs_16_{"x" * 100}.{"y" * 50}.{"z" * 200}'
+        PERSONAL = 'ghp_{"B" * 40}'
+        """
+        findings = scanner.scan_for_secrets(content)
+        assert len(findings) == 3
+
+
 class TestSkipPatterns:
     """Regression coverage for #6013 Finding 1: `tests?/` skip pattern
     used an unanchored `re.search` so `manifests/` and other directories
