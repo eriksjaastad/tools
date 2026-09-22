@@ -1,0 +1,178 @@
+"""Tests for governance/validators/content-guard.py.
+
+Runs via `pytest governance/validators/tests/`. The `conftest.py` loader
+is used to import the validator.
+"""
+import os
+import tempfile
+from pathlib import Path
+
+import pytest
+
+
+@pytest.fixture(scope="module")
+def guard(tmp_path_factory):
+    """Load the content-guard validator and provide test utilities."""
+    import importlib.util
+    import sys
+
+    validators_dir = Path(__file__).parent.parent
+    path = validators_dir / "content-guard.py"
+    
+    spec = importlib.util.spec_from_file_location("content_guard", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load validator from {path}")
+    
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["content_guard"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class TestPatternLoading:
+    """Test that patterns are loaded correctly from environment."""
+
+    def test_load_from_env_variable(self, guard, monkeypatch):
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS', 'pattern1\npattern2\npattern3')
+        patterns = guard.load_patterns()
+        assert patterns == ['pattern1', 'pattern2', 'pattern3']
+
+    def test_load_from_file(self, guard, monkeypatch, tmp_path):
+        patterns_file = tmp_path / "patterns.txt"
+        patterns_file.write_text("filepattern1\nfilepattern2\n\nfilepattern3")
+        
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', str(patterns_file))
+        patterns = guard.load_patterns()
+        assert patterns == ['filepattern1', 'filepattern2', 'filepattern3']
+
+    def test_load_from_both_sources(self, guard, monkeypatch, tmp_path):
+        patterns_file = tmp_path / "patterns.txt"
+        patterns_file.write_text("file_pattern")
+        
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS', 'env_pattern')
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', str(patterns_file))
+        
+        patterns = guard.load_patterns()
+        assert 'env_pattern' in patterns
+        assert 'file_pattern' in patterns
+
+    def test_empty_when_not_configured(self, guard, monkeypatch):
+        monkeypatch.delenv('CONTENT_GUARD_PATTERNS', raising=False)
+        monkeypatch.delenv('CONTENT_GUARD_PATTERNS_FILE', raising=False)
+        
+        patterns = guard.load_patterns()
+        assert patterns == []
+
+    def test_handles_missing_file_gracefully(self, guard, monkeypatch):
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', '/nonexistent/file.txt')
+        patterns = guard.load_patterns()
+        assert patterns == []
+
+
+class TestPatternScanning:
+    """Test detection of forbidden patterns in content."""
+
+    def test_detects_exact_pattern(self, guard):
+        content = "This is a line with FORBIDDEN_CLIENT in it"
+        patterns = ['FORBIDDEN_CLIENT']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 1
+        assert findings[0]['line_num'] == 1
+
+    def test_case_insensitive_detection(self, guard):
+        content = "forbidden_client\nFORBIDDEN_CLIENT\nForbidden_Client"
+        patterns = ['FORBIDDEN_CLIENT']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 3
+
+    def test_multiple_patterns_detected(self, guard):
+        content = "Line with CLIENT_A and CLIENT_B"
+        patterns = ['CLIENT_A', 'CLIENT_B']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 2
+
+    def test_pattern_in_multiple_lines(self, guard):
+        content = """
+        Line 1 has SECRET
+        Line 2 is clean
+        Line 3 has SECRET again
+        """
+        patterns = ['SECRET']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 2
+        line_nums = [f['line_num'] for f in findings]
+        assert 2 in line_nums
+        assert 4 in line_nums
+
+    def test_no_false_positives(self, guard):
+        content = "This is completely clean content"
+        patterns = ['FORBIDDEN', 'SECRET']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 0
+
+    def test_redacts_pattern_in_output(self, guard):
+        content = "Line with CLASSIFIED_INFO"
+        patterns = ['CLASSIFIED_INFO']
+        findings = guard.scan_for_patterns(content, patterns)
+        assert len(findings) == 1
+        # The pattern field should be redacted/hashed
+        assert findings[0]['pattern'].startswith('<pattern-')
+        assert 'CLASSIFIED_INFO' not in findings[0]['pattern']
+
+
+class TestFileFiltering:
+    """Test that correct files are checked and correct files are skipped."""
+
+    def test_python_files_checked(self, guard):
+        assert guard.should_check_file(Path("src/main.py"))
+        assert guard.should_check_file(Path("app/config.py"))
+
+    def test_javascript_files_checked(self, guard):
+        assert guard.should_check_file(Path("src/app.js"))
+        assert guard.should_check_file(Path("src/Component.tsx"))
+        assert guard.should_check_file(Path("lib/utils.ts"))
+
+    def test_config_files_checked(self, guard):
+        assert guard.should_check_file(Path("config.yaml"))
+        assert guard.should_check_file(Path("settings.json"))
+        assert guard.should_check_file(Path("config.toml"))
+
+    def test_test_directories_skipped(self, guard):
+        assert not guard.should_check_file(Path("tests/test_app.py"))
+        assert not guard.should_check_file(Path("app/test/fixtures.py"))
+        assert not guard.should_check_file(Path("test_utils.py"))
+        assert not guard.should_check_file(Path("utils_test.py"))
+
+    def test_git_directory_skipped(self, guard):
+        assert not guard.should_check_file(Path(".git/config"))
+        assert not guard.should_check_file(Path(".git/hooks/pre-commit"))
+
+    def test_node_modules_skipped(self, guard):
+        assert not guard.should_check_file(Path("node_modules/package/index.js"))
+
+    def test_venv_skipped(self, guard):
+        assert not guard.should_check_file(Path(".venv/lib/python/site.py"))
+        assert not guard.should_check_file(Path("venv/bin/activate"))
+
+
+class TestEndToEnd:
+    """Integration tests for the full validator."""
+
+    def test_exits_0_when_no_patterns_and_no_files(self, guard, monkeypatch):
+        # When patterns exist but no forbidden content
+        monkeypatch.setenv('CONTENT_GUARD_PATTERNS', 'FORBIDDEN')
+        
+        content = "This is clean content"
+        findings = guard.scan_for_patterns(content, ['FORBIDDEN'])
+        assert len(findings) == 0
+
+    def test_finds_content_across_file_types(self, guard):
+        patterns = ['SECRET_CLIENT']
+        
+        py_content = "client = 'SECRET_CLIENT'"
+        js_content = "const client = 'SECRET_CLIENT';"
+        yaml_content = "client: SECRET_CLIENT"
+        
+        for content in [py_content, js_content, yaml_content]:
+            findings = guard.scan_for_patterns(content, patterns)
+            assert len(findings) == 1

@@ -10,6 +10,7 @@ This governance system provides reusable git pre-commit hooks that can be instal
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
 - **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
 - **Source Deletion Checker**: Blocks new or edited permanent Python deletion sites without temporary ownership or a local rationale
+- **Content Guard**: Blocks commits containing external client identifiers (configured via environment variables)
 
 The **Silent Failure Checker** runs through this repository's CI using
 `silent-failure-gate.py`. The portfolio reporter remains read-only, and the
@@ -236,6 +237,31 @@ by their owners before enabling the shared gate in those repositories.
 **Exit codes**:
 - `0`: No secrets detected (pass)
 - `1`: Secrets detected (block commit)
+
+### Content Guard
+
+**Purpose**: Prevent external client identifiers from being committed to public repositories.
+
+**Configuration**: Patterns are loaded from environment variables, never committed:
+- `CONTENT_GUARD_PATTERNS`: Newline-separated list of forbidden patterns
+- `CONTENT_GUARD_PATTERNS_FILE`: Path to a private file containing patterns
+
+**Detects**: Any case-insensitive occurrence of configured patterns in tracked files
+
+**Skips**: Test directories, `.git/`, `node_modules/`, virtual environments
+
+**Exit codes**:
+- `0`: No forbidden content detected (pass)
+- `1`: Forbidden content detected (block commit)
+- `2`: Configuration error (no patterns available)
+
+**Example**:
+```bash
+export CONTENT_GUARD_PATTERNS="ClientNameA
+ClientNameB
+project-identifier-x"
+uv run governance/validators/content-guard.py file1.py file2.yaml
+```
 
 ### Absolute Path Checker
 
