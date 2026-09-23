@@ -32,51 +32,28 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 ## GitHub Identity — Read Before Any `gh` or `git push`
 
-**Identity is per-ROLE, not per-tool.** The 2026-04-24 cutover replaced per-tool identities with three canonical roles. Exactly these exist:
+**Erik's personal GitHub account is the writer identity** as of 2026-09-23.
+All agents use the same `eriksjaastad` account for new GitHub commits, PRs,
+issues and reviews. The repo-local and global Git author is `eriksjaastad`
+with the GitHub-linked ID-based `noreply` address. The installed `gha` shim on
+the MacBook and Mac Mini clears inherited `GH_TOKEN`/`GITHUB_TOKEN` and uses
+the personal `gh` login. Keep the agent's role in task/PR metadata, since the
+GitHub actor alone no longer distinguishes a floor manager from a worker.
 
-| Identity | Bot login |
-|----------|-----------|
-| `architect` | `architect-identity[bot]` |
-| `manager` | `manager-identity[bot]` |
-| `auxesis-coder` | `auxesis-coder[bot]` |
-
-**Codex uses the same identities as every other agent** (Erik's ruling, 2026-08-30). There is no Codex bot and no Gemini bot — no App, no Doppler credentials, nothing to restore.
-
-**`gh-claude.sh` has been removed**, together with its repository and installed user-hook allowances (#6782, completed after tools PR #53 and user-config PR #61). Use `gha` or `gh-agent.sh` with a canonical role. Installed hook wiring remains machine-local.
-
-`gh-codex.sh` and `gh-gemini.sh` were removed in #46, together with `gh-agent.sh`'s old silent fallback to the retired `claude` identity. An unresolved identity now fails closed with a readable reason instead of exiting 1 with no output.
-
-Rules:
-
-- **All GitHub write operations go through `gh-agent.sh` / the `gha` wrapper**, never bare `gh`. A PreToolUse hook enforces this.
-- **Never set `git config user.name` / `user.email` by hand.** This repo's `.git/config` already resolves to `manager-identity[bot]`. `--auto` picks `manager` inside a project dir and `architect` at `~/projects` root; `auxesis-coder` is never auto-picked.
-- **`gha` is a shell alias — do not rely on it inside a script file.** It expands to
-  `_tools/gh-agent.sh --auto` only in an interactive shell. Inside `bash script.sh` it is
-  `command not found`, so every call returns nothing — and a loop that greps that empty
-  output reports a clean sweep over zero data instead of failing. This silently produced
-  false "no findings" results during the #7085 audit. **In any script, call
-  `"$HOME/projects/_tools/gh-agent.sh" --auto` by path.** And check status, not
-  emptiness — noting that `$?` after a pipe reports the *last* command, so
-  `cmd | head` returns 0 even when `cmd` was not found. Use `set -o pipefail`, or
-  test `${PIPESTATUS[0]}`, or capture output before filtering it.
-  **A `~/bin/gha` PATH shim added 2026-09-14 makes the bare name resolve in
-  non-interactive shells too — but only where that shim exists.** It lives outside
-  every repo (`~/bin` is not tracked here or in `claude-user-config`), so it is
-  laptop-local and absent on the Mac Mini and in any fresh environment. A script
-  that works because of it will fail silently somewhere else. Call by path anyway.
-- **To ask which identity you are about to act as, run `gha whoami`** (or
-  `gh-agent.sh --auto whoami` in a script). It prints the resolved identity, bot login,
-  git author, and the cwd that drove `--auto`. It makes no `gh` API call and never puts
-  the token in its output — but it is **not** free: it runs after identity resolution,
-  so on a cold token cache it still costs a Doppler read and a live mint, exactly like
-  any other invocation. That is deliberate (it doubles as a check that the credential
-  chain works), but do not call it in a loop believing it is local. It takes no
-  arguments and rejects any it is given. **Do not probe GitHub for this.**
-  `gh api user` returns `403 Resource not accessible by integration` because an
-  installation token is not a user, and `gh api /app` returns `401` because that route
-  wants a signed JWT. Both read like a broken wrapper and neither is.
-- **Never let a `gh` call run with an empty `GH_TOKEN`.** An empty value is not treated as "no credentials" — `gh` reads it as unset and falls through to Erik's personal keyring, authenticating as `eriksjaastad` while the git author still says `<something>[bot]`. Any wrapper that builds a token in a subshell must explicitly test it is non-empty before invoking `gh`. Do not rely on `set -e` alone.
-- **Token cache:** installation tokens are cached at `~/.cache/gh-agent/<identity>.json` (0600 in a 0700 dir) and reused until 300s before the expiry GitHub reports. Each entry carries a `config` fingerprint of its `IDENTITY_MAP` tuple, so repointing an identity re-mints instead of serving the superseded App's token. A Doppler secret rotated **in place** under an unchanged suffix is **not** caught — after that kind of change, pass `--no-cache` or clear the cache directory. Any corrupt, expired, or drifted entry is treated as a miss, never as a failure.
+- Use `gha` for attributed GitHub operations. In non-interactive scripts,
+  resolve `command -v gha` and fail if it is absent; do not silently fall back
+  to an App token or another account. `gha api user --jq .login` should return
+  `eriksjaastad` when diagnosing identity.
+- Use plain `git` for commits and pushes. Do not override repo-local author or
+  credential settings ad hoc. `github-identity-cutover.py` audits/applies the
+  supported host setup and saves a private rollback snapshot first.
+- The three historical custom Apps (`architect`, `manager`, `auxesis-coder`)
+  remain installed only while the one-year GitHub archive is validated.
+  `gh-agent.sh` and `github-app-token.py` are legacy archive tools, not writer
+  paths. Never use an explicit App role for new PRs, reviews, comments or
+  pushes. The old bot-identity installer is disabled.
+- Preserve the independent Codex GitHub review connector and Discord agent
+  identities. The existing exact-head review/CI merge gates still apply.
 
 ## Safety Rules
 
@@ -87,7 +64,7 @@ Rules:
 
 ### Be Careful With
 1. **MCP server code** — affects all downstream agents
-2. **`gh-agent.sh` / `github-app-token.py`** — bot identity infrastructure, **check with Erik first.** This is the rule that got skipped when four commits landed on `perf/gha-token-cache` with no card on this board.
+2. **`gh-agent.sh` / `github-app-token.py`** — historical App credentials remain only for archive recovery; do not reintroduce them into a writer path.
 3. **Governance validators** — false positives block all commits across all projects
 
 ### Do Not Touch
