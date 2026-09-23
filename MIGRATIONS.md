@@ -17,8 +17,12 @@ Append-only log of `pt migration` sessions. Each section records the paths touch
 ### Modified paths (status changed during session)
 - `.github/workflows/auto-merge-on-tests.yml` (comment updated)
 - `.github/workflows/pr-label-check.yml` (deleted)
+- `.github/workflows/tests.yml` (obsolete suite description removed)
 - `README.md` (rollout guidance updated)
+- `claude-hooks/pr-enforcement.py` (obsolete workflow explanation removed)
 - `governance/standardize-gh-repo.sh` (preserves existing status checks)
 - `governance/sync-gh-workflows.sh` (installer retired)
+- `tests/remediation/test_status_failures.py` (obsolete workflow explanation removed)
+- `tests/workflows/test_pr_label_check.py` (deleted with the retired workflow)
 
 ---
