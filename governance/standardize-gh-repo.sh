@@ -12,11 +12,9 @@
 #   default_branch         = main
 #   labels                 = canonical 11 (feature enhancement bug chore
 #                            refactor docs test hotfix security perf ci)
-#   branch protection on main:
+#   branch protection on main (when missing):
 #     - require PR before merge
-#     - require status checks: check-label (when the pr-label-check
-#       workflow is wired up in the repo)
-#     - no human-review requirement
+#     - preserve any existing required checks and review settings
 #
 # Usage:
 #   standardize-gh-repo.sh --dry-run <repo>          # single repo, report only
@@ -50,8 +48,6 @@ CANONICAL_LABELS=(
   "perf:#F9D0C4"
   "ci:#1D76DB"
 )
-
-REQUIRED_CHECKS=("check-label")
 
 usage() {
   sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
@@ -147,42 +143,8 @@ check_repo() {
     changes+=("missing labels: ${missing_labels[*]}")
   fi
 
-  # 3. Branch protection on main — only enforce if main exists.
-  #
-  # Detect which canonical checks are actually wired up in this repo's
-  # workflows. We fetch each workflow file's content ONCE and grep all check
-  # names against that single blob, instead of re-fetching per-check or
-  # re-doing the whole detection in the apply phase. At 43 repos x ~5 workflows
-  # x 2 check names x 2 phases (old shape), this was ~860 API calls per sweep
-  # — enough to hit GitHub's 80 req/min secondary limit silently, since
-  # errors were suppressed by 2>/dev/null.
-  local -a workflow_paths=()
-  while IFS= read -r p; do
-    [[ -n "$p" ]] && workflow_paths+=("$p")
-  done < <(gh api "repos/$slug/actions/workflows" -q '.workflows[].path' 2>/dev/null)
-
-  local all_workflow_content=""
-  if [[ ${#workflow_paths[@]} -gt 0 ]]; then
-    for path in "${workflow_paths[@]}"; do
-      local encoded
-      encoded=$(gh api "repos/$slug/contents/$path" -q '.content // ""' 2>/dev/null || echo "")
-      [[ -n "$encoded" ]] && all_workflow_content+=$'\n'$(echo "$encoded" | base64 -d 2>/dev/null || echo "")
-    done
-  fi
-
-  # Build the list of REQUIRED_CHECKS that are actually referenced in workflow
-  # files. Reused below for both the detection report and the apply payload.
-  local -a PRESENT_CHECKS=()
-  for chk in "${REQUIRED_CHECKS[@]}"; do
-    if echo "$all_workflow_content" | grep -q "$chk"; then
-      PRESENT_CHECKS+=("$chk")
-    fi
-  done
-
-  if [[ ${#PRESENT_CHECKS[@]} -eq 0 ]]; then
-    changes+=("WARNING: no check-label workflow installed — protection enforced with empty contexts; copy .github/workflows/pr-label-check.yml from the tools repo")
-  fi
-
+  # 3. Branch protection on main — create only when absent. Existing protection
+  # may require unrelated checks; never replace its status contexts or reviews.
   local has_main
   has_main=$(gh api "repos/$slug/branches/main" 2>/dev/null | jq -r '.name // "none"')
   local protection_status="not-checked"
@@ -200,17 +162,6 @@ check_repo() {
       changes+=("branch protection on main: NONE -> enforce")
       protection_status="missing"
     else
-      # Compare required checks: what IS required vs what SHOULD be required
-      # (PRESENT_CHECKS, already computed above).
-      local cur_checks
-      cur_checks=$(echo "$current_protection" | jq -r '.required_status_checks.contexts // [] | .[]' 2>/dev/null | sort -u)
-      local needed_sorted=""
-      [[ ${#PRESENT_CHECKS[@]} -gt 0 ]] && needed_sorted=$(printf '%s\n' "${PRESENT_CHECKS[@]}" | sort -u | xargs)
-      local cur_sorted=""
-      [[ -n "$cur_checks" ]] && cur_sorted=$(echo "$cur_checks" | xargs)
-      if [[ "$needed_sorted" != "$cur_sorted" ]]; then
-        changes+=("required checks on main: [$cur_sorted] -> [$needed_sorted]")
-      fi
       protection_status="present"
     fi
   fi
@@ -245,22 +196,11 @@ check_repo() {
     done
 
     # Branch protection — only update if main exists.
-    if [[ "$has_main" == "main" ]] && [[ "$protection_status" != "not-checked" ]]; then
-      # Build the contexts list from PRESENT_CHECKS (already computed above
-      # — no re-fetching of workflow content).
-      local checks_payload="[]"
-      if [[ ${#PRESENT_CHECKS[@]} -gt 0 ]]; then
-        local -a quoted=()
-        for chk in "${PRESENT_CHECKS[@]}"; do quoted+=("\"$chk\""); done
-        local joined
-        joined=$(IFS=,; echo "${quoted[*]}")
-        checks_payload="[$joined]"
-      fi
-
+    if [[ "$has_main" == "main" ]] && [[ "$protection_status" == "missing" ]]; then
       gh api -X PUT "repos/$slug/branches/main/protection" \
         --input - <<EOF >/dev/null 2>&1 || echo "    ! failed to set branch protection"
 {
-  "required_status_checks": { "strict": false, "contexts": $checks_payload },
+  "required_status_checks": null,
   "enforce_admins": false,
   "required_pull_request_reviews": { "required_approving_review_count": 0, "dismiss_stale_reviews": false, "require_code_owner_reviews": false },
   "restrictions": null,
