@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# sync-gh-workflows.sh — install the canonical PR label workflow, remove
-# obsolete claude-review wrappers, and handle the one scoped default-branch
-# rename agreed on 2026-04-21.
+# sync-gh-workflows.sh — remove obsolete claude-review wrappers and handle
+# the one scoped default-branch rename agreed on 2026-04-21.
 #
 # Usage:
-#   sync-gh-workflows.sh --dry-run install-pr-label-check
-#   sync-gh-workflows.sh --apply   install-pr-label-check
-#   sync-gh-workflows.sh --apply   install-pr-label-check --all-active
 #   sync-gh-workflows.sh --dry-run delete-dead-claude-review
 #   sync-gh-workflows.sh --apply   delete-dead-claude-review ai-journal
 #   sync-gh-workflows.sh --dry-run rename-default-branch
@@ -19,46 +15,10 @@ set -euo pipefail
 OWNER="eriksjaastad"
 MODE="dry-run"
 ACTION=""
-USE_ALL_ACTIVE=0
-ACTIVE_DAYS="${ACTIVE_DAYS:-30}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-WORKFLOW_SOURCE="$SCRIPT_DIR/../.github/workflows/pr-label-check.yml"
-WORKFLOW_PATH=".github/workflows/pr-label-check.yml"
 DEAD_WRAPPER_PATH=".github/workflows/claude-review.yml"
 DEAD_WRAPPER_REF="eriksjaastad/tools/.github/workflows/claude-review-reusable.yml@main"
 FAILURES=0
-
-PR_LABEL_ROLLOUT_REPOS=(
-  "project-tracker"
-  "tools"
-  "claude-user-config"
-  "auxesis"
-  "mcp-trust-gateway"
-  "ai-journal"
-  "holoscape"
-  "trading-copilot"
-  "mcp-trust-scanner"
-  "discovery-lab-v2"
-  "mcp-trust-console"
-  "ai-memory"
-  "leadgen-data-products"
-  "x402-gateway"
-  "tollpath"
-  "mcp-trust-registry"
-  "mcp-trust-policy"
-  "mcp-trust-platform"
-  "auxesis-research-labs"
-  "cortana-personal-ai"
-  "muffinpanrecipes"
-  "project-scaffolding"
-  "Flo-Fi"
-  "hypocrisynow"
-  "ai-memory-replay"
-  "image-workflow"
-  "analyze-youtube-videos"
-  "tax-organizer"
-  "model-updater"
-)
 
 DEAD_CLAUDE_REVIEW_REPOS=(
   "ai-journal"
@@ -86,36 +46,28 @@ BRANCH_RENAMES=(
 usage() {
   local exit_code="${1:-1}"
   cat <<'EOF'
-sync-gh-workflows.sh — install the canonical PR label workflow, remove
-obsolete claude-review wrappers, and handle the scoped default-branch
-rename agreed on 2026-04-21.
+sync-gh-workflows.sh — remove obsolete claude-review wrappers and handle
+the scoped default-branch rename agreed on 2026-04-21.
 
 Usage:
-  sync-gh-workflows.sh --dry-run install-pr-label-check
-  sync-gh-workflows.sh --apply   install-pr-label-check
-  sync-gh-workflows.sh --apply   install-pr-label-check --all-active
   sync-gh-workflows.sh --dry-run delete-dead-claude-review
   sync-gh-workflows.sh --apply   delete-dead-claude-review ai-journal
   sync-gh-workflows.sh --dry-run rename-default-branch
 
 Actions:
-  install-pr-label-check
   delete-dead-claude-review
   rename-default-branch
 
 Flags:
   --dry-run      Report only (default)
   --apply        Make GitHub changes
-  --all-active   For install-pr-label-check only, target non-archived repos
-                 pushed within ACTIVE_DAYS (default 30) instead of the baked-in
-                 2026-04-21 rollout list
 EOF
   exit "$exit_code"
 }
 
 require_action() {
   case "$ACTION" in
-    install-pr-label-check|delete-dead-claude-review|rename-default-branch) ;;
+    delete-dead-claude-review|rename-default-branch) ;;
     *) echo "Error: missing or unknown action" >&2; usage ;;
   esac
 }
@@ -124,7 +76,6 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run) MODE="dry-run"; shift ;;
     --apply) MODE="apply"; shift ;;
-    --all-active) USE_ALL_ACTIVE=1; shift ;;
     -h|--help) usage 0 ;;
     -*)
       echo "Unknown flag: $1" >&2
@@ -143,37 +94,6 @@ done
 
 require_action
 
-if [[ "$ACTION" != "install-pr-label-check" && "$USE_ALL_ACTIVE" == "1" ]]; then
-  echo "Error: --all-active is only valid for install-pr-label-check" >&2
-  exit 1
-fi
-
-if [[ ! -f "$WORKFLOW_SOURCE" ]]; then
-  echo "Error: canonical workflow source not found: $WORKFLOW_SOURCE" >&2
-  exit 1
-fi
-
-WORKFLOW_SOURCE_B64="$(base64 < "$WORKFLOW_SOURCE" | tr -d '\n')"
-
-get_active_repos() {
-  gh repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
-    "$HOME/.local/bin/uv" run python3 -c "
-import sys, json
-from datetime import datetime, timezone
-days = $ACTIVE_DAYS
-repos = json.load(sys.stdin)
-now = datetime.now(timezone.utc)
-out = []
-for r in repos:
-    if r.get('isArchived'):
-        continue
-    pushed = datetime.fromisoformat(r['pushedAt'].replace('Z', '+00:00'))
-    if (now - pushed).days < days:
-        out.append(r['name'])
-print('\n'.join(out))
-"
-}
-
 ARCHIVED_QUERY_LIMIT=500
 
 drop_archived_repos() {
@@ -181,9 +101,8 @@ drop_archived_repos() {
   #
   # The canonical arrays below are hand-maintained, and archiving a repo and
   # editing this script are two unrelated actions with different triggers -- so
-  # the lists drift. On 2026-09-15 ten of PR_LABEL_ROLLOUT_REPOS' 29 entries
-  # were already archived (#7177). Deleting those ten would have fixed the
-  # occurrence, not the pattern.
+  # the lists drift. The archived-repo filter prevents obsolete targets from
+  # causing unnecessary writes or obscure errors.
   #
   # Every skip is LOGGED. A filter that silently shrinks a list is worse than
   # the stale list it replaces: the run looks clean and you never learn the
@@ -242,13 +161,6 @@ resolve_targets() {
   fi
 
   case "$ACTION" in
-    install-pr-label-check)
-      if [[ "$USE_ALL_ACTIVE" == "1" ]]; then
-        get_active_repos
-      else
-        printf '%s\n' "${PR_LABEL_ROLLOUT_REPOS[@]}" | drop_archived_repos
-      fi
-      ;;
     delete-dead-claude-review)
       printf '%s\n' "${DEAD_CLAUDE_REVIEW_REPOS[@]}" | drop_archived_repos
       ;;
@@ -281,62 +193,6 @@ run_standardize() {
     echo "    ✓ standardized repo settings"
   else
     echo "    ! failed to standardize repo settings"
-    FAILURES=$((FAILURES + 1))
-  fi
-}
-
-install_pr_label_check() {
-  local repo="$1"
-  local slug="$OWNER/$repo"
-  local info default_branch file_json existing_b64 existing_sha cmd
-
-  if ! info=$(repo_json "$repo"); then
-    echo "[$repo] ERROR: cannot fetch repo"
-    FAILURES=$((FAILURES + 1))
-    return
-  fi
-
-  default_branch=$(echo "$info" | jq -r '.default_branch')
-  existing_b64=""
-  existing_sha=""
-
-  if file_json=$(gh api "repos/$slug/contents/$WORKFLOW_PATH" 2>/dev/null); then
-    existing_b64=$(echo "$file_json" | jq -r '.content // ""' | tr -d '\n')
-    existing_sha=$(echo "$file_json" | jq -r '.sha // ""')
-  fi
-
-  if [[ "$existing_b64" == "$WORKFLOW_SOURCE_B64" ]]; then
-    echo "[$repo] ✓ $WORKFLOW_PATH already canonical"
-    return
-  fi
-
-  if [[ -n "$existing_sha" ]]; then
-    echo "[$repo] update $WORKFLOW_PATH on $default_branch"
-  else
-    echo "[$repo] create $WORKFLOW_PATH on $default_branch"
-  fi
-
-  if [[ "$MODE" == "dry-run" ]]; then
-    echo "    - would upsert canonical pr-label-check workflow"
-    run_standardize "$repo"
-    return
-  fi
-
-  cmd=(
-    gh api -X PUT "repos/$slug/contents/$WORKFLOW_PATH"
-    -f "message=Install pr-label-check workflow"
-    -f "content=$WORKFLOW_SOURCE_B64"
-    -f "branch=$default_branch"
-  )
-  if [[ -n "$existing_sha" ]]; then
-    cmd+=(-f "sha=$existing_sha")
-  fi
-
-  if "${cmd[@]}" >/dev/null 2>&1; then
-    echo "    ✓ workflow synced"
-    run_standardize "$repo"
-  else
-    echo "    ! failed to sync workflow"
     FAILURES=$((FAILURES + 1))
   fi
 }
@@ -449,7 +305,6 @@ echo ""
 while IFS= read -r target; do
   [[ -z "$target" ]] && continue
   case "$ACTION" in
-    install-pr-label-check) install_pr_label_check "$target" ;;
     delete-dead-claude-review) delete_dead_claude_review "$target" ;;
     rename-default-branch) rename_default_branch "$target" ;;
   esac

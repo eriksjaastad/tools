@@ -36,10 +36,9 @@ permissions:
   contents: write
   pull-requests: write
 
-# Type labelling is NOT duplicated here. It lives in the standalone
-# pr-label-check.yml, which every repo carries and which derives the label from
-# the PR title. This workflow used to carry a second, divergent copy of that
-# check (#7344).
+# This reusable workflow does not enforce PR labels. Label-only CI is being
+# retired separately under #7335; tests and the repository's review policy
+# continue to gate merges.
 
 jobs:
   test:

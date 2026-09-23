@@ -5,8 +5,8 @@ Fires after `gh pr create` commands to enforce PR quality standards:
 1. Detects multi-concern PRs (mixed conventional commit types)
 2. Reminds to run CI checks
 
-Type labels are not checked here -- pr-label-check.yml derives them from the
-PR title (#7344).
+Type labels are handled by the pre-create PR workflow during the #7335/#7336
+transition; this post-create hook only checks PR quality warnings.
 
 Returns a nonzero status if Git inspection could not complete the review.
 """
@@ -33,9 +33,8 @@ def main():
     warnings = []
     inspection_failed = False
 
-    # No label check here. Since #7344 the pr-label-check workflow derives the
-    # type label from the PR's conventional-commit title and applies it, so a
-    # missing --label is not a defect and warning about it was noise.
+    # No post-create label check: the PR workflow handles labeling before
+    # publication while #7335/#7336 retire the portfolio requirement.
 
     # Check: multi-concern PR?
     try:

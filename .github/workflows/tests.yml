@@ -7,7 +7,7 @@ name: Tests
 # 2026-09-01). This job only reports.
 #
 # Includes governance, integrity-warden, authentication, identity-hook,
-# pr-label-check workflow and route pricing regressions. Authentication
+# remediation-hook and route pricing regressions. Authentication
 # executables are stubbed; these suites do not mint live tokens or call
 # providers.
 
@@ -49,7 +49,6 @@ jobs:
             integrity-warden/tests/ \
             tests/auth/ \
             tests/hooks/ \
-            tests/workflows/ \
             tests/remediation/ \
             route/test_pricing.py \
             route/test_readers.py \

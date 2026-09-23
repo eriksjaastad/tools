@@ -104,10 +104,9 @@ def test_successful_pr_inspection_preserves_warnings(monkeypatch, capsys, messag
         module.main()
     assert error.value.code == 0
     output = capsys.readouterr().err
-    # The missing---label warning was removed in #7344: pr-label-check.yml now
-    # derives the type label from the PR title, so `gh pr create` without
-    # --label is no longer a defect worth warning about. Asserted absent rather
-    # than just dropped, so re-adding it has to be a decision.
+    # The post-create hook does not enforce labels. The PR workflow handles
+    # labels before publication during the #7335/#7336 transition. Assert the
+    # warning stays absent so re-adding a post-create gate needs a decision.
     assert "WITHOUT a label" not in output
     assert ("Multi-concern PR detected" in output) is mixed
     assert "unavailable" not in output

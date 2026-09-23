@@ -21,13 +21,14 @@ removed on 2026-04-21. Reasons:
 - We never want GitHub-side Claude API spend; review happens on the
   developer's machine.
 
-The only CI workflow we still ship from this repo is the type-label gate
-(`.github/workflows/pr-label-check.yml`), which posts the `check-label`
-status that branch protection on `main` requires.
+The type-label CI gate is being retired across the portfolio under #7335.
+This repo no longer ships or propagates `pr-label-check.yml`; repositories
+still carrying the gate keep their existing label requirement until their
+own workflow and required-status context are retired. GitHub Codex review
+and unrelated CI remain independent requirements.
 
-Use `governance/sync-gh-workflows.sh` to roll that workflow out across
-target repos, delete obsolete
-`claude-review.yml` wrappers, and handle the scoped `master` -> `main`
+Use `governance/sync-gh-workflows.sh` to delete obsolete
+`claude-review.yml` wrappers and handle the scoped `master` -> `main`
 rename for `eriksjaastad/eriksjaastad`. Run with `--dry-run` first.
 
 ---
@@ -35,14 +36,14 @@ rename for `eriksjaastad/eriksjaastad`. Run with `--dry-run` first.
 ## Repo Settings Standardization (`governance/standardize-gh-repo.sh`)
 
 Enforces canonical GitHub repo settings (auto-delete-on-merge, allowed
-merge methods, canonical labels, branch protection requiring `check-label`)
+merge methods, canonical label definitions, and branch protection when absent)
 across all `eriksjaastad/*` repos. See the script header for the full
-policy. Run with `--dry-run` first; `--apply` when you're sure.
+policy. Existing required checks and review settings are preserved. Run with
+`--dry-run` first; `--apply` when you're sure.
 
 Common rollout commands:
 
 ```bash
-_tools/governance/sync-gh-workflows.sh --dry-run install-pr-label-check
 _tools/governance/sync-gh-workflows.sh --dry-run delete-dead-claude-review
 _tools/governance/sync-gh-workflows.sh --dry-run rename-default-branch
 ```
@@ -51,7 +52,7 @@ _tools/governance/sync-gh-workflows.sh --dry-run rename-default-branch
 
 ## Local Pre-Commit Hooks (`governance/`)
 
-Runs validators at `git commit` time — secrets, hardcoded paths, naked API calls, agent config sync. Unlike the CI workflow above (which propagates automatically via `@main` ref), these must be installed per repo:
+Runs validators at `git commit` time — secrets, hardcoded paths, naked API calls, agent config sync. These must be installed per repo:
 
 ```bash
 _tools/governance/install-hooks.sh ~/projects/<project-name>
