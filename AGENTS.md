@@ -116,110 +116,93 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 <!-- BEGIN runtime-doctor:shared:code-review-rules -->
 ## Code Review Rules
 
-> **Authored once, here. Propagated into every repo's `AGENTS.md` so the reviewer sees it
-> in-repo.** Do not hand-copy this into a project file — if it is missing from a repo, that
-> is a propagation bug, not a licence to paste.
+> Shared source: `agent-runtime-config/shared_blocks/code-review-rules.md`, kept
+> in sync with its registry-declared authoring surface. Refresh through the
+> shared-rule rollout; do not hand-copy rules into individual projects.
 
-These are the standards every PR is reviewed against, by whoever or whatever is reviewing.
-They are written provider-neutral on purpose: Codex, Claude and any future reviewer read the
-same list.
+These rules apply to Codex and Claude local reviewers and GitHub Codex review.
+Codex is primary; Claude remains supported. This block contains the essential
+checks for in-repository review without requiring workstation files. Additional
+local detail: [full protocol](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/code-review-protocol.md).
 
-### Gate 0 — mechanical scan
+### Mechanical checks
 
-A failure prevents a PASS, but does not end the review. Complete all independent
-checks and the judgment audit, then report the supported findings together.
-If a failure prevents a check from running, identify that coverage gap.
-
-| ID | Check |
-|----|-------|
-| M1 | **Portable paths.** Flag machine-specific paths wired into executable code/config or prescribed setup commands. Illustrative examples, incident evidence, and committed data breadcrumbs are not runtime dependencies; do not reject them merely for spelling a path. |
-| M2 | **No swallowed unexpected failures.** Flag `except: pass` when it hides an operation failure from the caller. Explicit best-effort or expected-absence handling is valid when the documented contract is preserved. |
-| M3 | No real API keys, tokens, or credentials in files. Secrets come from Doppler. Clearly synthetic test fixtures and documented placeholders are permitted. |
-| M4 | No unresolved placeholders in rendered deliverables or runtime configuration. Source templates and literal test fixtures may intentionally contain placeholders. |
-| M5 | No JS redeclarations in changed `.js` files beneath any directory named `static`, at any depth (including nested subdirectories). If the diff touches any, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit 0 = pass. Skip when the diff has no static JS. |
-
-### Judgment checks — what automation cannot see
+A failure prevents PASS, but finish independent checks and report findings
+together. Name any check that could not run.
 
 | ID | Check |
 |----|-------|
-| T1 | **Inverse test audit.** Not "do tests pass" but *what do the passing tests never exercise*. Name the dark territory. |
-| T2 | **No weak assertions.** `isinstance(x, T)` or `x is not None` alone asserts almost nothing. |
-| E1 | **Status contracts are truthful.** Check the documented exit/status protocol. A hook that returns a deny decision in JSON with exit 0 is valid when its caller consumes that protocol. |
-| E2 | **No silent failure returns.** `return []` or `return ""` on a failed operation, with nothing logged, is a defect — the caller cannot tell empty from broken. |
-| H1 | **Subprocess integrity.** Use a timeout and handle failure through `check=True` or explicit validation of expected return codes. Expected nonzero results must remain usable; unexpected failures must not silently become success. |
-| H5 | **CASCADE DELETE documented.** Foreign-key relationships are spelled out before any `DELETE` lands. |
-| H7 | **No unrequested auto-cleanup.** A "helpful" destructive addition nobody asked for is a defect, not a bonus. |
+| M1 | Flag machine-specific paths in executable code/config or prescribed setup commands. Illustrative examples and committed evidence are not runtime dependencies. |
+| M2 | Flag swallowed unexpected failures. Documented best-effort and expected-absence handling are valid when the contract is preserved. |
+| M3 | No real credentials in files. Secrets come from Doppler. Synthetic fixtures and documented placeholders are permitted. |
+| M4 | No unresolved placeholders in rendered deliverables or runtime config. Source templates and literal fixtures may contain them. |
+| M5 | For changed `.js` under any `static` directory, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit0 passes; skip if none. |
 
-### Scope and authorisation
+### Judgment and scope
 
-- **Was this behaviour actually requested?** If no, reject it — however good it is.
-- **Does the change stay inside the task it claims?** Scope creep is a finding.
-- **Can every change trace to a requirement?** If it traces to nothing, say so.
+| ID | Check |
+|----|-------|
+| T1 | Identify the relevant behavior passing tests never exercise. |
+| T2 | Assertions such as non-null/type checks alone are insufficient for behavioral claims. |
+| E1 | Status contracts must be truthful. JSON deny with exit0 is valid if the caller consumes that protocol. |
+| E2 | An operation failure must not silently become a successful empty result. |
+| H1 | Subprocesses need timeouts and return-code handling; expected nonzero outcomes must remain usable. |
+| H5 | Document foreign-key relationships before a DELETE, including cascade effects. |
+| H7 | No unrequested destructive cleanup. |
 
-### Review in blast-radius order
+Trace changed behavior to an authorized requirement. State the scope and check
+claimed workflows; a written exclusion does not excuse a defect in behavior the
+change promises. Separate unrelated pre-existing concerns from this PR's fixes.
+Read propagation sources first, execution-critical code next, then reference docs.
 
-A Tier 1 defect propagates into every downstream project, so it is read first.
+### Evidence and convergence
 
-- **Tier 1** — `templates/`, `AGENTS.md`, `CLAUDE.md`: propagation sources.
-- **Tier 2** — `scripts/`, `scaffold/`: execution critical.
-- **Tier 3** — `docs/`, `patterns/`, rules files: human reference, no code impact.
+- Review the whole diff and affected callers. Gather the complete supported
+  finding set in one report; group related cases by root cause, most severe first.
+- Check both failures and legitimate uses. Use focused synthetic probes where
+  they materially validate a claim; do not turn review into an exhaustive audit.
+- Separate evidence, inference and unchecked coverage. No supported findings is
+  a valid result. Give each finding a concrete failure scenario and file/line.
+- Compare base, previous reviewed revision and current head. Distinguish inherited
+  misses from fix-induced regressions and verify prior fixes' adjacent effects.
+- Test neighbouring legitimate behavior before requesting review. Batch corrections;
+  a repeated regression family requires reassessing the approach, not another
+  isolated patch. Local preflight also consumes resources and must stay bounded.
 
-### Verdict
+### Three GitHub review cycles: assess the result
 
-Local and delegated review reports end in **PASS** or **FAIL**, pinned to the
-**exact commit SHA** reviewed. State that SHA in the verdict; a new commit requires
-a fresh review. A local or sub-agent PASS does not replace the Codex GitHub gate.
+Keep automatic GitHub Codex review on. The initial execution counts. Persist the
+work item's distinct review cycles, request/acknowledgement evidence, head SHAs
+and outcomes in its PR/task notes. Multiple comments or reactions from one cycle
+are not multiple reviews. Count acknowledged failed/stalled executions; resolve
+uncertain history before triggering another. Follow the full PR policy's counting
+rules before pushes, ready transitions, requests, retries and merges.
 
-GitHub reviewers report supported findings or a clean result in the integration's
-normal format. Reviewing code does not require access to workstation tools or
-merge-policy mirrors.
+The third cycle may be requested after fixes and preflight. At that request or
+detection of an automatic third cycle, all agents on that work item stop edits,
+commits, pushes, draft/ready flips, further review requests and merges. Let that
+review finish. A clean third review on the unchanged recorded head may merge
+when CI and all other gates pass, without extra approval solely for its count.
+If findings remain, report the PR, SHA, findings, cycle evidence and recurring
+patterns to Erik; stop further fixes or requests until he directs the next step.
+Pending, unknown, ambiguous or stale evidence is not clearance; existing wait
+limits and unrelated user holds still apply. Do not reset the count by
+changing agents/sessions/branches or splitting/recreating the PR. A fourth cycle
+requires Erik's explicit direction; this never waives correctness or CI.
 
-Agents publishing or merging a PR must follow the complete
-[PR review and merge policy](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/pr-review-policy.md).
-Local installations also expose that same policy through `pt info get pr_merge_policy`
-and `~/projects/Project-workflow.md`. A clean review object, completed summary, or
-fresh connector thumbs-up observed on an unchanged recorded head can qualify under
-that procedure without a literal PASS token. The evidence must identify the current
-commit and clear findings. Pending, missing, ambiguous, or stale evidence does not
-pass. If the complete policy is unavailable, stop publication or merging; this does
-not prevent a reviewer from completing the code review. An explicitly authorized
-exception is recorded as an exception, never as a PASS.
+### Verdict and publication
 
-### How to report
+Local/delegated verdicts end PASS or FAIL with the exact reviewed commit SHA;
+a new commit requires fresh review. GitHub reviewers use the integration's normal
+finding/clean-result format. Review itself needs no workstation-tool access.
 
-Shape, not standards. Drip-fed findings cost a full cycle each — a new commit
-invalidates the prior review, so a five-finding diff becomes five reviews.
-
-- **One review per request, covering the whole diff.** Every finding, most
-  severe first, each with `file:line` and a concrete failure scenario. Never
-  hold one back for a later round.
-- **Separate evidence from uncertainty.** Findings need a concrete failure
-  scenario. Report unverified concerns as questions or coverage gaps, not defects.
-  A review with no supported findings is valid; do not manufacture issues.
-- **Rank use-case breakage above hypothetical hardening.** A P2 that silently
-  breaks the primary workflow outranks a serious-looking edge case nobody hits.
-  Say which class a finding is in.
-- **Say where the change is too strict** — where it refuses, blocks or rejects
-  something it should accept. Implementers cannot see this in their own work, so
-  it is the direction least likely to be found without you.
-- **If the diff answers your previous findings, say so**, and check whether those
-  fixes opened adjacent surface. Most late-round defects live there.
-
-### Review convergence
-
-- **Review the behavior, not only the changed lines.** Trace affected callers,
-  consumers, and execution paths. When a defect appears, inspect related forms
-  before submitting the review; group examples with the same root cause.
-- **Check both failure and legitimate use.** For parsers and filters, cover the
-  relevant syntax variants, wrappers, normalization, and safe counterparts. For
-  synchronization and conversion, check round trips and preservation of authored
-  content. Select cases from the actual contract; unrelated exhaustive audits are
-  outside the PR's scope.
-- **Verify fixes against history.** Compare relevant behavior with the base and
-  previous reviewed revision. Distinguish incomplete fixes, newly introduced
-  regressions, and pre-existing issues outside the changed behavior. On follow-up
-  reviews, verify prior findings and adjacent effects, retaining whole-diff context.
-- **Aim to converge in two or three reviews.** If the same defect family returns,
-  reassess the implementation and test coverage before another narrow patch.
-  The target never waives a finding, required check, or exact-head review.
+Publishing/merging agents follow the complete [PR review and merge policy](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/pr-review-policy.md),
+also mirrored in `pt info get pr_merge_policy` and `~/projects/Project-workflow.md`.
+A local PASS is preflight only. GitHub clearance must identify the current head
+and clear findings; pending, stale, missing or ambiguous evidence is insufficient.
+Qualifying clean summaries or fresh observed-cycle thumbs-up can count under the
+full policy. If that policy is unavailable, stop publication/merging, not review.
+Third-review findings require a human discussion; clean third-review clearance
+follows the normal merge gates. An authorized exception is recorded as an
+exception, never as PASS.
 <!-- END runtime-doctor:shared:code-review-rules -->
