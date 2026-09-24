@@ -83,10 +83,13 @@ def legacy_wrapper_invocation(command: str) -> bool:
                 continue
             if word in ("bash", "sh", "/bin/bash", "/bin/sh"):
                 index += 1
-                if index < len(words) and words[index] == "-c" and index + 1 < len(words):
-                    return legacy_wrapper_invocation(words[index + 1])
                 while index < len(words) and words[index].startswith("-"):
+                    option = words[index]
                     index += 1
+                    if option.startswith("-") and not option.startswith("--") and "c" in option[1:]:
+                        if index < len(words) and legacy_wrapper_invocation(words[index]):
+                            return True
+                        break
                 continue
             if word in ("command", "exec"):
                 index += 1
