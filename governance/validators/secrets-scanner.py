@@ -39,11 +39,11 @@ SECRET_PATTERNS = [
     (r"(?<![A-Za-z0-9/+])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])", "Potential AWS Secret Key", "40-char base64 string"),
 
     # GitHub
-    (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Access Token", "Starts with ghp_"),
-    (r"gho_[a-zA-Z0-9]{36}", "GitHub OAuth Token", "Starts with gho_"),
-    (r"ghu_[a-zA-Z0-9]{36}", "GitHub User Token", "Starts with ghu_"),
-    (r"ghs_[a-zA-Z0-9]{36}", "GitHub Server Token", "Starts with ghs_"),
-    (r"ghr_[a-zA-Z0-9]{36}", "GitHub Refresh Token", "Starts with ghr_"),
+    (r"ghp_[a-zA-Z0-9]{36,}", "GitHub Personal Access Token", "Starts with ghp_"),
+    (r"gho_[a-zA-Z0-9]{36,}", "GitHub OAuth Token", "Starts with gho_"),
+    (r"ghu_[a-zA-Z0-9]{36,}", "GitHub User Token", "Starts with ghu_"),
+    (r"ghs_[A-Za-z0-9.\-_]{36,}", "GitHub Server Token", "Starts with ghs_"),
+    (r"ghr_[a-zA-Z0-9]{36,}", "GitHub Refresh Token", "Starts with ghr_"),
 
     # Slack
     (r"xox[baprs]-[a-zA-Z0-9\-]{10,}", "Slack Token", "Starts with xox[baprs]-"),

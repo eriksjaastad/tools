@@ -10,6 +10,7 @@ This governance system provides reusable git pre-commit hooks that can be instal
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
 - **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
 - **Source Deletion Checker**: Blocks new or edited permanent Python deletion sites without temporary ownership or a local rationale
+- **Content Guard**: Blocks PRs containing external client identifiers (configured via a repository secret)
 
 The **Silent Failure Checker** runs through this repository's CI using
 `silent-failure-gate.py`. The portfolio reporter remains read-only, and the
@@ -236,6 +237,41 @@ by their owners before enabling the shared gate in those repositories.
 **Exit codes**:
 - `0`: No secrets detected (pass)
 - `1`: Secrets detected (block commit)
+
+### Content Guard
+
+**Purpose**: Prevent external client identifiers from being committed to public repositories.
+
+**Configuration**: Patterns are loaded from environment variables, never committed:
+- `CONTENT_GUARD_PATTERNS`: Newline-separated list of forbidden patterns
+- `CONTENT_GUARD_PATTERNS_FILE`: Path to a private file containing patterns
+
+**Detects**: Any case-insensitive occurrence of configured patterns in tracked files
+
+**Scans**: Every tracked PR blob, regardless of suffix, including UTF-8 and
+UTF-16/UTF-32 text with or without a BOM. Mixed bytes preserve ASCII markers. Symlink
+target text is scanned without following the link. Gitlinks are skipped because
+their contents are not in this checkout. Enumeration and unreadable-file errors
+fail the scan.
+
+CI runs on `pull_request_target` for PRs targeting the default branch, with the
+scanner checked out from that branch. The PR checkout is scanned as data, so
+PR-controlled code does not receive `CONTENT_GUARD_PATTERNS`. This workflow
+starts running after it lands
+on the base branch; the rollout PR itself is checked with synthetic local tests.
+
+**Exit codes**:
+- `0`: No forbidden content detected (pass)
+- `1`: Forbidden content detected
+- `2`: Missing configuration or a scan error (fail-closed gate)
+
+**Example**:
+```bash
+export CONTENT_GUARD_PATTERNS="ClientNameA
+ClientNameB
+project-identifier-x"
+uv run governance/validators/content-guard.py file1.py file2.yaml
+```
 
 ### Absolute Path Checker
 
