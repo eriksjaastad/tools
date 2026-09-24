@@ -34,6 +34,8 @@ def test_supported_commands_remain_allowed(command):
                                       "bash -c './gh-agent.sh manager pr create'",
                                       "bash -lc './gh-agent.sh manager pr create'",
                                       "bash -e -c './gh-agent.sh manager pr create'",
+                                      "source ./gh-agent.sh manager pr create",
+                                      ". ./gh-agent.sh manager pr create",
                                       "./gh-agent.sh --auto pr view 1; echo 'unclosed",
                                       "./gh-agent.sh --auto -- git push",
                                       "gh pr create --body gha"])
@@ -51,8 +53,33 @@ def test_retired_wrapper_no_longer_exempts_bare_write():
     assert not (REPO / "gh-claude.sh").exists()
 
 
+@pytest.mark.parametrize("command", [
+    "GH_TOKEN=x gh api -X POST repos/example/issues",
+    "gh api --method PATCH repos/example/issues/1",
+    "gh api -f title=test repos/example/issues",
+    "gh api --raw-field title=test repos/example/issues",
+    "gh api --input payload.json repos/example/issues",
+    "bash -lc 'gh api -X DELETE repos/example/issues/1'",
+])
+def test_mutating_bare_api_is_blocked(command):
+    assert hook.check_gh_identity(command) == (True, "gh api write operation")
+
+
+@pytest.mark.parametrize("command", [
+    "gh api repos/example/issues",
+    "gh api -X GET search/issues -f q=test",
+    "gh api --method=GET search/issues --field q=test",
+    "rg 'gh api -X POST' AGENTS.md",
+])
+def test_read_only_api_is_allowed(command):
+    assert hook.check_gh_identity(command) == (False, "")
+
+
 @pytest.mark.parametrize("command,expected_code", [("gha pr create", 0), ("gh pr create --body gh-claude.sh", 2),
                                                    ("gh-agent.sh manager pr create", 2),
+                                                   ("source ./gh-agent.sh manager pr create", 2),
+                                                   ("GH_TOKEN=x gh api -X POST repos/example/issues", 2),
+                                                   ("gh api -X GET search/issues -f q=test", 0),
                                                    ("./gh-agent.sh --auto -- git push", 2)])
 def test_hook_json_entrypoint(command, expected_code):
     payload = {"tool_name": "Bash", "tool_input": {"command": command}}
