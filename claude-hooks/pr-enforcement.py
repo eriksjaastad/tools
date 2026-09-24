@@ -91,8 +91,7 @@ def main():
                 "merge with `gha pr merge <number> --merge --match-head-commit <sha>`. "
                 "Do not ping Erik solely for a merge click."
             )
-    except (OSError, subprocess.SubprocessError):
-        # Silently skip if repo privacy detection fails
+    except (OSError, subprocess.SubprocessError):  # governance: allow-silent SF001: optional privacy check, hook continues without it
         pass
 
     if warnings:
