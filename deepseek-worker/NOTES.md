@@ -3,6 +3,8 @@
 **Card:** #7569  
 **Date:** 2026-09-24 (EDT)
 
+**Canonical docs:** `DESIGN.md` (architecture), `PLAN.md` (PR slices). This file holds gap inventory + Erik questions only.
+
 ---
 
 ## Holoscape supervisor writeup — GAP
