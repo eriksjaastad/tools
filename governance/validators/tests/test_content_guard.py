@@ -18,11 +18,11 @@ def guard(tmp_path_factory):
 
     validators_dir = Path(__file__).parent.parent
     path = validators_dir / "content-guard.py"
-    
+
     spec = importlib.util.spec_from_file_location("content_guard", path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Cannot load validator from {path}")
-    
+
     mod = importlib.util.module_from_spec(spec)
     sys.modules["content_guard"] = mod
     spec.loader.exec_module(mod)
@@ -40,7 +40,7 @@ class TestPatternLoading:
     def test_load_from_file(self, guard, monkeypatch, tmp_path):
         patterns_file = tmp_path / "patterns.txt"
         patterns_file.write_text("filepattern1\nfilepattern2\n\nfilepattern3")
-        
+
         monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', str(patterns_file))
         patterns = guard.load_patterns()
         assert patterns == ['filepattern1', 'filepattern2', 'filepattern3']
@@ -48,10 +48,10 @@ class TestPatternLoading:
     def test_load_from_both_sources(self, guard, monkeypatch, tmp_path):
         patterns_file = tmp_path / "patterns.txt"
         patterns_file.write_text("file_pattern")
-        
+
         monkeypatch.setenv('CONTENT_GUARD_PATTERNS', 'env_pattern')
         monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', str(patterns_file))
-        
+
         patterns = guard.load_patterns()
         assert 'env_pattern' in patterns
         assert 'file_pattern' in patterns
@@ -59,7 +59,7 @@ class TestPatternLoading:
     def test_empty_when_not_configured(self, guard, monkeypatch):
         monkeypatch.delenv('CONTENT_GUARD_PATTERNS', raising=False)
         monkeypatch.delenv('CONTENT_GUARD_PATTERNS_FILE', raising=False)
-        
+
         patterns = guard.load_patterns()
         # Empty patterns will cause main() to exit 1 (fail-closed)
         assert patterns == []
@@ -127,18 +127,18 @@ class TestEndToEnd:
     def test_exits_0_when_no_patterns_and_no_files(self, guard, monkeypatch):
         # When patterns exist but no forbidden content
         monkeypatch.setenv('CONTENT_GUARD_PATTERNS', 'FORBIDDEN')
-        
+
         content = "This is clean content"
         findings = guard.scan_for_patterns(content, ['FORBIDDEN'])
         assert len(findings) == 0
 
     def test_finds_content_across_file_types(self, guard):
         patterns = ['SECRET_CLIENT']
-        
+
         py_content = "client = 'SECRET_CLIENT'"
         js_content = "const client = 'SECRET_CLIENT';"
         yaml_content = "client: SECRET_CLIENT"
-        
+
         for content in [py_content, js_content, yaml_content]:
             findings = guard.scan_for_patterns(content, patterns)
             assert len(findings) == 1
