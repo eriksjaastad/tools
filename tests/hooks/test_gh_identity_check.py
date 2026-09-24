@@ -23,6 +23,8 @@ def test_supported_commands_remain_allowed(command):
 
 @pytest.mark.parametrize("command", ["gh pr create", "gh pr review 1", "gh issue create",
                                       "gh-agent.sh manager pr create", "gh-agent.sh --auto issue create",
+                                      "gh-agent.sh manager api -X PUT repos/example/pulls/74/merge",
+                                      "./gh-agent.sh --auto -- git push",
                                       "gh pr create --body gha"])
 def test_bare_writes_are_blocked(command):
     blocked, reason = hook.check_gh_identity(command)
@@ -39,7 +41,8 @@ def test_retired_wrapper_no_longer_exempts_bare_write():
 
 
 @pytest.mark.parametrize("command,expected_code", [("gha pr create", 0), ("gh pr create --body gh-claude.sh", 2),
-                                                   ("gh-agent.sh manager pr create", 2)])
+                                                   ("gh-agent.sh manager pr create", 2),
+                                                   ("./gh-agent.sh --auto -- git push", 2)])
 def test_hook_json_entrypoint(command, expected_code):
     payload = {"tool_name": "Bash", "tool_input": {"command": command}}
     try:

@@ -3,7 +3,7 @@
 GitHub Identity Hook
 
 Global PreToolUse hook for personal-account GitHub writes.
-Agents use the installed `gha` shim. Legacy App-role wrapper writes are blocked.
+Agents use the installed `gha` shim. Direct legacy App-wrapper commands are blocked.
 
 Location: ~/.claude/hooks/gh-identity-check.py
 Applies to: All Claude Code projects
@@ -34,9 +34,8 @@ WRITE_PATTERNS = [
     r"gh\s+issue\s+reopen\b",
 ]
 
-LEGACY_WRAPPER_WRITE = re.compile(
-    r"(?:^|[\s/])gh-agent\.sh\s+(?:(?:--auto|manager|architect|auxesis-coder)\s+)?"
-    r"(?:pr|issue)\s+(?:create|comment|review|merge|close|edit|ready|reopen)\b",
+LEGACY_WRAPPER_COMMAND = re.compile(
+    r"(?:^|[;&|]\s*)\s*(?:\S*/)?gh-agent\.sh(?=\s|$)",
     re.IGNORECASE,
 )
 
@@ -46,9 +45,9 @@ def check_gh_identity(command: str) -> tuple[bool, str]:
     Check if a bare `gh` command is used for write operations.
     Returns: (should_block, reason)
     """
-    legacy = LEGACY_WRAPPER_WRITE.search(command)
+    legacy = LEGACY_WRAPPER_COMMAND.search(command)
     if legacy:
-        return True, legacy.group(0).strip()
+        return True, "gh-agent.sh"
 
     # Check if command matches any write operation pattern
     for pattern in WRITE_PATTERNS:
@@ -86,7 +85,7 @@ def main():
         error_msg = f"""
 GH COMMAND BLOCKED BY IDENTITY HOOK
 
-Unsupported GitHub write path `{operation}` detected.
+Unsupported GitHub command path `{operation}` detected.
 
 Attempted: {command}
 
