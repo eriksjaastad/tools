@@ -70,6 +70,15 @@ def test_workflow_runs_trusted_scanner_on_every_tracked_name(tmp_path):
     )
     assert unicode_export.returncode == 1, unicode_export.stderr
 
+    (pr / "clients.csv").write_bytes("顧客名称".encode("utf-16-be"))
+    subprocess.run(["git", "-C", str(pr), "add", "clients.csv"], check=True, timeout=10)
+    non_ascii = subprocess.run(
+        command, shell=True, executable="/bin/bash", cwd=pr,
+        env={**env, "CONTENT_GUARD_PATTERNS": "顧客名称"},
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert non_ascii.returncode == 1, non_ascii.stderr
+
     # Git enumeration failure cannot become a successful empty scan.
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()

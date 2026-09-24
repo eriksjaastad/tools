@@ -164,6 +164,18 @@ class TestEndToEnd:
             guard.main()
         assert result.value.code == 1
 
+    @pytest.mark.parametrize("encoding", ["utf-16-le", "utf-16-be"])
+    def test_unicode_marker_without_nul_bytes(self, guard, monkeypatch, tmp_path, encoding):
+        marker = "顧客名称"
+        target = tmp_path / "clients.csv"
+        target.write_bytes(marker.encode(encoding))
+        assert b"\0" not in target.read_bytes()
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
     def test_missing_input_fails_closed(self, guard, monkeypatch, tmp_path):
         monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")
         monkeypatch.setattr("sys.argv", ["content-guard.py", str(tmp_path / "missing.log")])
