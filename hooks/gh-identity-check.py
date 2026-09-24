@@ -14,7 +14,9 @@ Exit codes:
 """
 import json
 import re
+import shlex
 import sys
+from pathlib import Path
 
 
 # Write operations that must use the personal-account `gha` shim.
@@ -34,7 +36,67 @@ WRITE_PATTERNS = [
     r"gh\s+issue\s+reopen\b",
 ]
 
-LEGACY_WRAPPER_COMMAND = re.compile(r"gh-agent\.sh", re.IGNORECASE)
+
+def legacy_wrapper_invocation(command: str) -> bool:
+    """Recognize direct and common shell-launched wrapper executions."""
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+    except ValueError:
+        # A malformed command may execute an earlier segment. Keep the legacy
+        # wrapper blocked when its invocation cannot be parsed reliably.
+        return "gh-agent.sh" in command
+
+    segments = []
+    segment = []
+    for token in tokens:
+        if token and all(char in ";&|()" for char in token):
+            if segment:
+                segments.append(segment)
+            segment = []
+        else:
+            segment.append(token)
+    if segment:
+        segments.append(segment)
+
+    for words in segments:
+        index = 0
+        while index < len(words):
+            word = words[index]
+            if "=" in word and not word.startswith("/") and index == 0:
+                index += 1  # Shell variable assignment before the command.
+                continue
+            if word in ("env", "/usr/bin/env"):
+                index += 1
+                while index < len(words):
+                    option = words[index]
+                    if option == "-u" and index + 1 < len(words):
+                        index += 2
+                    elif option.startswith("-") or ("=" in option and not option.startswith("/")):
+                        index += 1
+                    else:
+                        break
+                continue
+            if word == "timeout" and index + 1 < len(words):
+                index += 2  # duration
+                continue
+            if word in ("bash", "sh", "/bin/bash", "/bin/sh"):
+                index += 1
+                if index < len(words) and words[index] == "-c" and index + 1 < len(words):
+                    return legacy_wrapper_invocation(words[index + 1])
+                while index < len(words) and words[index].startswith("-"):
+                    index += 1
+                continue
+            if word in ("command", "exec"):
+                index += 1
+                if index < len(words) and words[index] == "-v":
+                    break  # command -v only inspects PATH.
+                continue
+            if Path(word).name == "gh-agent.sh":
+                return True
+            break
+    return False
 
 
 def check_gh_identity(command: str) -> tuple[bool, str]:
@@ -42,11 +104,7 @@ def check_gh_identity(command: str) -> tuple[bool, str]:
     Check if a bare `gh` command is used for write operations.
     Returns: (should_block, reason)
     """
-    # Reject every literal legacy-wrapper reference. Shell launchers such as
-    # `bash`, `env`, and `timeout` can all invoke it, and this hook cannot safely
-    # prove a reference is read-only from the command text alone.
-    legacy = LEGACY_WRAPPER_COMMAND.search(command)
-    if legacy:
+    if legacy_wrapper_invocation(command):
         return True, "gh-agent.sh"
 
     # Check if command matches any write operation pattern

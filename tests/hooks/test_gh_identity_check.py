@@ -16,7 +16,9 @@ hook = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hook)
 
 
-@pytest.mark.parametrize("command", ["gha pr create", "gh pr view 1", "gh issue list"])
+@pytest.mark.parametrize("command", ["gha pr create", "gh pr view 1", "gh issue list",
+                                      "rg gh-agent.sh AGENTS.md", "cat gh-agent.sh",
+                                      "command -v gh-agent.sh"])
 def test_supported_commands_remain_allowed(command):
     assert hook.check_gh_identity(command) == (False, "")
 
@@ -26,6 +28,11 @@ def test_supported_commands_remain_allowed(command):
                                       "gh-agent.sh manager api -X PUT repos/example/pulls/74/merge",
                                       "bash ./gh-agent.sh manager api -X PUT repos/example/pulls/74/merge",
                                       "env GH_TOKEN=x ./gh-agent.sh --auto api -X POST repos/example/issues",
+                                      "env -u GH_TOKEN bash ./gh-agent.sh --auto -- git push",
+                                      "GH_TOKEN=x ./gh-agent.sh --auto pr create",
+                                      "timeout 10 bash ./gh-agent.sh --auto -- git push",
+                                      "bash -c './gh-agent.sh manager pr create'",
+                                      "./gh-agent.sh --auto pr view 1; echo 'unclosed",
                                       "./gh-agent.sh --auto -- git push",
                                       "gh pr create --body gha"])
 def test_bare_writes_are_blocked(command):
