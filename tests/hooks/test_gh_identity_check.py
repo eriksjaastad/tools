@@ -32,6 +32,8 @@ def test_supported_commands_remain_allowed(command):
                                       "GH_TOKEN=x ./gh-agent.sh --auto pr create",
                                       "timeout 10 bash ./gh-agent.sh --auto -- git push",
                                       "bash -c './gh-agent.sh manager pr create'",
+                                      "bash -lc './gh-agent.sh manager pr create'",
+                                      "bash -e -c './gh-agent.sh manager pr create'",
                                       "./gh-agent.sh --auto pr view 1; echo 'unclosed",
                                       "./gh-agent.sh --auto -- git push",
                                       "gh pr create --body gha"])
