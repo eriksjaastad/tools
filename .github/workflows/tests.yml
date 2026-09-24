@@ -38,12 +38,6 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: uv run --python 3.12 governance/validators/source-deletion-check.py --base "$PR_BASE_SHA"
 
-      - name: Check for external client identifiers
-        env:
-          CONTENT_GUARD_PATTERNS: ${{ secrets.CONTENT_GUARD_PATTERNS }}
-        run: |
-          git ls-files -z | xargs -0 uv run --python 3.12 governance/validators/content-guard.py
-
       - name: Run test suites
         env:
           PYTHONPATH: model-bench:integrity-warden

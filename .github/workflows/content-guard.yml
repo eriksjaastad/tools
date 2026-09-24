@@ -1,0 +1,36 @@
+name: Content guard
+
+# This workflow and the scanner come from the trusted base branch. The PR
+# checkout supplies data only; its workflow and Python code never see the marker
+# secret. Fork PRs receive the same scan because pull_request_target owns the job.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted scanner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: trusted
+          persist-credentials: false
+
+      - name: Check out PR files as data
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr
+          persist-credentials: false
+
+      - name: Scan every tracked PR file
+        working-directory: pr
+        env:
+          CONTENT_GUARD_PATTERNS: ${{ secrets.CONTENT_GUARD_PATTERNS }}
+        run: git ls-files -z | xargs -0 -r python3 -I ../trusted/governance/validators/content-guard.py

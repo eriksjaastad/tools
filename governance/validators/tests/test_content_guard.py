@@ -64,10 +64,10 @@ class TestPatternLoading:
         # Empty patterns will cause main() to exit 1 (fail-closed)
         assert patterns == []
 
-    def test_handles_missing_file_gracefully(self, guard, monkeypatch):
+    def test_configured_missing_file_fails_closed(self, guard, monkeypatch):
         monkeypatch.setenv('CONTENT_GUARD_PATTERNS_FILE', '/nonexistent/file.txt')
-        patterns = guard.load_patterns()
-        assert patterns == []
+        with pytest.raises(OSError):
+            guard.load_patterns()
 
 
 class TestPatternScanning:
@@ -121,42 +121,6 @@ class TestPatternScanning:
         assert 'CLASSIFIED_INFO' not in findings[0]['pattern']
 
 
-class TestFileFiltering:
-    """Test that correct files are checked and correct files are skipped."""
-
-    def test_python_files_checked(self, guard):
-        assert guard.should_check_file(Path("src/main.py"))
-        assert guard.should_check_file(Path("app/config.py"))
-
-    def test_javascript_files_checked(self, guard):
-        assert guard.should_check_file(Path("src/app.js"))
-        assert guard.should_check_file(Path("src/Component.tsx"))
-        assert guard.should_check_file(Path("lib/utils.ts"))
-
-    def test_config_files_checked(self, guard):
-        assert guard.should_check_file(Path("config.yaml"))
-        assert guard.should_check_file(Path("settings.json"))
-        assert guard.should_check_file(Path("config.toml"))
-
-    def test_test_files_are_checked(self, guard):
-        # Tests are committed public content and CAN leak identifiers
-        assert guard.should_check_file(Path("tests/test_app.py"))
-        assert guard.should_check_file(Path("app/test/fixtures.py"))
-        assert guard.should_check_file(Path("test_utils.py"))
-        assert guard.should_check_file(Path("utils_test.py"))
-
-    def test_git_directory_skipped(self, guard):
-        assert not guard.should_check_file(Path(".git/config"))
-        assert not guard.should_check_file(Path(".git/hooks/pre-commit"))
-
-    def test_node_modules_skipped(self, guard):
-        assert not guard.should_check_file(Path("node_modules/package/index.js"))
-
-    def test_venv_skipped(self, guard):
-        assert not guard.should_check_file(Path(".venv/lib/python/site.py"))
-        assert not guard.should_check_file(Path("venv/bin/activate"))
-
-
 class TestEndToEnd:
     """Integration tests for the full validator."""
 
@@ -178,3 +142,28 @@ class TestEndToEnd:
         for content in [py_content, js_content, yaml_content]:
             findings = guard.scan_for_patterns(content, patterns)
             assert len(findings) == 1
+
+    def test_mixed_encoding_file_cannot_hide_ascii_identifier(self, guard, monkeypatch, tmp_path, capsys):
+        target = tmp_path / "clients.csv"
+        target.write_bytes(b"\xffname,FORBIDDEN_CLIENT\n")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+        assert "FORBIDDEN_CLIENT" not in capsys.readouterr().err
+
+    def test_missing_input_fails_closed(self, guard, monkeypatch, tmp_path):
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(tmp_path / "missing.log")])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 2
+
+    def test_missing_configuration_uses_documented_exit(self, guard, monkeypatch, tmp_path):
+        monkeypatch.delenv("CONTENT_GUARD_PATTERNS", raising=False)
+        monkeypatch.delenv("CONTENT_GUARD_PATTERNS_FILE", raising=False)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(tmp_path / "report.log")])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 2

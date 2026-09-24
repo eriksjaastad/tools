@@ -10,7 +10,7 @@ This governance system provides reusable git pre-commit hooks that can be instal
 - **Absolute Path Checker**: Blocks commits with hardcoded absolute paths
 - **API Wrapper Checker**: Enforces the repository's provider-wrapper rules
 - **Source Deletion Checker**: Blocks new or edited permanent Python deletion sites without temporary ownership or a local rationale
-- **Content Guard**: Blocks commits containing external client identifiers (configured via environment variables)
+- **Content Guard**: Blocks PRs containing external client identifiers (configured via a repository secret)
 
 The **Silent Failure Checker** runs through this repository's CI using
 `silent-failure-gate.py`. The portfolio reporter remains read-only, and the
@@ -248,13 +248,18 @@ by their owners before enabling the shared gate in those repositories.
 
 **Detects**: Any case-insensitive occurrence of configured patterns in tracked files
 
-**Scans**: All tracked files including tests (committed public content can leak identifiers)
+**Scans**: Every tracked PR file, regardless of suffix or encoding. Symlink
+target text is scanned without following the link. Unreadable files fail the scan.
 
-**Skips**: Only untracked/generated/vendor areas (`.git/`, `node_modules/`, virtual environments)
+CI runs on `pull_request_target` with the scanner checked out from the trusted
+base branch. The PR checkout is scanned as data, so PR-controlled code does not
+receive `CONTENT_GUARD_PATTERNS`. This workflow starts running after it lands
+on the base branch; the rollout PR itself is checked with synthetic local tests.
 
 **Exit codes**:
 - `0`: No forbidden content detected (pass)
-- `1`: Forbidden content detected OR patterns not configured (fail-closed gate)
+- `1`: Forbidden content detected
+- `2`: Missing configuration or a scan error (fail-closed gate)
 
 **Example**:
 ```bash
