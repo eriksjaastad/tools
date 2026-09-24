@@ -5,9 +5,12 @@ import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from .schemas import HandoffSchema, HandoffStatus, WorkOrderSchema
+
+
+class HeadShaError(RuntimeError):
+    """Raised when the git HEAD SHA cannot be resolved for the work repo."""
 
 
 class StubWorker:
@@ -29,7 +32,7 @@ class StubWorker:
             pt_task_id=self.work_order.pt_task_id,
             status=HandoffStatus.COMPLETED,
             branch=self.work_order.branch,
-            head_sha=head_sha or "0" * 40,
+            head_sha=head_sha,
             notes="Stub worker completed successfully",
             finished_at=datetime.now(timezone.utc).isoformat(),
         )
@@ -40,8 +43,8 @@ class StubWorker:
 
         return handoff
 
-    def _get_head_sha(self) -> Optional[str]:
-        """Get current HEAD SHA from the repo."""
+    def _get_head_sha(self) -> str:
+        """Get current HEAD SHA from the repo, raising on failure."""
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
@@ -51,9 +54,16 @@ class StubWorker:
                 timeout=5,
                 check=True,
             )
-            return result.stdout.strip()
-        except (subprocess.SubprocessError, OSError):
-            return None
+            head_sha = result.stdout.strip()
+            if not head_sha:
+                raise HeadShaError(
+                    f"git rev-parse HEAD returned an empty result in {self.work_order.repo_path}"
+                )
+            return head_sha
+        except (subprocess.SubprocessError, OSError) as e:
+            raise HeadShaError(
+                f"Failed to resolve git HEAD in {self.work_order.repo_path}: {e}"
+            ) from e
 
 
 def run_stub_worker(job_id: str, work_order_path: Path, job_dir: Path) -> int:

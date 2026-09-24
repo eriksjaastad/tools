@@ -115,7 +115,22 @@ def submit(order: str, idempotency_key: Optional[str], output_json: bool, data_d
         manager_identity="unknown",
     )
 
-    if not supervisor.spawn_worker(job.job_id):
+    try:
+        spawned = supervisor.spawn_worker(job.job_id)
+    except Exception as e:
+        if output_json:
+            click.echo(
+                json.dumps(
+                    {"error": "spawn_failed", "job_id": job.job_id, "detail": str(e)}
+                )
+            )
+        else:
+            click.echo(
+                f"Error: Failed to spawn worker for job {job.job_id}: {e}", err=True
+            )
+        sys.exit(1)
+
+    if not spawned:
         if output_json:
             click.echo(json.dumps({"error": "spawn_failed", "job_id": job.job_id}))
         else:
@@ -206,7 +221,8 @@ def logs(job_id: str, follow: bool, data_dir: Optional[str]):
                         if job.state not in {JobState.RUNNING, JobState.SPAWNING}:
                             break
         except KeyboardInterrupt:
-            pass
+            click.echo("\nFollow stopped (interrupted).")
+            sys.exit(0)
 
 
 @main.command()

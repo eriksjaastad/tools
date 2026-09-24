@@ -58,7 +58,7 @@ class WorkerSupervisor:
             self.store.transition_state(
                 job_id, JobState.FAILED, error=str(e), reason="spawn_failed"
             )
-            return False
+            raise
 
     def finalize_job(self, job_id: str) -> bool:
         """Check for handoff and finalize job state."""
