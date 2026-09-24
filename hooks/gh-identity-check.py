@@ -124,7 +124,31 @@ def mutating_bare_api(command: str) -> bool:
         segments.append(segment)
 
     for words in segments:
-        for index, word in enumerate(words[:-1]):
+        index = 0
+        while index < len(words):
+            word = words[index]
+            if "=" in word and not word.startswith("/") and index == 0:
+                index += 1
+                continue
+            if word in ("env", "/usr/bin/env"):
+                index += 1
+                while index < len(words):
+                    option = words[index]
+                    if option == "-u" and index + 1 < len(words):
+                        index += 2
+                    elif option.startswith("-") or ("=" in option and not option.startswith("/")):
+                        index += 1
+                    else:
+                        break
+                continue
+            if word == "timeout" and index + 1 < len(words):
+                index += 2
+                continue
+            if word in ("command", "exec"):
+                index += 1
+                if index < len(words) and words[index] == "-v":
+                    break
+                continue
             if word in ("bash", "sh", "/bin/bash", "/bin/sh"):
                 option_index = index + 1
                 while option_index < len(words) and words[option_index].startswith("-"):
@@ -134,8 +158,9 @@ def mutating_bare_api(command: str) -> bool:
                         if option_index < len(words) and mutating_bare_api(words[option_index]):
                             return True
                         break
-            if word != "gh" or words[index + 1] != "api":
-                continue
+                break
+            if word != "gh" or index + 1 >= len(words) or words[index + 1] != "api":
+                break
             args = words[index + 2:]
             method = None
             has_body = False
@@ -152,6 +177,7 @@ def mutating_bare_api(command: str) -> bool:
                 return method not in ("GET", "HEAD")
             if has_body:
                 return True
+            break
     return False
 
 

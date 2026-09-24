@@ -55,6 +55,8 @@ def test_retired_wrapper_no_longer_exempts_bare_write():
 
 @pytest.mark.parametrize("command", [
     "GH_TOKEN=x gh api -X POST repos/example/issues",
+    "env GH_TOKEN=x gh api -X POST repos/example/issues",
+    "command gh api -X POST repos/example/issues",
     "gh api --method PATCH repos/example/issues/1",
     "gh api -f title=test repos/example/issues",
     "gh api --raw-field title=test repos/example/issues",
@@ -70,6 +72,8 @@ def test_mutating_bare_api_is_blocked(command):
     "gh api -X GET search/issues -f q=test",
     "gh api --method=GET search/issues --field q=test",
     "rg 'gh api -X POST' AGENTS.md",
+    "echo gh api -X POST",
+    "printf %s gh api -X POST",
 ])
 def test_read_only_api_is_allowed(command):
     assert hook.check_gh_identity(command) == (False, "")
