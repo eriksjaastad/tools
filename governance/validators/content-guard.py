@@ -104,14 +104,22 @@ def repository_relative_name(path: Path, root: Path | None = None) -> str:
     marker-named directories inside the repo are still scanned. Absolute
     paths outside the checkout contribute only their leaf name so unrelated
     parent directories cannot false-positive a clean file.
+
+    The final path component is preserved without following a trailing
+    symlink, so a forbidden symlink name is still scanned even when its
+    target is a clean pathname.
     """
     if not path.is_absolute():
         return path.as_posix()
-    base = root if root is not None else checkout_root()
+    base = (root if root is not None else checkout_root()).resolve()
+    # Resolve parents only; keep the final component (may be a symlink name).
     try:
-        return path.resolve().relative_to(base.resolve()).as_posix()
+        rel_parent = path.parent.resolve().relative_to(base)
     except ValueError:
         return path.name
+    if str(rel_parent) == ".":
+        return path.name
+    return f"{rel_parent.as_posix()}/{path.name}"
 
 
 def redact_markers(text: str, patterns: list[str]) -> str:

@@ -329,6 +329,27 @@ class TestEndToEnd:
         outside = tmp_path / f"{marker}-workspace" / "clean.txt"
         outside.parent.mkdir()
         outside.write_text("x")
-        assert guard.repository_relative_name(inside.resolve(), root) == f"{marker}-dir/clean.txt"
-        assert guard.repository_relative_name(outside.resolve(), root) == "clean.txt"
+        link = root / f"{marker}-link"
+        link.symlink_to("clean.txt")
+        (root / "clean.txt").write_text("x")
+        assert guard.repository_relative_name(inside, root) == f"{marker}-dir/clean.txt"
+        assert guard.repository_relative_name(outside, root) == "clean.txt"
+        assert guard.repository_relative_name(link, root) == f"{marker}-link"
         assert guard.repository_relative_name(Path(f"docs/{marker}-report.txt")) == f"docs/{marker}-report.txt"
+
+    def test_absolute_symlink_name_with_marker_is_detected(self, guard, monkeypatch, tmp_path):
+        """Absolute symlink args must scan the link name, not only the target."""
+        import subprocess
+        marker = "PLACEHOLDER_CLIENT"
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        (repo / "clean.txt").write_text("This is clean content")
+        link = repo / f"{marker}-link"
+        link.symlink_to("clean.txt")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(link)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
