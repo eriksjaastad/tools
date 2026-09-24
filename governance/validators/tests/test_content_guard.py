@@ -153,8 +153,9 @@ class TestEndToEnd:
         assert result.value.code == 1
         assert "FORBIDDEN_CLIENT" not in capsys.readouterr().err
 
-    @pytest.mark.parametrize("encoding", ["utf-16", "utf-32"])
-    def test_bom_unicode_export_detected(self, guard, monkeypatch, tmp_path, encoding):
+    @pytest.mark.parametrize("encoding", ["utf-16", "utf-32", "utf-16-le", "utf-16-be",
+                                          "utf-32-le", "utf-32-be"])
+    def test_unicode_export_detected(self, guard, monkeypatch, tmp_path, encoding):
         target = tmp_path / "clients.csv"
         target.write_bytes("name,FORBIDDEN_CLIENT\n".encode(encoding))
         monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")

@@ -62,6 +62,14 @@ def test_workflow_runs_trusted_scanner_on_every_tracked_name(tmp_path):
     )
     assert clean.returncode == 0, clean.stderr
 
+    (pr / "clients.csv").write_bytes("name,SYNTHETIC_PRIVATE_CLIENT\n".encode("utf-16-le"))
+    subprocess.run(["git", "-C", str(pr), "add", "clients.csv"], check=True, timeout=10)
+    unicode_export = subprocess.run(
+        command, shell=True, executable="/bin/bash", cwd=pr, env=env,
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert unicode_export.returncode == 1, unicode_export.stderr
+
     # Git enumeration failure cannot become a successful empty scan.
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()

@@ -113,13 +113,18 @@ def tracked_paths() -> list[Path]:
     return paths
 
 
-def decode_content(data: bytes) -> str:
-    """Keep ASCII visible in mixed bytes and decode common Unicode exports."""
+def decoded_views(data: bytes):
+    """Try common Unicode byte orders without letting a missing BOM hide text."""
     if data.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
-        return data.decode("utf-32")
+        yield data.decode("utf-32")
+        return
     if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
-        return data.decode("utf-16")
-    return data.decode("utf-8", errors="replace")
+        yield data.decode("utf-16")
+        return
+    yield data.decode("utf-8", errors="replace")
+    if b"\0" in data:
+        for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
+            yield data.decode(encoding, errors="replace")
 
 
 def main():
@@ -162,14 +167,17 @@ def main():
             # Read symlink text itself; never follow a PR-controlled link into
             # files outside the checkout.
             if file_path.is_symlink():
-                content = os.readlink(file_path)
+                views = (os.readlink(file_path),)
             else:
-                content = decode_content(file_path.read_bytes())
+                views = decoded_views(file_path.read_bytes())
+            findings = []
+            for content in views:
+                findings = scan_for_patterns(content, patterns)
+                if findings:
+                    break
         except (OSError, UnicodeError) as exc:
             print(f"Cannot scan {file_path}: {exc}", file=sys.stderr)
             sys.exit(2)
-
-        findings = scan_for_patterns(content, patterns)
 
         if findings:
             all_findings.append({
