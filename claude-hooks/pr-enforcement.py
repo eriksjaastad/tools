@@ -4,6 +4,7 @@
 Fires after `gh pr create` commands to enforce PR quality standards:
 1. Detects multi-concern PRs (mixed conventional commit types)
 2. Reminds to run CI checks
+3. Reminds about merge requirements for private repos (no allow-auto-merge on Free)
 
 Type labels are handled by the pre-create PR workflow during the #7335/#7336
 transition; this post-create hook only checks PR quality warnings.
@@ -72,6 +73,27 @@ def main():
         warnings.append(
             "REMINDER: Run `gha pr checks <number> --watch` to wait for CI"
         )
+
+    # Check: remind about merge requirements for private repos
+    try:
+        result = subprocess.run(
+            ["gh", "repo", "view", "--json", "isPrivate", "-q", ".isPrivate"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=True,
+        )
+        is_private = result.stdout.strip().lower() == "true"
+        if is_private:
+            warnings.append(
+                "REMINDER: Private repos have no GitHub allow-auto-merge on Free. "
+                "Once independent local review clears the exact HEAD and CI/gates are satisfied, "
+                "merge with `gha pr merge <number> --merge --match-head-commit <sha>`. "
+                "Do not ping Erik solely for a merge click."
+            )
+    except (OSError, subprocess.SubprocessError):
+        # Silently skip if repo privacy detection fails
+        pass
 
     if warnings:
         print("\n".join(warnings), file=sys.stderr)
