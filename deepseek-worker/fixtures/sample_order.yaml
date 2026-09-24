@@ -1,0 +1,26 @@
+schema: deepseek-worker.work_order.v1
+pt_task_id: 7569
+goal: "Test the deepseek-worker harness with a stub worker"
+acceptance_criteria:
+  - "Job reaches completed state"
+  - "Handoff file is created with valid schema"
+  - "Head SHA is recorded"
+context_paths:
+  - "deepseek-worker/DESIGN.md"
+  - "deepseek-worker/PLAN.md"
+repo_path: "/workspace"
+base_ref: "task/7569-deepseek-worker-design"
+branch: "task/7569-deepseek-worker-design"
+constraints:
+  model: "deepseek-v4-pro"
+  max_cost_usd: 0.0
+  deadline_minutes: 5
+  max_retries: 0
+  forbidden_actions:
+    - "git push"
+    - "gh pr create"
+    - "gh pr merge"
+test_commands:
+  - "echo 'Stub worker test command'"
+off_peak_policy: "allow_peak"
+peak_exception: null
