@@ -34,10 +34,7 @@ WRITE_PATTERNS = [
     r"gh\s+issue\s+reopen\b",
 ]
 
-LEGACY_WRAPPER_COMMAND = re.compile(
-    r"(?:^|[;&|]\s*)\s*(?:\S*/)?gh-agent\.sh(?=\s|$)",
-    re.IGNORECASE,
-)
+LEGACY_WRAPPER_COMMAND = re.compile(r"gh-agent\.sh", re.IGNORECASE)
 
 
 def check_gh_identity(command: str) -> tuple[bool, str]:
@@ -45,6 +42,9 @@ def check_gh_identity(command: str) -> tuple[bool, str]:
     Check if a bare `gh` command is used for write operations.
     Returns: (should_block, reason)
     """
+    # Reject every literal legacy-wrapper reference. Shell launchers such as
+    # `bash`, `env`, and `timeout` can all invoke it, and this hook cannot safely
+    # prove a reference is read-only from the command text alone.
     legacy = LEGACY_WRAPPER_COMMAND.search(command)
     if legacy:
         return True, "gh-agent.sh"
