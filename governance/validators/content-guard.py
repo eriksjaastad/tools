@@ -84,7 +84,7 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
 
 
 def tracked_paths() -> list[Path]:
-    """Enumerate checkout blobs and symlinks; gitlinks have no local file body."""
+    """Enumerate checkout blobs, symlinks, and gitlink names."""
     try:
         result = subprocess.run(
             ["git", "ls-files", "--stage", "-z"],
@@ -93,6 +93,7 @@ def tracked_paths() -> list[Path]:
     except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         raise RuntimeError("cannot enumerate tracked files") from exc
     paths = []
+    gitlink_names = []
     for entry in result.stdout.split(b"\0"):
         if not entry:
             continue
@@ -104,26 +105,34 @@ def tracked_paths() -> list[Path]:
         if stage != b"0":
             raise RuntimeError("unmerged tracked-file entry")
         if mode == b"160000":
+            # Gitlinks have no local file body, but scan the pathname itself
+            gitlink_names.append(os.fsdecode(name))
             continue
         if mode not in (b"100644", b"100755", b"120000"):
             raise RuntimeError("unexpected tracked-file mode")
         paths.append(Path(os.fsdecode(name)))
-    if not paths:
+    if not paths and not gitlink_names:
         raise RuntimeError("no tracked files to scan")
-    return paths
+    return paths, gitlink_names
 
 
 def decoded_views(data: bytes):
-    """Try common Unicode byte orders without letting a missing BOM hide text."""
+    """Try common Unicode byte orders without letting a missing BOM hide text.
+    
+    Always include a raw-byte ASCII-decoded view to catch literal ASCII markers
+    even in mixed-encoding or malformed files with a BOM.
+    """
     if data.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
         yield data.decode("utf-32")
-        return
-    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+    elif data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
         yield data.decode("utf-16")
-        return
-    yield data.decode("utf-8", errors="replace")
-    for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
-        yield data.decode(encoding, errors="replace")
+    else:
+        yield data.decode("utf-8", errors="replace")
+        for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
+            yield data.decode(encoding, errors="replace")
+    
+    # Always scan raw bytes as ASCII to catch literal markers in mixed/malformed files
+    yield data.decode("ascii", errors="replace")
 
 
 def main():
@@ -147,7 +156,7 @@ def main():
 
     if sys.argv[1:] == ["--tracked"]:
         try:
-            file_paths = tracked_paths()
+            file_paths, gitlink_names = tracked_paths()
         except RuntimeError as exc:
             print(f"Content guard scan error: {exc}", file=sys.stderr)
             sys.exit(2)
@@ -156,8 +165,27 @@ def main():
         sys.exit(2)
     else:
         file_paths = [Path(value) for value in sys.argv[1:]]
+        gitlink_names = []
 
     all_findings = []
+    
+    # Scan all tracked pathnames (including gitlink names)
+    for path_obj in file_paths:
+        pathname = str(path_obj)
+        findings = scan_for_patterns(pathname, patterns)
+        if findings:
+            all_findings.append({
+                "file": f"<pathname:{pathname}>",
+                "findings": findings
+            })
+    
+    for gitlink_name in gitlink_names:
+        findings = scan_for_patterns(gitlink_name, patterns)
+        if findings:
+            all_findings.append({
+                "file": f"<gitlink:{gitlink_name}>",
+                "findings": findings
+            })
 
     for file_path in file_paths:
 

@@ -149,9 +149,14 @@ def main():
         parser.error("--apply and --restore are exclusive")
     home = Path.home()
     archive = home / "projects/.github-history-archive"
-    wrapper = Path(shutil.which("gha") or "")
-    if not wrapper.is_file() or home not in wrapper.parents:
-        raise RuntimeError("gha wrapper must be an installed file under this user's home")
+    
+    # Only require gha wrapper to be installed for apply mode
+    # For restore, the backup contains the wrapper's absolute path and contents
+    if not args.restore:
+        wrapper = Path(shutil.which("gha") or "")
+        if not wrapper.is_file() or home not in wrapper.parents:
+            raise RuntimeError("gha wrapper must be an installed file under this user's home")
+    
     zshrc = home / ".zshrc"
     repos = repositories(home)
     if args.restore:
@@ -170,7 +175,9 @@ def main():
                     continue
                 scope_replace("--worktree", worktree["settings"], worktree["path"])
         scope_replace("--global", backup["global_settings"])
-        write_bytes(Path(backup["wrapper_path"]), bytes.fromhex(backup["wrapper_hex"]),
+        # Use the wrapper path from the backup
+        wrapper = Path(backup["wrapper_path"])
+        write_bytes(wrapper, bytes.fromhex(backup["wrapper_hex"]),
                     backup["wrapper_mode"])
         if backup["zshrc_changed"]:
             current = zshrc.read_text()
