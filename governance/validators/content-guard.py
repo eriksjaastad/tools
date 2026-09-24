@@ -31,6 +31,7 @@ Or:
 
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -81,6 +82,36 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
     return findings
 
 
+def tracked_paths() -> list[Path]:
+    """Enumerate checkout blobs and symlinks; gitlinks have no local file body."""
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "--stage", "-z"],
+            capture_output=True, check=True, timeout=30,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise RuntimeError("cannot enumerate tracked files") from exc
+    paths = []
+    for entry in result.stdout.split(b"\0"):
+        if not entry:
+            continue
+        try:
+            metadata, name = entry.split(b"\t", 1)
+            mode, _oid, stage = metadata.split(b" ")
+        except ValueError as exc:
+            raise RuntimeError("invalid tracked-file entry") from exc
+        if stage != b"0":
+            raise RuntimeError("unmerged tracked-file entry")
+        if mode == b"160000":
+            continue
+        if mode not in (b"100644", b"100755", b"120000"):
+            raise RuntimeError("unexpected tracked-file mode")
+        paths.append(Path(os.fsdecode(name)))
+    if not paths:
+        raise RuntimeError("no tracked files to scan")
+    return paths
+
+
 def main():
     # Load patterns - fail closed if not configured
     try:
@@ -100,14 +131,21 @@ def main():
         print("variable, then retry.", file=sys.stderr)
         sys.exit(2)
 
-    if len(sys.argv) < 2:
+    if sys.argv[1:] == ["--tracked"]:
+        try:
+            file_paths = tracked_paths()
+        except RuntimeError as exc:
+            print(f"Content guard scan error: {exc}", file=sys.stderr)
+            sys.exit(2)
+    elif len(sys.argv) < 2:
         print("Usage: content-guard.py <file1> [file2] ...", file=sys.stderr)
         sys.exit(2)
+    else:
+        file_paths = [Path(value) for value in sys.argv[1:]]
 
     all_findings = []
 
-    for file_path_str in sys.argv[1:]:
-        file_path = Path(file_path_str)
+    for file_path in file_paths:
 
         try:
             # Replacement keeps ASCII identifiers visible in mixed-encoding text.

@@ -34,4 +34,4 @@ jobs:
         working-directory: pr
         env:
           CONTENT_GUARD_PATTERNS: ${{ secrets.CONTENT_GUARD_PATTERNS }}
-        run: git ls-files -z | xargs -0 -r python3 -I ../trusted/governance/validators/content-guard.py
+        run: python3 -I ../trusted/governance/validators/content-guard.py --tracked
