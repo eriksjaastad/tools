@@ -249,7 +249,7 @@ by their owners before enabling the shared gate in those repositories.
 **Detects**: Any case-insensitive occurrence of configured patterns in tracked files
 
 **Scans**: Every tracked PR blob, regardless of suffix, including UTF-8 and
-BOM-prefixed UTF-16/UTF-32 text. Mixed bytes preserve ASCII markers. Symlink
+UTF-16/UTF-32 text with or without a BOM. Mixed bytes preserve ASCII markers. Symlink
 target text is scanned without following the link. Gitlinks are skipped because
 their contents are not in this checkout. Enumeration and unreadable-file errors
 fail the scan.
