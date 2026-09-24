@@ -36,16 +36,16 @@ from pathlib import Path
 
 def load_patterns() -> list[str]:
     """Load forbidden patterns from environment variable or file.
-    
+
     Returns empty list if no patterns are configured (which causes exit 2).
     """
     patterns = []
-    
+
     # Try environment variable first
     env_patterns = os.getenv('CONTENT_GUARD_PATTERNS')  # governance: allow-silent SF003: optional configuration checked explicitly below
     if env_patterns:
         patterns.extend([p.strip() for p in env_patterns.strip().split('\n') if p.strip()])
-    
+
     # Try patterns file
     patterns_file = os.getenv('CONTENT_GUARD_PATTERNS_FILE')  # governance: allow-silent SF003: optional configuration checked explicitly below
     if patterns_file:
@@ -54,18 +54,18 @@ def load_patterns() -> list[str]:
         if not content:
             raise ValueError("configured patterns file is empty")
         patterns.extend([p.strip() for p in content.split('\n') if p.strip()])
-    
+
     return patterns
 
 
 def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
     """
     Scan content for forbidden patterns.
-    
+
     Returns list of findings: [{"pattern": "...", "line_num": N, "line": "..."}]
     """
     findings = []
-    
+
     for line_num, line in enumerate(content.split('\n'), 1):
         for pattern in patterns:
             # Case-insensitive search for the pattern
@@ -77,7 +77,7 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
                     "line_num": line_num,
                     "line": redacted_line,
                 })
-    
+
     return findings
 
 
@@ -88,7 +88,7 @@ def main():
     except (OSError, UnicodeError, ValueError) as exc:
         print(f"Cannot load configured content patterns: {exc}", file=sys.stderr)
         sys.exit(2)
-    
+
     if not patterns:
         print("\n🚨 CONTENT GUARD NOT CONFIGURED - BLOCKING COMMIT", file=sys.stderr)
         print("", file=sys.stderr)
@@ -99,16 +99,16 @@ def main():
         print("are configured. Configure the repository secret or environment", file=sys.stderr)
         print("variable, then retry.", file=sys.stderr)
         sys.exit(2)
-    
+
     if len(sys.argv) < 2:
         print("Usage: content-guard.py <file1> [file2] ...", file=sys.stderr)
         sys.exit(2)
 
     all_findings = []
-    
+
     for file_path_str in sys.argv[1:]:
         file_path = Path(file_path_str)
-        
+
         try:
             # Replacement keeps ASCII identifiers visible in mixed-encoding text.
             # Read symlink text itself; never follow a PR-controlled link into
@@ -122,7 +122,7 @@ def main():
             sys.exit(2)
 
         findings = scan_for_patterns(content, patterns)
-        
+
         if findings:
             all_findings.append({
                 "file": str(file_path),
@@ -131,7 +131,7 @@ def main():
 
     if all_findings:
         print("\n🚨 FORBIDDEN CONTENT DETECTED\n", file=sys.stderr)
-        
+
         for file_result in all_findings:
             print(f"File: {file_result['file']}", file=sys.stderr)
             for finding in file_result['findings'][:5]:
@@ -143,7 +143,7 @@ def main():
         print("Files contain forbidden external client identifiers.", file=sys.stderr)
         print("These patterns must not be committed to the public repository.", file=sys.stderr)
         print("Remove the content or move it to a private location.", file=sys.stderr)
-        
+
         sys.exit(1)
     else:
         sys.exit(0)
