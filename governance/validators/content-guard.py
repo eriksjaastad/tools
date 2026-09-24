@@ -83,17 +83,35 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
     return findings
 
 
-def repository_relative_name(path: Path) -> str:
-    """Name to scan for markers: repo-relative path, never absolute parents.
+def checkout_root() -> Path:
+    """Return the git work-tree root, or cwd when git is unavailable."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, check=True, timeout=10, text=True,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return Path.cwd()
+    root = result.stdout.strip()
+    return Path(root) if root else Path.cwd()
+
+
+def repository_relative_name(path: Path, root: Path | None = None) -> str:
+    """Name to scan for markers: in-repo relative path, never outside parents.
 
     Tracked paths from git are already relative and keep their full form.
-    Explicit absolute file arguments may include unrelated parent directories
-    (including marker-named workspaces); only the leaf name is part of the
-    pathname contract in that mode.
+    Absolute arguments under the checkout become repository-relative so
+    marker-named directories inside the repo are still scanned. Absolute
+    paths outside the checkout contribute only their leaf name so unrelated
+    parent directories cannot false-positive a clean file.
     """
-    if path.is_absolute():
+    if not path.is_absolute():
+        return path.as_posix()
+    base = root if root is not None else checkout_root()
+    try:
+        return path.resolve().relative_to(base.resolve()).as_posix()
+    except ValueError:
         return path.name
-    return path.as_posix()
 
 
 def redact_markers(text: str, patterns: list[str]) -> str:
@@ -190,11 +208,13 @@ def main():
         gitlink_names = []
 
     all_findings = []
+    root = checkout_root()
 
-    # Scan repository-relative pathnames (including gitlink names). Never scan
-    # absolute parent directories from explicit file arguments.
+    # Scan repository-relative pathnames (including gitlink names). Absolute
+    # args under the checkout keep in-repo directories; outside parents are
+    # ignored.
     for path_obj in file_paths:
-        pathname = repository_relative_name(path_obj)
+        pathname = repository_relative_name(path_obj, root)
         findings = scan_for_patterns(pathname, patterns)
         if findings:
             all_findings.append({

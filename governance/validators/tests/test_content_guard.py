@@ -285,27 +285,50 @@ class TestEndToEnd:
         assert "<pathname:" in err
         assert "<pattern-" in err
 
-    def test_absolute_parent_marker_does_not_block_clean_file(self, guard, monkeypatch, tmp_path):
-        """Explicit absolute args must not treat parent directory names as pathnames."""
+    def test_absolute_parent_marker_outside_repo_does_not_block(self, guard, monkeypatch, tmp_path):
+        """Absolute args outside the checkout must not treat parent dirs as pathnames."""
+        import subprocess
         marker = "PLACEHOLDER_CLIENT"
-        parent = tmp_path / f"{marker}-workspace"
-        parent.mkdir()
-        target = parent / "clean.txt"
-        target.write_text("This is clean content")
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        target_outside = tmp_path / f"{marker}-workspace" / "clean.txt"
+        target_outside.parent.mkdir()
+        target_outside.write_text("This is clean content")
         monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
-        monkeypatch.chdir(parent)
-        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target.resolve())])
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target_outside.resolve())])
         with pytest.raises(SystemExit) as result:
             guard.main()
         assert result.value.code == 0
 
-    def test_repository_relative_name_ignores_absolute_parents(self, guard, tmp_path):
+    def test_absolute_in_repo_marker_dir_is_detected(self, guard, monkeypatch, tmp_path):
+        """Absolute args under the checkout keep in-repo directory names."""
+        import subprocess
         marker = "PLACEHOLDER_CLIENT"
-        parent = tmp_path / f"{marker}-workspace"
-        parent.mkdir()
-        target = parent / "clean.txt"
-        target.write_text("x")
-        # Absolute args yield only the leaf name (no parent false positives).
-        assert guard.repository_relative_name(target.resolve()) == "clean.txt"
-        # Relative multi-component paths keep the repo-relative form.
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        nested = repo / f"{marker}-dir" / "clean.txt"
+        nested.parent.mkdir()
+        nested.write_text("This is clean content")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(nested.resolve())])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
+    def test_repository_relative_name_scopes_to_checkout(self, guard, tmp_path):
+        marker = "PLACEHOLDER_CLIENT"
+        root = tmp_path / "repo"
+        root.mkdir()
+        inside = root / f"{marker}-dir" / "clean.txt"
+        inside.parent.mkdir()
+        inside.write_text("x")
+        outside = tmp_path / f"{marker}-workspace" / "clean.txt"
+        outside.parent.mkdir()
+        outside.write_text("x")
+        assert guard.repository_relative_name(inside.resolve(), root) == f"{marker}-dir/clean.txt"
+        assert guard.repository_relative_name(outside.resolve(), root) == "clean.txt"
         assert guard.repository_relative_name(Path(f"docs/{marker}-report.txt")) == f"docs/{marker}-report.txt"
