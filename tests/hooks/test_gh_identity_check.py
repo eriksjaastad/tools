@@ -24,6 +24,8 @@ def test_supported_commands_remain_allowed(command):
 @pytest.mark.parametrize("command", ["gh pr create", "gh pr review 1", "gh issue create",
                                       "gh-agent.sh manager pr create", "gh-agent.sh --auto issue create",
                                       "gh-agent.sh manager api -X PUT repos/example/pulls/74/merge",
+                                      "bash ./gh-agent.sh manager api -X PUT repos/example/pulls/74/merge",
+                                      "env GH_TOKEN=x ./gh-agent.sh --auto api -X POST repos/example/issues",
                                       "./gh-agent.sh --auto -- git push",
                                       "gh pr create --body gha"])
 def test_bare_writes_are_blocked(command):
