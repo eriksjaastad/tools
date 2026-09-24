@@ -122,9 +122,8 @@ def decoded_views(data: bytes):
         yield data.decode("utf-16")
         return
     yield data.decode("utf-8", errors="replace")
-    if b"\0" in data:
-        for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
-            yield data.decode(encoding, errors="replace")
+    for encoding in ("utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"):
+        yield data.decode(encoding, errors="replace")
 
 
 def main():
