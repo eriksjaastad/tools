@@ -17,7 +17,7 @@ The marker list is NEVER committed to the public repository. It is loaded from:
 Exit codes:
 - 0: No forbidden content found, continue
 - 1: Forbidden content detected, block commit
-- 2: Configuration error (no patterns available)
+- 2: Configuration or scan error (including missing patterns)
 
 Usage:
   export CONTENT_GUARD_PATTERNS="pattern1
@@ -34,47 +34,10 @@ import re
 import sys
 from pathlib import Path
 
-# File extensions to check (essentially everything that could contain text)
-CHECK_EXTENSIONS = {
-    '.py', '.js', '.ts', '.tsx', '.jsx', '.mjs', '.cjs',
-    '.md', '.txt', '.yaml', '.yml', '.json', '.toml',
-    '.sh', '.bash', '.zsh', '.fish',
-    '.html', '.css', '.scss', '.sass',
-    '.go', '.rs', '.rb', '.java', '.c', '.cpp', '.h',
-    '.sql', '.ini', '.cfg', '.conf',
-}
-
-# Patterns to skip (untracked/generated/vendor/binary areas only)
-# Tests are NOT exempt - they are committed public content that can leak identifiers
-SKIP_PATH_PATTERNS = [
-    r'\.git/',
-    r'node_modules/',
-    r'\.venv/',
-    r'venv/',
-    r'__pycache__/',
-    r'\.pytest_cache/',
-    r'site-packages/',
-    r'\.env$',
-    r'\.log$',
-]
-
-
-def should_check_file(file_path: Path) -> bool:
-    """Determine if this file should be scanned."""
-    path_str = str(file_path)
-
-    for pattern in SKIP_PATH_PATTERNS:
-        if re.search(pattern, path_str):
-            return False
-
-    return file_path.suffix.lower() in CHECK_EXTENSIONS or file_path.suffix == ''
-
-
 def load_patterns() -> list[str]:
     """Load forbidden patterns from environment variable or file.
     
-    Returns empty list if no patterns are configured (which will cause
-    the validator to exit with code 2).
+    Returns empty list if no patterns are configured (which causes exit 2).
     """
     patterns = []
     
@@ -86,13 +49,11 @@ def load_patterns() -> list[str]:
     # Try patterns file
     patterns_file = os.getenv('CONTENT_GUARD_PATTERNS_FILE')  # governance: allow-silent SF003: optional configuration checked explicitly below
     if patterns_file:
-        try:
-            file_path = Path(patterns_file.strip()).expanduser()
-            if file_path.exists():
-                content = file_path.read_text().strip()
-                patterns.extend([p.strip() for p in content.split('\n') if p.strip()])
-        except (OSError, PermissionError) as e:
-            print(f"Warning: Could not read patterns file {patterns_file}: {e}", file=sys.stderr)
+        file_path = Path(patterns_file.strip()).expanduser()
+        content = file_path.read_text().strip()
+        if not content:
+            raise ValueError("configured patterns file is empty")
+        patterns.extend([p.strip() for p in content.split('\n') if p.strip()])
     
     return patterns
 
@@ -122,7 +83,11 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
 
 def main():
     # Load patterns - fail closed if not configured
-    patterns = load_patterns()
+    try:
+        patterns = load_patterns()
+    except (OSError, UnicodeError, ValueError) as exc:
+        print(f"Cannot load configured content patterns: {exc}", file=sys.stderr)
+        sys.exit(2)
     
     if not patterns:
         print("\n🚨 CONTENT GUARD NOT CONFIGURED - BLOCKING COMMIT", file=sys.stderr)
@@ -133,27 +98,28 @@ def main():
         print("This is a fail-closed gate: commits are blocked until patterns", file=sys.stderr)
         print("are configured. Configure the repository secret or environment", file=sys.stderr)
         print("variable, then retry.", file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
     
     if len(sys.argv) < 2:
         print("Usage: content-guard.py <file1> [file2] ...", file=sys.stderr)
-        sys.exit(0)
+        sys.exit(2)
 
     all_findings = []
     
     for file_path_str in sys.argv[1:]:
         file_path = Path(file_path_str)
         
-        if not file_path.exists():
-            continue
-            
-        if not should_check_file(file_path):
-            continue
-
         try:
-            content = file_path.read_text()
-        except (UnicodeDecodeError, PermissionError):
-            continue
+            # Replacement keeps ASCII identifiers visible in mixed-encoding text.
+            # Read symlink text itself; never follow a PR-controlled link into
+            # files outside the checkout.
+            if file_path.is_symlink():
+                content = os.readlink(file_path)
+            else:
+                content = file_path.read_bytes().decode('utf-8', errors='replace')
+        except OSError as exc:
+            print(f"Cannot scan {file_path}: {exc}", file=sys.stderr)
+            sys.exit(2)
 
         findings = scan_for_patterns(content, patterns)
         
