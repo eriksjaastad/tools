@@ -91,7 +91,7 @@ def legacy_wrapper_invocation(command: str) -> bool:
                             return True
                         break
                 continue
-            if word in ("command", "exec"):
+            if word in ("command", "exec", "source", "."):
                 index += 1
                 if index < len(words) and words[index] == "-v":
                     break  # command -v only inspects PATH.
@@ -102,6 +102,59 @@ def legacy_wrapper_invocation(command: str) -> bool:
     return False
 
 
+def mutating_bare_api(command: str) -> bool:
+    """Block bare gh api requests whose HTTP method can change server state."""
+    try:
+        lexer = shlex.shlex(command, posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        tokens = list(lexer)
+    except ValueError:
+        return bool(re.search(r"\bgh\s+api\b", command))
+
+    segment = []
+    segments = []
+    for token in tokens:
+        if token and all(char in ";&|()" for char in token):
+            if segment:
+                segments.append(segment)
+            segment = []
+        else:
+            segment.append(token)
+    if segment:
+        segments.append(segment)
+
+    for words in segments:
+        for index, word in enumerate(words[:-1]):
+            if word in ("bash", "sh", "/bin/bash", "/bin/sh"):
+                option_index = index + 1
+                while option_index < len(words) and words[option_index].startswith("-"):
+                    option = words[option_index]
+                    option_index += 1
+                    if option.startswith("-") and not option.startswith("--") and "c" in option[1:]:
+                        if option_index < len(words) and mutating_bare_api(words[option_index]):
+                            return True
+                        break
+            if word != "gh" or words[index + 1] != "api":
+                continue
+            args = words[index + 2:]
+            method = None
+            has_body = False
+            for offset, arg in enumerate(args):
+                if arg in ("-X", "--method") and offset + 1 < len(args):
+                    method = args[offset + 1].upper()
+                elif arg.startswith("--method="):
+                    method = arg.partition("=")[2].upper()
+                elif arg.startswith("-X") and len(arg) > 2:
+                    method = arg[2:].upper()
+                elif arg in ("-f", "-F", "--field", "--raw-field", "--input") or arg.startswith(("--field=", "--raw-field=", "--input=", "-f", "-F")):
+                    has_body = True
+            if method is not None:
+                return method not in ("GET", "HEAD")
+            if has_body:
+                return True
+    return False
+
+
 def check_gh_identity(command: str) -> tuple[bool, str]:
     """
     Check if a bare `gh` command is used for write operations.
@@ -109,6 +162,8 @@ def check_gh_identity(command: str) -> tuple[bool, str]:
     """
     if legacy_wrapper_invocation(command):
         return True, "gh-agent.sh"
+    if mutating_bare_api(command):
+        return True, "gh api write operation"
 
     # Check if command matches any write operation pattern
     for pattern in WRITE_PATTERNS:
