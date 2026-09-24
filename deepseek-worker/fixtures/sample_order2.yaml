@@ -1,0 +1,14 @@
+schema: deepseek-worker.work_order.v1
+pt_task_id: 9999
+goal: "Second test of the deepseek-worker harness"
+acceptance_criteria:
+  - "Job reaches completed state"
+  - "Handoff file is created with valid schema"
+context_paths: []
+repo_path: "/workspace"
+base_ref: "task/7569-deepseek-worker-design"
+branch: "task/7569-deepseek-worker-design"
+constraints:
+  model: "deepseek-v4-pro"
+test_commands: []
+off_peak_policy: "allow_peak"
