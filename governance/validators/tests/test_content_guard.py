@@ -190,3 +190,166 @@ class TestEndToEnd:
         with pytest.raises(SystemExit) as result:
             guard.main()
         assert result.value.code == 2
+
+    def test_utf16_bom_does_not_hide_ascii_marker(self, guard, monkeypatch, tmp_path):
+        """Test that UTF-16 BOM doesn't bypass ASCII marker detection in mixed/malformed files."""
+        target = tmp_path / "mixed.txt"
+        # UTF-16 LE BOM followed by literal ASCII marker (malformed/mixed encoding)
+        target.write_bytes(b"\xff\xfeFORBIDDEN_MARKER")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_MARKER")
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
+    def test_tracked_pathname_with_marker_is_detected(self, guard, monkeypatch, tmp_path):
+        """Test that client markers in tracked filenames are caught."""
+        marker = "PLACEHOLDER_CLIENT"
+        # Create a repo with a file named with the marker
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        import subprocess
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.email", "test@example.invalid"], 
+                       cwd=repo, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.name", "Test"], 
+                       cwd=repo, check=True, timeout=10)
+        
+        # Create file with benign content but marker in filename
+        tracked_file = repo / f"{marker}-report.txt"
+        tracked_file.write_text("This is clean content")
+        subprocess.run(["git", "add", tracked_file.name], cwd=repo, check=True, timeout=10)
+        
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", "--tracked"])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
+    def test_gitlink_name_with_marker_is_detected(self, guard, monkeypatch, tmp_path):
+        """Test that client markers in gitlink (submodule) names are caught."""
+        marker = "PLACEHOLDER_CLIENT"
+        # Create parent repo
+        parent = tmp_path / "parent"
+        parent.mkdir()
+        import subprocess
+        subprocess.run(["git", "init", "-q"], cwd=parent, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.email", "test@example.invalid"], 
+                       cwd=parent, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.name", "Test"], 
+                       cwd=parent, check=True, timeout=10)
+        
+        # Create submodule repo
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=sub, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.email", "test@example.invalid"], 
+                       cwd=sub, check=True, timeout=10)
+        subprocess.run(["git", "config", "user.name", "Test"], 
+                       cwd=sub, check=True, timeout=10)
+        (sub / "README").write_text("sub")
+        subprocess.run(["git", "add", "README"], cwd=sub, check=True, timeout=10)
+        subprocess.run(["git", "commit", "-qm", "init"], cwd=sub, check=True, timeout=10)
+        
+        # Manually create a gitlink entry with marker in the path
+        # Get the commit SHA from the submodule
+        result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=sub, 
+                               capture_output=True, text=True, check=True, timeout=10)
+        sub_commit = result.stdout.strip()
+        
+        # Use git update-index to add a gitlink entry directly
+        subprocess.run(["git", "update-index", "--add", "--cacheinfo",
+                       f"160000,{sub_commit},{marker}-module"],
+                       cwd=parent, check=True, timeout=10)
+        
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(parent)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", "--tracked"])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
+    def test_pathname_finding_redacts_marker_in_diagnostics(self, guard, monkeypatch, tmp_path, capsys):
+        """Pathname hits must not print the literal client marker in diagnostics."""
+        marker = "PLACEHOLDER_CLIENT"
+        target = tmp_path / f"{marker}-report.txt"
+        target.write_text("clean body")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+        err = capsys.readouterr().err
+        assert marker not in err
+        assert "<pathname:" in err
+        assert "<pattern-" in err
+
+    def test_absolute_parent_marker_outside_repo_does_not_block(self, guard, monkeypatch, tmp_path):
+        """Absolute args outside the checkout must not treat parent dirs as pathnames."""
+        import subprocess
+        marker = "PLACEHOLDER_CLIENT"
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        target_outside = tmp_path / f"{marker}-workspace" / "clean.txt"
+        target_outside.parent.mkdir()
+        target_outside.write_text("This is clean content")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target_outside.resolve())])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 0
+
+    def test_absolute_in_repo_marker_dir_is_detected(self, guard, monkeypatch, tmp_path):
+        """Absolute args under the checkout keep in-repo directory names."""
+        import subprocess
+        marker = "PLACEHOLDER_CLIENT"
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        nested = repo / f"{marker}-dir" / "clean.txt"
+        nested.parent.mkdir()
+        nested.write_text("This is clean content")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(nested.resolve())])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
+    def test_repository_relative_name_scopes_to_checkout(self, guard, tmp_path):
+        marker = "PLACEHOLDER_CLIENT"
+        root = tmp_path / "repo"
+        root.mkdir()
+        inside = root / f"{marker}-dir" / "clean.txt"
+        inside.parent.mkdir()
+        inside.write_text("x")
+        outside = tmp_path / f"{marker}-workspace" / "clean.txt"
+        outside.parent.mkdir()
+        outside.write_text("x")
+        link = root / f"{marker}-link"
+        link.symlink_to("clean.txt")
+        (root / "clean.txt").write_text("x")
+        assert guard.repository_relative_name(inside, root) == f"{marker}-dir/clean.txt"
+        assert guard.repository_relative_name(outside, root) == "clean.txt"
+        assert guard.repository_relative_name(link, root) == f"{marker}-link"
+        assert guard.repository_relative_name(Path(f"docs/{marker}-report.txt")) == f"docs/{marker}-report.txt"
+
+    def test_absolute_symlink_name_with_marker_is_detected(self, guard, monkeypatch, tmp_path):
+        """Absolute symlink args must scan the link name, not only the target."""
+        import subprocess
+        marker = "PLACEHOLDER_CLIENT"
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=repo, check=True, timeout=10)
+        (repo / "clean.txt").write_text("This is clean content")
+        link = repo / f"{marker}-link"
+        link.symlink_to("clean.txt")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(repo)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(link)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1

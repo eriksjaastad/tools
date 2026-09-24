@@ -98,3 +98,28 @@ def test_hook_json_entrypoint(command, expected_code):
     else:
         assert expected_code == 0
         assert result.stdout == ""
+
+
+@pytest.mark.parametrize("command", [
+    "if ./gh-agent.sh manager pr create; then echo ok; fi",
+    "if [ -x ./gh-agent.sh ]; then ./gh-agent.sh manager pr create; fi",
+    "{ ./gh-agent.sh manager pr create; }",
+    "while true; do ./gh-agent.sh manager pr view 1; done",
+])
+def test_compound_command_wrapper_execution_is_blocked(command):
+    """Test that legacy wrapper execution under compound commands is blocked."""
+    blocked, reason = hook.check_gh_identity(command)
+    assert blocked
+    assert reason == "gh-agent.sh"
+
+
+@pytest.mark.parametrize("command", [
+    "bash -c -- './gh-agent.sh manager pr create'",
+    "bash -lc -- './gh-agent.sh manager pr create'",
+    "sh -c -- './gh-agent.sh manager pr create'",
+    "bash -c -- 'gh api -X POST repos/example/issues'",
+])
+def test_dash_dash_before_shell_payload_is_honored(command):
+    """Test that -- option terminator is skipped before inspecting shell payloads."""
+    blocked, reason = hook.check_gh_identity(command)
+    assert blocked

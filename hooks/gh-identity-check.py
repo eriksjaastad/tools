@@ -64,6 +64,13 @@ def legacy_wrapper_invocation(command: str) -> bool:
         index = 0
         while index < len(words):
             word = words[index]
+            
+            # Skip compound command keywords before checking for wrapper execution
+            if word in ("if", "elif", "while", "until", "for", "case", "then", "else", 
+                       "do", "done", "fi", "esac", "{", "(", "[[", "["):
+                index += 1
+                continue
+            
             if "=" in word and not word.startswith("/") and index == 0:
                 index += 1  # Shell variable assignment before the command.
                 continue
@@ -87,6 +94,9 @@ def legacy_wrapper_invocation(command: str) -> bool:
                     option = words[index]
                     index += 1
                     if option.startswith("-") and not option.startswith("--") and "c" in option[1:]:
+                        # Skip -- option terminator before inspecting the payload
+                        if index < len(words) and words[index] == "--":
+                            index += 1
                         if index < len(words) and legacy_wrapper_invocation(words[index]):
                             return True
                         break
@@ -155,6 +165,9 @@ def mutating_bare_api(command: str) -> bool:
                     option = words[option_index]
                     option_index += 1
                     if option.startswith("-") and not option.startswith("--") and "c" in option[1:]:
+                        # Skip -- option terminator before inspecting the payload
+                        if option_index < len(words) and words[option_index] == "--":
+                            option_index += 1
                         if option_index < len(words) and mutating_bare_api(words[option_index]):
                             return True
                         break

@@ -198,3 +198,38 @@ def test_restore_skips_disappeared_temporary_clone(tmp_path, monkeypatch, capsys
     assert result["restored_repos"] == 0
     assert result["missing_paths"] == [str(tmp_path / "vanished-clone")]
     assert wrapper.read_bytes() == b"restored wrapper\n"
+
+
+def test_restore_works_without_gha_on_path(tmp_path, monkeypatch, capsys):
+    """Test that restore can proceed even when gha wrapper is not on PATH."""
+    home = tmp_path / "home"
+    (home / "projects").mkdir(parents=True)
+    # Create wrapper in a location that won't be on PATH
+    archive_dir = home / "archive"
+    archive_dir.mkdir()
+    wrapper = archive_dir / "gha"
+    
+    monkeypatch.setattr(cutover.Path, "home", lambda: home)
+    # Simulate gha not being on PATH
+    monkeypatch.setattr(cutover.shutil, "which", lambda name: None)
+    monkeypatch.setattr(cutover, "repositories", lambda unused_home: [])
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "global-gitconfig"))
+    global_before = cutover.scope_settings("--global")
+    
+    backup = tmp_path / "backup.json"
+    backup.write_text(json.dumps({
+        "repos": [],
+        "global_settings": global_before,
+        "wrapper_path": str(wrapper),
+        "wrapper_hex": b"#!/bin/sh\necho restored\n".hex(),
+        "wrapper_mode": 0o755,
+        "zshrc_changed": False,
+    }))
+    
+    monkeypatch.setattr(cutover.sys, "argv", [str(SOURCE), "--restore", str(backup)])
+    assert cutover.main() == 0
+    
+    # Verify wrapper was restored using backup's absolute path
+    assert wrapper.exists()
+    assert wrapper.read_bytes() == b"#!/bin/sh\necho restored\n"
+    assert (wrapper.stat().st_mode & 0o777) == 0o755
