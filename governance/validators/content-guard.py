@@ -83,6 +83,28 @@ def scan_for_patterns(content: str, patterns: list[str]) -> list[dict]:
     return findings
 
 
+def repository_relative_name(path: Path) -> str:
+    """Name to scan for markers: repo-relative path, never absolute parents.
+
+    Tracked paths from git are already relative and keep their full form.
+    Explicit absolute file arguments may include unrelated parent directories
+    (including marker-named workspaces); only the leaf name is part of the
+    pathname contract in that mode.
+    """
+    if path.is_absolute():
+        return path.name
+    return path.as_posix()
+
+
+def redact_markers(text: str, patterns: list[str]) -> str:
+    """Replace forbidden markers in diagnostic text with the hashed pattern tag."""
+    redacted = text
+    for pattern in patterns:
+        tag = f"<pattern-{hash(pattern) % 10000:04d}>"
+        redacted = re.sub(re.escape(pattern), tag, redacted, flags=re.IGNORECASE)
+    return redacted
+
+
 def tracked_paths() -> list[Path]:
     """Enumerate checkout blobs, symlinks, and gitlink names."""
     try:
@@ -168,23 +190,24 @@ def main():
         gitlink_names = []
 
     all_findings = []
-    
-    # Scan all tracked pathnames (including gitlink names)
+
+    # Scan repository-relative pathnames (including gitlink names). Never scan
+    # absolute parent directories from explicit file arguments.
     for path_obj in file_paths:
-        pathname = str(path_obj)
+        pathname = repository_relative_name(path_obj)
         findings = scan_for_patterns(pathname, patterns)
         if findings:
             all_findings.append({
-                "file": f"<pathname:{pathname}>",
-                "findings": findings
+                "file": f"<pathname:{redact_markers(pathname, patterns)}>",
+                "findings": findings,
             })
-    
+
     for gitlink_name in gitlink_names:
         findings = scan_for_patterns(gitlink_name, patterns)
         if findings:
             all_findings.append({
-                "file": f"<gitlink:{gitlink_name}>",
-                "findings": findings
+                "file": f"<gitlink:{redact_markers(gitlink_name, patterns)}>",
+                "findings": findings,
             })
 
     for file_path in file_paths:

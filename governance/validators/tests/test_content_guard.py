@@ -269,3 +269,43 @@ class TestEndToEnd:
         with pytest.raises(SystemExit) as result:
             guard.main()
         assert result.value.code == 1
+
+    def test_pathname_finding_redacts_marker_in_diagnostics(self, guard, monkeypatch, tmp_path, capsys):
+        """Pathname hits must not print the literal client marker in diagnostics."""
+        marker = "PLACEHOLDER_CLIENT"
+        target = tmp_path / f"{marker}-report.txt"
+        target.write_text("clean body")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+        err = capsys.readouterr().err
+        assert marker not in err
+        assert "<pathname:" in err
+        assert "<pattern-" in err
+
+    def test_absolute_parent_marker_does_not_block_clean_file(self, guard, monkeypatch, tmp_path):
+        """Explicit absolute args must not treat parent directory names as pathnames."""
+        marker = "PLACEHOLDER_CLIENT"
+        parent = tmp_path / f"{marker}-workspace"
+        parent.mkdir()
+        target = parent / "clean.txt"
+        target.write_text("This is clean content")
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", marker)
+        monkeypatch.chdir(parent)
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target.resolve())])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 0
+
+    def test_repository_relative_name_ignores_absolute_parents(self, guard, tmp_path):
+        marker = "PLACEHOLDER_CLIENT"
+        parent = tmp_path / f"{marker}-workspace"
+        parent.mkdir()
+        target = parent / "clean.txt"
+        target.write_text("x")
+        # Absolute args yield only the leaf name (no parent false positives).
+        assert guard.repository_relative_name(target.resolve()) == "clean.txt"
+        # Relative multi-component paths keep the repo-relative form.
+        assert guard.repository_relative_name(Path(f"docs/{marker}-report.txt")) == f"docs/{marker}-report.txt"
