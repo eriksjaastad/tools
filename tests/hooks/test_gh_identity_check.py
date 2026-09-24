@@ -16,12 +16,14 @@ hook = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(hook)
 
 
-@pytest.mark.parametrize("command", ["gha pr create", "gh-agent.sh manager pr create", "gh pr view 1", "gh issue list"])
+@pytest.mark.parametrize("command", ["gha pr create", "gh pr view 1", "gh issue list"])
 def test_supported_commands_remain_allowed(command):
     assert hook.check_gh_identity(command) == (False, "")
 
 
-@pytest.mark.parametrize("command", ["gh pr create", "gh pr review 1", "gh issue create"])
+@pytest.mark.parametrize("command", ["gh pr create", "gh pr review 1", "gh issue create",
+                                      "gh-agent.sh manager pr create", "gh-agent.sh --auto issue create",
+                                      "gh pr create --body gha"])
 def test_bare_writes_are_blocked(command):
     blocked, reason = hook.check_gh_identity(command)
     assert blocked
@@ -36,7 +38,8 @@ def test_retired_wrapper_no_longer_exempts_bare_write():
     assert not (REPO / "gh-claude.sh").exists()
 
 
-@pytest.mark.parametrize("command,expected_code", [("gha pr create", 0), ("gh pr create --body gh-claude.sh", 2)])
+@pytest.mark.parametrize("command,expected_code", [("gha pr create", 0), ("gh pr create --body gh-claude.sh", 2),
+                                                   ("gh-agent.sh manager pr create", 2)])
 def test_hook_json_entrypoint(command, expected_code):
     payload = {"tool_name": "Bash", "tool_input": {"command": command}}
     try:

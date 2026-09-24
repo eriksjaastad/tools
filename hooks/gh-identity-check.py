@@ -2,10 +2,8 @@
 """
 GitHub Identity Hook
 
-Global PreToolUse hook to enforce bot identity on gh write operations.
-Agents must use `gha` (alias for gh-agent.sh --auto) instead of bare `gh`
-for PR/issue write operations. This prevents PRs from appearing under
-Erik's personal account instead of the project's bot identity.
+Global PreToolUse hook for personal-account GitHub writes.
+Agents use the installed `gha` shim. Legacy App-role wrapper writes are blocked.
 
 Location: ~/.claude/hooks/gh-identity-check.py
 Applies to: All Claude Code projects
@@ -19,7 +17,7 @@ import re
 import sys
 
 
-# Write operations that MUST use gha wrapper
+# Write operations that must use the personal-account `gha` shim.
 WRITE_PATTERNS = [
     r"gh\s+pr\s+create\b",
     r"gh\s+pr\s+comment\b",
@@ -36,11 +34,11 @@ WRITE_PATTERNS = [
     r"gh\s+issue\s+reopen\b",
 ]
 
-# Wrapper scripts that set bot identity — these are safe
-WRAPPER_PATTERNS = [
-    r"gha\b",
-    r"gh-agent\.sh",
-]
+LEGACY_WRAPPER_WRITE = re.compile(
+    r"(?:^|[\s/])gh-agent\.sh\s+(?:(?:--auto|manager|architect|auxesis-coder)\s+)?"
+    r"(?:pr|issue)\s+(?:create|comment|review|merge|close|edit|ready|reopen)\b",
+    re.IGNORECASE,
+)
 
 
 def check_gh_identity(command: str) -> tuple[bool, str]:
@@ -48,10 +46,9 @@ def check_gh_identity(command: str) -> tuple[bool, str]:
     Check if a bare `gh` command is used for write operations.
     Returns: (should_block, reason)
     """
-    # If the command uses a known wrapper, allow it
-    for wrapper in WRAPPER_PATTERNS:
-        if re.search(wrapper, command):
-            return False, ""
+    legacy = LEGACY_WRAPPER_WRITE.search(command)
+    if legacy:
+        return True, legacy.group(0).strip()
 
     # Check if command matches any write operation pattern
     for pattern in WRITE_PATTERNS:
@@ -79,8 +76,8 @@ def main():
     if tool_name != "Bash" or not command:
         sys.exit(0)
 
-    # Quick exit: only check commands that contain "gh "
-    if "gh " not in command and not command.startswith("gh"):
+    # Both bare gh and the retired wrapper require inspection.
+    if "gh" not in command:
         sys.exit(0)
 
     should_block, operation = check_gh_identity(command)
@@ -89,18 +86,17 @@ def main():
         error_msg = f"""
 GH COMMAND BLOCKED BY IDENTITY HOOK
 
-Bare `{operation}` detected — this will run under Erik's personal account.
+Unsupported GitHub write path `{operation}` detected.
 
 Attempted: {command}
 
-Use `gha` instead of `gh` for all write operations:
+Use the installed personal-account `gha` shim for write operations:
   gha pr create ...
   gha pr comment ...
   gha issue create ...
 
-`gha` is an alias for `$HOME/projects/_tools/gh-agent.sh --auto` which
-automatically sets the correct bot identity (GitHub App token + committer)
-for the current project.
+`gha` resolves to the personal-account shim on PATH. App-role wrapper writes
+must not be used for new work.
 
 Read-only operations (gh pr view, gh pr checks, gh api) are fine with bare gh.
 """.strip()

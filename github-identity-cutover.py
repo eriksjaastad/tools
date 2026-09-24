@@ -3,6 +3,8 @@
 
 Run on each host with ``uv run --no-project github-identity-cutover.py`` first.
 ``--apply`` writes a private rollback snapshot before changing any setting.
+GitHub credentials are scoped to github.com; other hosts retain their helpers.
+Worktree-specific author and helper values are included in audit and rollback.
 """
 
 import argparse
@@ -16,9 +18,11 @@ import sys
 from datetime import datetime, timezone
 
 
-KEYS = ("user.name", "user.email", "credential.helper")
+GITHUB_HELPER_KEY = "credential.https://github.com.helper"
+KEYS = ("user.name", "user.email", "credential.helper", GITHUB_HELPER_KEY)
 PERSONAL_HELPER = '!f() { env -u GH_TOKEN -u GITHUB_TOKEN gh auth git-credential "$@"; }; f'
 PERSONAL_GHA = b'#!/bin/sh\nunset GH_TOKEN GITHUB_TOKEN\nexec gh "$@"\n'
+TEMP_ROOT = Path("/private/tmp")
 
 
 def run(args, *, cwd=None, check=True, env=None):
@@ -59,6 +63,28 @@ def settings(repo):
     return scope_settings("--local", repo)
 
 
+def personal_settings(previous, email):
+    """Keep helpers for other hosts; override them only for github.com."""
+    return {**previous, "user.name": ["eriksjaastad"], "user.email": [email],
+            GITHUB_HELPER_KEY: ["", PERSONAL_HELPER]}
+
+
+def worktree_settings(repo):
+    enabled = run(["git", "config", "--local", "--bool", "--get",
+                   "extensions.worktreeConfig"], cwd=repo, check=False)
+    if enabled.returncode == 1:
+        return []
+    if enabled.returncode != 0:
+        raise RuntimeError(f"cannot read worktree configuration in {repo}")
+    if enabled.stdout.strip() != b"true":
+        return []
+    listed = run(["git", "worktree", "list", "--porcelain"], cwd=repo).stdout.decode()
+    paths = [line.removeprefix("worktree ") for line in listed.splitlines()
+             if line.startswith("worktree ")]
+    return [{"path": path, "settings": scope_settings("--worktree", path)}
+            for path in paths]
+
+
 def repositories(home):
     root = home / "projects"
     candidates = [root]
@@ -69,8 +95,7 @@ def repositories(home):
                        root / "holoscape-deepseek-worker"))
     # Independent temporary clones retain their own .git/config. A project
     # checkout can be resumed from there after the primary clone is migrated.
-    temp_root = Path("/private/tmp")
-    for marker in (*temp_root.glob("*/.git"), *temp_root.glob("*/*/.git")):
+    for marker in (*TEMP_ROOT.glob("*/.git"), *TEMP_ROOT.glob("*/*/.git")):
         repo = marker.parent
         remote = run(["git", "remote", "get-url", "origin"], cwd=repo, check=False)
         if remote.returncode == 0 and remote.stdout.decode().strip().startswith(
@@ -131,8 +156,19 @@ def main():
     repos = repositories(home)
     if args.restore:
         backup = json.loads(args.restore.read_text())
+        missing = []
+        restored = 0
         for row in backup["repos"]:
+            if not Path(row["path"]).exists():
+                missing.append(row["path"])
+                continue
             replace_config(row["path"], row["settings"])
+            restored += 1
+            for worktree in row.get("worktrees", []):
+                if not Path(worktree["path"]).exists():
+                    missing.append(worktree["path"])
+                    continue
+                scope_replace("--worktree", worktree["settings"], worktree["path"])
         scope_replace("--global", backup["global_settings"])
         write_bytes(Path(backup["wrapper_path"]), bytes.fromhex(backup["wrapper_hex"]),
                     backup["wrapper_mode"])
@@ -143,7 +179,8 @@ def main():
             if replacement not in current:
                 raise RuntimeError("cannot restore alias: expected cutover marker is missing")
             zshrc.write_text(current.replace(replacement, previous, 1))
-        print(json.dumps({"restored_repos": len(backup["repos"]), "backup": str(args.restore)}))
+        print(json.dumps({"restored_repos": restored,
+                          "missing_paths": missing, "backup": str(args.restore)}))
         return 0
     personal_account()
     email = "2491180+eriksjaastad@users.noreply.github.com"
@@ -154,12 +191,17 @@ def main():
     if alias_line and alias_line != 'alias gha="gh"' and "gh-agent.sh --auto" not in alias_line:
         raise RuntimeError("unknown gha shell alias; inspect before cutover")
     alias_replacement = "# gha uses the installed shim on PATH"
-    rows = [{"path": path, "settings": settings(path)} for path in repos]
+    rows = [{"path": path, "settings": settings(path),
+             "worktrees": worktree_settings(path)} for path in repos]
     old_global = scope_settings("--global")
+    is_bot = lambda name: "[bot]" in name or name == "CodexSpud"
     print(json.dumps({"host": os.uname().nodename, "repos": len(rows),
-                      "bot_authors": sum(any("[bot]" in name or name == "CodexSpud"
-                                             for name in row["settings"]["user.name"])
+                      "bot_authors": sum(any(is_bot(name) for name in row["settings"]["user.name"])
                                          for row in rows),
+                      "global_bot_author": any(is_bot(name) for name in old_global["user.name"]),
+                      "worktree_bot_authors": sum(
+                          any(is_bot(name) for name in tree["settings"]["user.name"])
+                          for row in rows for tree in row["worktrees"]),
                       "wrapper": str(wrapper), "target_login": "eriksjaastad",
                       "target_email": email, "mode": "apply" if args.apply else "audit"}))
     if not args.apply:
@@ -176,14 +218,19 @@ def main():
     backup_path = archive / ("identity-backup-" + os.uname().nodename + "-" +
                              datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".json")
     write_bytes(backup_path, (json.dumps(backup, indent=2) + "\n").encode(), 0o600)
-    target = {"user.name": ["eriksjaastad"], "user.email": [email],
-              "credential.helper": ["", PERSONAL_HELPER]}
     for row in rows:
+        target = personal_settings(row["settings"], email)
         replace_config(row["path"], target)
         if settings(row["path"]) != target:
             raise RuntimeError(f"cutover verification failed for {row['path']}; restore from {backup_path}")
-    scope_replace("--global", target)
-    if scope_settings("--global") != target:
+        for worktree in row["worktrees"]:
+            tree_target = personal_settings(worktree["settings"], email)
+            scope_replace("--worktree", tree_target, worktree["path"])
+            if scope_settings("--worktree", worktree["path"]) != tree_target:
+                raise RuntimeError(f"worktree cutover verification failed for {worktree['path']}; restore from {backup_path}")
+    global_target = personal_settings(old_global, email)
+    scope_replace("--global", global_target)
+    if scope_settings("--global") != global_target:
         raise RuntimeError(f"global cutover verification failed; restore from {backup_path}")
     write_bytes(wrapper, PERSONAL_GHA, backup["wrapper_mode"])
     if backup["zshrc_changed"]:
