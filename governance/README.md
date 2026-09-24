@@ -248,8 +248,10 @@ by their owners before enabling the shared gate in those repositories.
 
 **Detects**: Any case-insensitive occurrence of configured patterns in tracked files
 
-**Scans**: Every tracked PR file, regardless of suffix or encoding. Symlink
-target text is scanned without following the link. Unreadable files fail the scan.
+**Scans**: Every tracked PR blob, regardless of suffix or encoding. Symlink
+target text is scanned without following the link. Gitlinks are skipped because
+their contents are not in this checkout. Enumeration and unreadable-file errors
+fail the scan.
 
 CI runs on `pull_request_target` with the scanner checked out from the trusted
 base branch. The PR checkout is scanned as data, so PR-controlled code does not
