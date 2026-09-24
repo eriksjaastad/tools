@@ -153,6 +153,16 @@ class TestEndToEnd:
         assert result.value.code == 1
         assert "FORBIDDEN_CLIENT" not in capsys.readouterr().err
 
+    @pytest.mark.parametrize("encoding", ["utf-16", "utf-32"])
+    def test_bom_unicode_export_detected(self, guard, monkeypatch, tmp_path, encoding):
+        target = tmp_path / "clients.csv"
+        target.write_bytes("name,FORBIDDEN_CLIENT\n".encode(encoding))
+        monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")
+        monkeypatch.setattr("sys.argv", ["content-guard.py", str(target)])
+        with pytest.raises(SystemExit) as result:
+            guard.main()
+        assert result.value.code == 1
+
     def test_missing_input_fails_closed(self, guard, monkeypatch, tmp_path):
         monkeypatch.setenv("CONTENT_GUARD_PATTERNS", "FORBIDDEN_CLIENT")
         monkeypatch.setattr("sys.argv", ["content-guard.py", str(tmp_path / "missing.log")])

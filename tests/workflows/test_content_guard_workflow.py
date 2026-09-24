@@ -13,6 +13,9 @@ ROOT = Path(__file__).parents[2]
 
 def test_workflow_runs_trusted_scanner_on_every_tracked_name(tmp_path):
     workflow = yaml.safe_load((ROOT / ".github/workflows/content-guard.yml").read_text())
+    job = workflow["jobs"]["scan"]
+    assert job["if"] == "github.event.pull_request.base.ref == github.event.repository.default_branch"
+    assert job["steps"][0]["with"]["ref"] == "${{ github.event.repository.default_branch }}"
     command = workflow["jobs"]["scan"]["steps"][-1]["run"]
 
     trusted = tmp_path / "trusted" / "governance" / "validators"

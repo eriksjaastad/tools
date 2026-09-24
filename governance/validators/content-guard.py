@@ -33,6 +33,7 @@ import os
 import re
 import subprocess
 import sys
+import codecs
 from pathlib import Path
 
 def load_patterns() -> list[str]:
@@ -112,6 +113,15 @@ def tracked_paths() -> list[Path]:
     return paths
 
 
+def decode_content(data: bytes) -> str:
+    """Keep ASCII visible in mixed bytes and decode common Unicode exports."""
+    if data.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        return data.decode("utf-32")
+    if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return data.decode("utf-16")
+    return data.decode("utf-8", errors="replace")
+
+
 def main():
     # Load patterns - fail closed if not configured
     try:
@@ -154,8 +164,8 @@ def main():
             if file_path.is_symlink():
                 content = os.readlink(file_path)
             else:
-                content = file_path.read_bytes().decode('utf-8', errors='replace')
-        except OSError as exc:
+                content = decode_content(file_path.read_bytes())
+        except (OSError, UnicodeError) as exc:
             print(f"Cannot scan {file_path}: {exc}", file=sys.stderr)
             sys.exit(2)
 
