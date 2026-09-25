@@ -477,18 +477,20 @@ def _git_common_dir(repo: Path) -> Path | None:
 
 
 def _read_throttle_stamp(stamp: Path) -> float | None:
+    if not stamp.exists():
+        return None
     try:
         return float(stamp.read_text().strip())
-    except (OSError, ValueError):
-        return None
+    except (OSError, ValueError) as exc:
+        raise StartupCleanupError(f"cannot read throttle stamp {stamp}: {exc}") from exc
 
 
 def _write_throttle_stamp(stamp: Path, now: float) -> None:
     try:
         stamp.write_text(f"{now:.6f}\n")
-    except OSError:
-        # Best effort: a failed stamp write must not block startup or retries.
-        pass
+    except OSError as exc:
+        # Best effort: the report remains truthful and a later startup retries.
+        print(f"startup-cleanup: cannot write throttle stamp {stamp}: {exc}", file=sys.stderr)
 
 
 def run_startup_cleanup(
@@ -543,7 +545,13 @@ def run_startup_cleanup(
     stamp = common_dir / THROTTLE_STAMP_NAME
 
     if not force and min_interval_seconds > 0:
-        previous = _read_throttle_stamp(stamp)
+        try:
+            previous = _read_throttle_stamp(stamp)
+        except StartupCleanupError as exc:
+            report["ok"] = False
+            report["error"] = str(exc)
+            report["duration_ms"] = int((time.time() - started) * 1000)
+            return report
         if previous is not None and (now - previous) < min_interval_seconds:
             report["throttled"] = True
             report["summary"] = {"reason": f"last run {int(now - previous)}s ago; interval {min_interval_seconds}s"}
@@ -781,8 +789,8 @@ def _read_hook_project_dir() -> str | None:
         payload = json.loads(raw)
         cwd = payload.get("cwd") or payload.get("project_dir") or payload.get("working_directory")
         return str(cwd) if cwd else None
-    except (json.JSONDecodeError, OSError, AttributeError):
-        return None
+    except (json.JSONDecodeError, OSError, AttributeError) as exc:
+        raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
 
 
 def _resolve_project_dir(cli_dir: str | None) -> Path:
@@ -790,9 +798,9 @@ def _resolve_project_dir(cli_dir: str | None) -> Path:
     if cli_dir:
         candidates.append(cli_dir)
     candidates.append(_read_hook_project_dir() or "")
-    candidates.append(os.environ.get("CLAUDE_PROJECT_DIR", ""))
-    candidates.append(os.environ.get("CODEBOX_CWD", ""))
-    candidates.append(os.environ.get("CODEBOX_PROJECT_DIR", ""))
+    candidates.append(os.environ.get("CLAUDE_PROJECT_DIR"))
+    candidates.append(os.environ.get("CODEBOX_CWD"))
+    candidates.append(os.environ.get("CODEBOX_PROJECT_DIR"))
     candidates.append(os.getcwd())
     for candidate in candidates:
         if candidate and Path(candidate).is_dir():
@@ -894,7 +902,11 @@ def main(argv: list[str] | None = None) -> int:
         print(_hook_command("codex"))
         return 0
 
-    project_dir = _resolve_project_dir(args.project_dir)
+    try:
+        project_dir = _resolve_project_dir(args.project_dir)
+    except StartupCleanupError as exc:
+        print(json.dumps({"schema_version": SCHEMA_VERSION, "ok": False, "error": str(exc)}))
+        return 1
     report = run_startup_cleanup(
         project_dir,
         min_interval_seconds=args.min_interval,
