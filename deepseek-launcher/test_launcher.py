@@ -10,6 +10,7 @@ import unittest
 
 
 LAUNCHER = Path(__file__).with_name("deepcode-run.sh")
+PTY = Path(__file__).with_name("deepseek-pty-exec.py")
 
 
 class LauncherTest(unittest.TestCase):
@@ -106,6 +107,34 @@ class LauncherTest(unittest.TestCase):
             self.assertEqual(process.returncode, 0, err.decode())
         self.assert_secret_cleared()
 
+    def test_concurrent_different_source_is_refused(self):
+        self.write("deepcode", "#!/bin/sh\nsleep 2\n")
+        first = subprocess.Popen([str(LAUNCHER), "--version"], cwd=self.root,
+                                 env=self.env, stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+        for _ in range(40):
+            if self.settings.exists() and self.settings.stat().st_size:
+                break
+            time.sleep(0.05)
+        second_env = dict(self.env, DEEPCODE_DOPPLER_PROJECT="different-project")
+        second = subprocess.run([str(LAUNCHER), "--version"], cwd=self.root,
+                                env=second_env, capture_output=True, text=True, timeout=15)
+        self.assertNotEqual(second.returncode, 0)
+        self.assertIn("refusing credential reuse", second.stderr)
+        _, first_err = first.communicate(timeout=15)
+        self.assertEqual(first.returncode, 0, first_err.decode())
+        self.assert_secret_cleared()
+
+    def test_ping_checks_response(self):
+        self.write("ping-cli", "#!/bin/sh\nprintf 'NOT_PONG\\n'\n")
+        cmd = ["python3", str(PTY), "--bin", str(self.bin / "ping-cli"),
+               "--cwd", str(self.root), "--timeout", "2", "--ping"]
+        bad = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(bad.returncode, 1)
+        self.write("ping-cli", "#!/bin/sh\nprintf 'PONG\\n'\n")
+        good = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(good.returncode, 0, good.stderr)
+
     def test_mode_while_running(self):
         self.write("deepcode", "#!/bin/sh\nsleep 2\n")
         process = subprocess.Popen([str(LAUNCHER), "--version"], cwd=self.root,
@@ -122,7 +151,7 @@ class LauncherTest(unittest.TestCase):
         self.assert_secret_cleared()
 
     def test_non_tty_timeout_cleans_credential(self):
-        self.write("deepcode", "#!/bin/sh\nsleep 30\n")
+        self.write("deepcode", "#!/bin/sh\nexec sleep 30\n")
         self.env["DEEPCODE_TIMEOUT"] = "1"
         result = self.run_launcher("-x", "-p", "synthetic")
         self.assertEqual(result.returncode, 124, result.stderr)

@@ -5,6 +5,8 @@
 DeepCode CLI. The key is only fetched from Doppler. New files have mode `0600`;
 normal exit, fetch failure, and catchable termination clear the file before
 moving it to Trash. An existing handwritten settings file is left untouched.
+Concurrent sessions may share the temporary file only when their Doppler
+source, base URL, and model match. A mismatch fails visibly.
 
 When `-x` runs without a terminal, the launcher uses
 `deepseek-pty-exec.py` automatically. It starts in the caller's current

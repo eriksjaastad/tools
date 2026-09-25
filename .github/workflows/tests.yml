@@ -55,4 +55,5 @@ jobs:
             model-bench/tests/test_registry.py \
             model-bench/tests/test_seat_runner.py \
             model-bench/tests/test_seat_scorer.py \
+            deepseek-launcher/test_launcher.py \
             -q

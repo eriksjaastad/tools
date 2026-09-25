@@ -3,6 +3,7 @@
 
 import argparse
 import contextlib
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -44,9 +45,14 @@ def alive(pid):
     return running
 
 
+def source_fingerprint(args):
+    source = [args.project, args.config, args.secret, args.base_url, args.model]
+    return hashlib.sha256(json.dumps(source).encode("utf-8")).hexdigest()
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("identity", "owner", "empty", "stale", "fetch"))
+    parser.add_argument("mode", choices=("identity", "owner", "empty", "stale", "fetch", "source", "fingerprint"))
     parser.add_argument("path")
     parser.add_argument("--inode", default="")
     parser.add_argument("--pid", default="")
@@ -58,6 +64,16 @@ def main():
     parser.add_argument("--doppler-timeout", type=int, default=30)
     args = parser.parse_args()
     try:
+        if args.mode == "fingerprint":
+            print(source_fingerprint(args))
+            return 0
+        if args.mode == "source":
+            source = ""
+            with contextlib.suppress(ValueError, TypeError, AttributeError):
+                source = str(json.loads(Path(args.path).read_text(encoding="utf-8")).get(
+                    "_deepcode_run_source", ""))
+            print(source)
+            return 0
         if args.mode == "fetch":
             if args.doppler_timeout < 1:
                 raise ValueError("Doppler timeout must be positive")
@@ -70,6 +86,7 @@ def main():
             if result.returncode or not re.fullmatch(r"[A-Za-z0-9_.-]{16,}", key):
                 raise ValueError("Doppler did not return a valid key")
             json.dump({"_deepcode_run_owner_pid": args.pid,
+                       "_deepcode_run_source": source_fingerprint(args),
                        "env": {"API_KEY": key, "BASE_URL": args.base_url,
                                "MODEL": args.model}}, sys.stdout)
             return 0

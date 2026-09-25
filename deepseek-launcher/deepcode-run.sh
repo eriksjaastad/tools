@@ -50,8 +50,11 @@ SETTINGS_HELPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/settings_file.py"
 REUSE_EXISTING=0
 WE_CREATED=0
 CREATED_INODE=""
+SOURCE_ARGS=(--project "$PROJECT" --config "$CONFIG" --secret "$SECRET" \
+             --base-url "$BASE_URL" --model "$MODEL")
 
 command -v doppler >/dev/null 2>&1 || { echo "deepcode-run: doppler not found on PATH" >&2; exit 1; }
+EXPECTED_SOURCE="$(python3 "$SETTINGS_HELPER" fingerprint "$SETTINGS_FILE" "${SOURCE_ARGS[@]}")"
 
 # Resolve the REAL deepcode binary, skipping any shim in ~/bin that points back at
 # this script. Both `deepseek` and `deepcode` in ~/bin are symlinks to this file, so
@@ -229,13 +232,20 @@ if [[ "$REUSE_EXISTING" -eq 0 ]]; then
 # The helper bounds Doppler to 30 seconds, validates its output, and writes the
 # credential only to this mode-0600 file. It never logs the key.
 if ! python3 "$SETTINGS_HELPER" fetch "$SETTINGS_FILE" --pid "$$" \
-    --project "$PROJECT" --config "$CONFIG" --secret "$SECRET" \
-    --base-url "$BASE_URL" --model "$MODEL" \
+    "${SOURCE_ARGS[@]}" \
     --doppler-timeout "${DEEPCODE_DOPPLER_TIMEOUT:-30}" > "$SETTINGS_FILE"; then
   echo "deepcode-run: failed to read $SECRET from doppler ($PROJECT/$CONFIG)" >&2
   exit 1
 fi
 fi  # REUSE_EXISTING
+
+if [[ "$REUSE_EXISTING" -eq 1 ]]; then
+  actual_source="$(python3 "$SETTINGS_HELPER" source "$SETTINGS_FILE")"
+  if [[ "$actual_source" != "$EXPECTED_SOURCE" ]]; then
+    echo "deepcode-run: another live session uses different DeepCode settings; refusing credential reuse" >&2
+    exit 1
+  fi
+fi
 
 # ---------------------------------------------------------------------------
 # Warp terminal integration.

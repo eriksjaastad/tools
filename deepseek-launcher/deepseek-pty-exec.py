@@ -19,6 +19,7 @@ import argparse
 import contextlib
 import os
 import pty
+import re
 import select
 import signal
 import sys
@@ -71,6 +72,7 @@ def main() -> int:
     deadline = time.monotonic() + args.timeout
     exit_status: int | None = None
     output_open = True
+    ping_output = bytearray()
     try:
         while time.monotonic() < deadline:
             ready, _, _ = select.select([fd] if output_open else [], [], [], 0.2)
@@ -84,6 +86,8 @@ def main() -> int:
                 else:
                     sys.stdout.buffer.write(data)
                     sys.stdout.buffer.flush()
+                    if args.ping and len(ping_output) < 65536:
+                        ping_output.extend(data[:65536 - len(ping_output)])
             wpid, status = os.waitpid(pid, os.WNOHANG)
             if wpid == pid:
                 exit_status = status
@@ -104,8 +108,17 @@ def main() -> int:
             signal_child(signal.SIGTERM)
             time.sleep(2)
             signal_child(signal.SIGKILL)
-            with contextlib.suppress(ChildProcessError):
-                os.waitpid(pid, 0)
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(pid, signal.SIGKILL)
+            reap_deadline = time.monotonic() + 2
+            while time.monotonic() < reap_deadline:
+                try:
+                    reaped, _ = os.waitpid(pid, os.WNOHANG)
+                except ChildProcessError:
+                    break
+                if reaped == pid:
+                    break
+                time.sleep(0.05)
             return 124
     finally:
         with contextlib.suppress(OSError):
@@ -114,7 +127,13 @@ def main() -> int:
     if exit_status is None:
         return 1
     if os.WIFEXITED(exit_status):
-        return os.WEXITSTATUS(exit_status)
+        code = os.WEXITSTATUS(exit_status)
+        if code == 0 and args.ping:
+            plain = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", bytes(ping_output))
+            if b"PONG" not in [line.strip() for line in plain.splitlines()]:
+                print("deepseek-pty-exec: ping response did not contain a standalone PONG", file=sys.stderr)
+                return 1
+        return code
     if os.WIFSIGNALED(exit_status):
         return 128 + os.WTERMSIG(exit_status)
     return 1
