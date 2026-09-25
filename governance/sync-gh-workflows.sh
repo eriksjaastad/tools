@@ -2,6 +2,14 @@
 # sync-gh-workflows.sh — remove obsolete claude-review wrappers and handle
 # the one scoped default-branch rename agreed on 2026-04-21.
 #
+# File mutations go through a branch-and-PR flow. This script never commits
+# to a default branch: it creates a short-lived branch, changes the file
+# there through the GitHub contents API, and opens a pull request.
+#
+# All GitHub operations use the `gha` personal-identity shim. `gha` clears
+# inherited GH_TOKEN/GITHUB_TOKEN and uses Erik's personal `gh` login; bare
+# `gh` would fall through to whatever token the environment carries.
+#
 # Usage:
 #   sync-gh-workflows.sh --dry-run delete-dead-claude-review
 #   sync-gh-workflows.sh --apply   delete-dead-claude-review ai-journal
@@ -18,6 +26,7 @@ ACTION=""
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DEAD_WRAPPER_PATH=".github/workflows/claude-review.yml"
 DEAD_WRAPPER_REF="eriksjaastad/tools/.github/workflows/claude-review-reusable.yml@main"
+SYNC_BRANCH="tools-sync/delete-dead-claude-review"
 FAILURES=0
 
 DEAD_CLAUDE_REVIEW_REPOS=(
@@ -55,12 +64,15 @@ Usage:
   sync-gh-workflows.sh --dry-run rename-default-branch
 
 Actions:
-  delete-dead-claude-review
-  rename-default-branch
+  delete-dead-claude-review   Open a branch+PR that deletes the dead wrapper
+  rename-default-branch       Rename the scoped default branch (settings only)
 
 Flags:
   --dry-run      Report only (default)
-  --apply        Make GitHub changes
+  --apply        Make GitHub changes (still always through a PR for file edits)
+
+GitHub operations use the `gha` personal-identity shim. Set GHA_BIN to
+override its path (used by the test suite).
 EOF
   exit "$exit_code"
 }
@@ -94,6 +106,32 @@ done
 
 require_action
 
+# Resolve the managed identity shim before any GitHub call. Never fall back
+# to bare `gh`: that would silently authenticate as whatever token the
+# environment carries, which is the failure this shim exists to prevent.
+resolve_gha() {
+  if [[ -n "${GHA_BIN:-}" ]]; then
+    if [[ "$GHA_BIN" == */* ]] && [[ ! -x "$GHA_BIN" ]]; then
+      echo "ERROR: GHA_BIN '$GHA_BIN' is not executable." >&2
+      echo "       Refusing to run GitHub operations without the managed identity." >&2
+      exit 1
+    fi
+    if [[ "$GHA_BIN" != */* ]] && ! command -v "$GHA_BIN" >/dev/null 2>&1; then
+      echo "ERROR: GHA_BIN '$GHA_BIN' not found on PATH." >&2
+      echo "       Refusing to run GitHub operations without the managed identity." >&2
+      exit 1
+    fi
+    GHA="$GHA_BIN"
+  elif command -v gha >/dev/null 2>&1; then
+    GHA="gha"
+  else
+    echo "ERROR: 'gha' personal-identity shim not found on PATH." >&2
+    echo "       Refusing to run GitHub operations without the managed identity." >&2
+    exit 1
+  fi
+}
+resolve_gha
+
 ARCHIVED_QUERY_LIMIT=500
 
 drop_archived_repos() {
@@ -116,11 +154,11 @@ drop_archived_repos() {
   # transient auth or network blip would disable this filter with no trace --
   # the run would look clean while writing to archived repos anyway.
   local repo_json
-  if ! repo_json="$(gh repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
+  if ! repo_json="$("$GHA" repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
       --json name,isArchived 2>/dev/null)"; then
     echo "WARNING: could not list repos for '$OWNER' -- archived filter DISABLED," >&2
     echo "         passing all targets through unfiltered. Writes to archived repos" >&2
-    echo "         will fail individually rather than being skipped." >&2
+    echo "         will be skipped per-repo instead of being attempted." >&2
     printf '%s\n' "$names"
     return 0
   fi
@@ -179,7 +217,14 @@ decode_base64() {
 }
 
 repo_json() {
-  gh api "repos/$OWNER/$1" 2>/dev/null
+  "$GHA" api "repos/$OWNER/$1" 2>/dev/null
+}
+
+repo_archived() {
+  # Print "true" only when the fetched repo JSON says so. A fetch failure or a
+  # malformed payload is a failure, not an active repo: callers check the exit
+  # status of the fetch itself before trusting this.
+  jq -r '.archived // false' <<< "$1"
 }
 
 run_standardize() {
@@ -197,10 +242,20 @@ run_standardize() {
   fi
 }
 
+delete_file_on_branch() {
+  # GitHub contents API DELETE scoped to a branch. $1 slug, $2 path, $3 sha, $4 branch.
+  "$GHA" api -X DELETE "repos/$1/contents/$2" \
+    -f "message=Delete dead claude-review wrapper" \
+    -f "sha=$3" \
+    -f "branch=$4" >/dev/null 2>&1
+}
+
 delete_dead_claude_review() {
   local repo="$1"
   local slug="$OWNER/$repo"
-  local info default_branch file_json existing_sha decoded
+  local info default_branch archived file_json existing_sha decoded
+  local branch_file_json branch_sha ref_json default_ref default_sha
+  local pr_json pr_number pr_url
 
   if ! info=$(repo_json "$repo"); then
     echo "[$repo] ERROR: cannot fetch repo"
@@ -208,9 +263,20 @@ delete_dead_claude_review() {
     return
   fi
 
-  default_branch=$(echo "$info" | jq -r '.default_branch')
-  if ! file_json=$(gh api "repos/$slug/contents/$DEAD_WRAPPER_PATH" 2>/dev/null); then
-    echo "[$repo] ✓ $DEAD_WRAPPER_PATH already absent"
+  default_branch=$(echo "$info" | jq -r '.default_branch // ""')
+  archived=$(repo_archived "$info")
+  if [[ "$archived" == "true" ]]; then
+    echo "[$repo] skip: archived, no write attempted"
+    return
+  fi
+  if [[ -z "$default_branch" || "$default_branch" == "null" ]]; then
+    echo "[$repo] ERROR: repo has no default branch"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
+
+  if ! file_json=$("$GHA" api "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$default_branch" 2>/dev/null); then
+    echo "[$repo] ✓ $DEAD_WRAPPER_PATH already absent on $default_branch"
     return
   fi
 
@@ -221,26 +287,96 @@ delete_dead_claude_review() {
     return
   fi
 
-  echo "[$repo] delete $DEAD_WRAPPER_PATH from $default_branch"
+  echo "[$repo] plan: branch-and-PR delete of $DEAD_WRAPPER_PATH ($default_branch)"
+
   if [[ "$MODE" == "dry-run" ]]; then
-    echo "    - would delete wrapper referencing $DEAD_WRAPPER_REF"
+    echo "    - would create branch $SYNC_BRANCH from $default_branch"
+    echo "    - would delete wrapper via contents API on branch $SYNC_BRANCH"
+    echo "    - would open PR $SYNC_BRANCH -> $default_branch"
     return
   fi
 
-  if gh api -X DELETE "repos/$slug/contents/$DEAD_WRAPPER_PATH" \
-      -f "message=Delete dead claude-review wrapper" \
-      -f "sha=$existing_sha" \
-      -f "branch=$default_branch" >/dev/null 2>&1; then
-    echo "    ✓ wrapper deleted"
-  else
-    echo "    ! failed to delete wrapper"
+  # Idempotency gate 1: an open PR from our branch means the change is already
+  # staged for review; do not create a second PR or rewrite the branch.
+  if ! pr_json=$("$GHA" pr list --repo "$slug" --head "$SYNC_BRANCH" --state open \
+      --json number,url 2>/dev/null); then
+    echo "    ! cannot list open PRs for branch $SYNC_BRANCH"
     FAILURES=$((FAILURES + 1))
+    return
   fi
+  pr_number=$(echo "$pr_json" | jq -r '.[0].number // ""')
+  if [[ -n "$pr_number" ]]; then
+    echo "    ✓ PR already open: #$pr_number"
+    return
+  fi
+
+  # Idempotency gate 2: reuse an existing branch from a previous interrupted
+  # run. If the file is already gone on that branch, open the PR; otherwise
+  # finish the deletion on the branch first.
+  if ref_json=$("$GHA" api "repos/$slug/git/ref/heads/$SYNC_BRANCH" 2>/dev/null); then
+    echo "    - branch $SYNC_BRANCH already exists; reusing"
+    if ! branch_file_json=$("$GHA" api "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$SYNC_BRANCH" 2>/dev/null); then
+      echo "    ✓ wrapper already absent on $SYNC_BRANCH"
+    else
+      branch_sha=$(echo "$branch_file_json" | jq -r '.sha // ""')
+      if [[ -z "$branch_sha" ]]; then
+        echo "    ! cannot resolve file sha on $SYNC_BRANCH"
+        FAILURES=$((FAILURES + 1))
+        return
+      fi
+      if ! delete_file_on_branch "$slug" "$DEAD_WRAPPER_PATH" "$branch_sha" "$SYNC_BRANCH"; then
+        echo "    ! failed to delete wrapper on existing branch $SYNC_BRANCH"
+        FAILURES=$((FAILURES + 1))
+        return
+      fi
+      echo "    ✓ wrapper deleted on existing branch $SYNC_BRANCH"
+    fi
+  else
+    # Create the branch from the default branch's current head.
+    if ! default_ref=$("$GHA" api "repos/$slug/git/ref/heads/$default_branch" 2>/dev/null); then
+      echo "    ! cannot resolve default branch ref $default_branch"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    default_sha=$(echo "$default_ref" | jq -r '.object.sha // ""')
+    if [[ -z "$default_sha" ]]; then
+      echo "    ! default branch ref has no sha"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    if ! "$GHA" api -X POST "repos/$slug/git/refs" \
+        -f "ref=refs/heads/$SYNC_BRANCH" \
+        -f "sha=$default_sha" >/dev/null 2>&1; then
+      echo "    ! failed to create branch $SYNC_BRANCH"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    echo "    ✓ created branch $SYNC_BRANCH"
+
+    if ! delete_file_on_branch "$slug" "$DEAD_WRAPPER_PATH" "$existing_sha" "$SYNC_BRANCH"; then
+      echo "    ! failed to delete wrapper on branch $SYNC_BRANCH"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    echo "    ✓ wrapper deleted on branch $SYNC_BRANCH"
+  fi
+
+  if ! pr_url=$("$GHA" pr create --repo "$slug" --head "$OWNER:$SYNC_BRANCH" \
+      --base "$default_branch" \
+      --title "Remove dead claude-review workflow" \
+      --body "Deletes $DEAD_WRAPPER_PATH, which references the retired $DEAD_WRAPPER_REF reusable workflow.
+
+Created by governance/sync-gh-workflows.sh (branch-and-PR sync)." 2>/dev/null); then
+    echo "    ! branch updated but failed to open PR"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
+  echo "    ✓ PR opened: $pr_url"
 }
 
 rename_default_branch() {
   local spec="$1"
-  local repo from_branch to_branch slug info current_default
+  local repo from_branch to_branch slug info current_default archived
 
   repo="${spec%%:*}"
   from_branch="${spec#*:}"
@@ -251,6 +387,12 @@ rename_default_branch() {
   if ! info=$(repo_json "$repo"); then
     echo "[$repo] ERROR: cannot fetch repo"
     FAILURES=$((FAILURES + 1))
+    return
+  fi
+
+  archived=$(repo_archived "$info")
+  if [[ "$archived" == "true" ]]; then
+    echo "[$repo] skip: archived, no write attempted"
     return
   fi
 
@@ -276,14 +418,14 @@ rename_default_branch() {
     return
   fi
 
-  if ! gh api -X POST "repos/$slug/branches/$from_branch/rename" \
+  if ! "$GHA" api -X POST "repos/$slug/branches/$from_branch/rename" \
       -f "new_name=$to_branch" >/dev/null 2>&1; then
     echo "    ! failed to rename $from_branch to $to_branch"
     FAILURES=$((FAILURES + 1))
     return
   fi
 
-  if ! gh api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1; then
+  if ! "$GHA" api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1; then
     echo "    ! branch renamed but failed to set default_branch pointer to $to_branch"
     FAILURES=$((FAILURES + 1))
     return
@@ -299,6 +441,7 @@ echo "=== sync-gh-workflows.sh ==="
 echo "Mode:   $MODE"
 echo "Action: $ACTION"
 echo "Owner:  $OWNER"
+echo "GHA:    $GHA"
 echo "Repos:  $TARGET_COUNT"
 echo ""
 

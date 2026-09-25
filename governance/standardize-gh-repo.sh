@@ -16,6 +16,9 @@
 #     - require PR before merge
 #     - preserve any existing required checks and review settings
 #
+# All GitHub operations use the `gha` personal-identity shim. `gha` clears
+# inherited GH_TOKEN/GITHUB_TOKEN and uses Erik's personal `gh` login.
+#
 # Usage:
 #   standardize-gh-repo.sh --dry-run <repo>          # single repo, report only
 #   standardize-gh-repo.sh --apply   <repo>          # single repo, make changes
@@ -26,14 +29,16 @@
 # without --apply.
 
 set -uo pipefail
-# NOTE: -e omitted intentionally — per-repo gh api calls can fail on edge
+# NOTE: -e omitted intentionally — per-repo gha api calls can fail on edge
 # cases (empty repos, missing main, permissions) and we want to skip the
-# bad repo and continue, not abort the entire sweep.
+# bad repo and continue, not abort the entire sweep. Failures are counted
+# and reported; --apply exits nonzero if any write fails.
 
 OWNER="eriksjaastad"
 MODE="dry-run"
 TARGET=""
 ACTIVE_DAYS="${ACTIVE_DAYS:-30}"
+APPLY_FAILURES=0
 
 CANONICAL_LABELS=(
   "feature:#5319E7"
@@ -70,10 +75,36 @@ if [[ -z "$TARGET" ]]; then
   usage
 fi
 
+# Resolve the managed identity shim before any GitHub call. Never fall back
+# to bare `gh`: that would silently authenticate as whatever token the
+# environment carries, which is the failure this shim exists to prevent.
+resolve_gha() {
+  if [[ -n "${GHA_BIN:-}" ]]; then
+    if [[ "$GHA_BIN" == */* ]] && [[ ! -x "$GHA_BIN" ]]; then
+      echo "ERROR: GHA_BIN '$GHA_BIN' is not executable." >&2
+      echo "       Refusing to run GitHub operations without the managed identity." >&2
+      exit 1
+    fi
+    if [[ "$GHA_BIN" != */* ]] && ! command -v "$GHA_BIN" >/dev/null 2>&1; then
+      echo "ERROR: GHA_BIN '$GHA_BIN' not found on PATH." >&2
+      echo "       Refusing to run GitHub operations without the managed identity." >&2
+      exit 1
+    fi
+    GHA="$GHA_BIN"
+  elif command -v gha >/dev/null 2>&1; then
+    GHA="gha"
+  else
+    echo "ERROR: 'gha' personal-identity shim not found on PATH." >&2
+    echo "       Refusing to run GitHub operations without the managed identity." >&2
+    exit 1
+  fi
+}
+resolve_gha
+
 # Fetch repo list once. For --all-active, list active repos; for single, use as-is.
 if [[ "$TARGET" == "__all__" ]]; then
-  REPOS=$(gh repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
-    "$HOME/.local/bin/uv" run python3 -c "
+  REPOS=$("$GHA" repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
+    python3 -c "
 import sys, json
 from datetime import datetime, timezone
 days = $ACTIVE_DAYS
@@ -96,6 +127,7 @@ REPO_COUNT=$(echo "$REPOS" | wc -l | tr -d ' ')
 echo "=== standardize-gh-repo.sh ==="
 echo "Mode:   $MODE"
 echo "Owner:  $OWNER"
+echo "GHA:    $GHA"
 echo "Repos:  $REPO_COUNT"
 echo ""
 
@@ -110,8 +142,15 @@ check_repo() {
 
   # 1. Fetch current settings.
   local settings
-  if ! settings=$(gh api "repos/$slug" 2>/dev/null); then
+  if ! settings=$("$GHA" api "repos/$slug" 2>/dev/null); then
     echo "[$repo] ERROR: cannot fetch repo (missing? no access?)"
+    return
+  fi
+
+  local cur_archived
+  cur_archived=$(echo "$settings" | jq -r '.archived // false')
+  if [[ "$cur_archived" == "true" ]]; then
+    echo "[$repo] skip: archived, no write attempted"
     return
   fi
 
@@ -131,22 +170,28 @@ check_repo() {
 
   # 2. Labels — ensure canonical 11 exist (don't delete others).
   local existing_labels
-  existing_labels=$(gh api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null || echo "")
+  local labels_readable=1
+  if ! existing_labels=$("$GHA" api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null); then
+    echo "    ! cannot list labels; skipping label enforcement"
+    existing_labels=""
+    labels_readable=0
+  fi
   local missing_labels=()
-  for entry in "${CANONICAL_LABELS[@]}"; do
-    local name="${entry%%:*}"
-    if ! echo "$existing_labels" | grep -qx "$name"; then
-      missing_labels+=("$name")
-    fi
-  done
+  if [[ "$labels_readable" == "1" ]]; then
+    for entry in "${CANONICAL_LABELS[@]}"; do
+      local name="${entry%%:*}"
+      if ! echo "$existing_labels" | grep -qx "$name"; then
+        missing_labels+=("$name")
+      fi
+    done
+  fi
   if [[ ${#missing_labels[@]} -gt 0 ]]; then
     changes+=("missing labels: ${missing_labels[*]}")
   fi
 
   # 3. Branch protection on main — create only when absent. Existing protection
   # may require unrelated checks; never replace its status contexts or reviews.
-  local has_main
-  has_main=$(gh api "repos/$slug/branches/main" 2>/dev/null | jq -r '.name // "none"')
+  local has_main=""
   local protection_status="not-checked"
   # Branch protection requires a paid plan for private repos. Skip with
   # warning rather than failing apply — the repo-level settings (auto-delete,
@@ -154,11 +199,19 @@ check_repo() {
   if [[ "$cur_private" == "true" ]]; then
     changes+=("WARNING: private repo — branch protection skipped (requires GitHub Pro)")
     has_main="none"
+  else
+    if has_main=$("$GHA" api "repos/$slug/branches/main" 2>/dev/null | jq -r '.name // "none"'); then
+      :
+    else
+      has_main=""
+    fi
   fi
   if [[ "$has_main" == "main" ]]; then
     local current_protection
-    current_protection=$(gh api "repos/$slug/branches/main/protection" 2>/dev/null || echo "{}")
-    if [[ "$current_protection" == "{}" ]] || echo "$current_protection" | grep -q '"message":"Branch not protected"'; then
+    if ! current_protection=$("$GHA" api "repos/$slug/branches/main/protection" 2>/dev/null); then
+      echo "    ! cannot read branch protection; skipping protection enforcement"
+      protection_status="unreadable"
+    elif [[ "$current_protection" == "{}" ]] || echo "$current_protection" | grep -q '"message":"Branch not protected"'; then
       changes+=("branch protection on main: NONE -> enforce")
       protection_status="missing"
     else
@@ -179,26 +232,33 @@ check_repo() {
 
   if [[ "$MODE" == "apply" ]]; then
     # Apply repo-level settings.
-    gh api -X PATCH "repos/$slug" \
+    if ! "$GHA" api -X PATCH "repos/$slug" \
       -f delete_branch_on_merge=true \
       -f allow_squash_merge=false \
       -f allow_merge_commit=true \
-      -f allow_rebase_merge=true >/dev/null
+      -f allow_rebase_merge=true >/dev/null 2>&1; then
+      echo "    ! failed to apply repo settings"
+      APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    fi
 
     # Apply missing labels.
-    for entry in "${CANONICAL_LABELS[@]}"; do
-      local name="${entry%%:*}"
-      local color="${entry##*:#}"
-      if ! echo "$existing_labels" | grep -qx "$name"; then
-        gh api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1 || \
-          echo "    ! failed to create label: $name"
-      fi
-    done
+    if [[ "$labels_readable" == "1" ]]; then
+      for entry in "${CANONICAL_LABELS[@]}"; do
+        local name="${entry%%:*}"
+        local color="${entry##*:#}"
+        if ! echo "$existing_labels" | grep -qx "$name"; then
+          if ! "$GHA" api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1; then
+            echo "    ! failed to create label: $name"
+            APPLY_FAILURES=$((APPLY_FAILURES + 1))
+          fi
+        fi
+      done
+    fi
 
-    # Branch protection — only update if main exists.
+    # Branch protection — only update if main exists and protection is missing.
     if [[ "$has_main" == "main" ]] && [[ "$protection_status" == "missing" ]]; then
-      gh api -X PUT "repos/$slug/branches/main/protection" \
-        --input - <<EOF >/dev/null 2>&1 || echo "    ! failed to set branch protection"
+      if ! "$GHA" api -X PUT "repos/$slug/branches/main/protection" \
+        --input - >/dev/null 2>&1 <<EOF
 {
   "required_status_checks": null,
   "enforce_admins": false,
@@ -209,6 +269,10 @@ check_repo() {
   "required_conversation_resolution": false
 }
 EOF
+      then
+        echo "    ! failed to set branch protection"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
     fi
     echo "    ✓ applied"
   fi
@@ -221,5 +285,9 @@ done
 
 echo ""
 echo "Done. Mode was: $MODE"
+if [[ "$MODE" == "apply" && "$APPLY_FAILURES" -gt 0 ]]; then
+  echo "$APPLY_FAILURES apply failure(s)."
+  exit 1
+fi
 [[ "$MODE" == "dry-run" ]] && echo "Re-run with --apply to make changes."
 exit 0

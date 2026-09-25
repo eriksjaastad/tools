@@ -8,10 +8,10 @@ That routing policy was retired on July 13, 2026. References to the Mac Mini,
 qwen3:32b, and proposed additional local models describe that earlier setup.
 The original observations are preserved here as history.
 
-The current [model-bench documentation](model-bench/README.md#retained-ollama-transport)
-describes the retained Ollama transport for project-pinned incumbents.
-Benchmark Ollama generation candidates were removed; embedding services remain
-outside that decision.
+The `model-bench` benchmark that retained an Ollama transport for
+project-pinned incumbents was retired in September 2026 (#6453); its sealed
+pilot results are preserved under `_archive/model-bench-results/`. Embedding
+services remain outside that decision.
 
 ## qwen3:32b
 
