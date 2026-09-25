@@ -71,8 +71,7 @@ Flags:
   --dry-run      Report only (default)
   --apply        Make GitHub changes (still always through a PR for file edits)
 
-GitHub operations use the `gha` personal-identity shim. Set GHA_BIN to
-override its path (used by the test suite).
+GitHub operations resolve the `gha` personal-identity shim from PATH.
 EOF
   exit "$exit_code"
 }
@@ -110,27 +109,17 @@ require_action
 # to bare `gh`: that would silently authenticate as whatever token the
 # environment carries, which is the failure this shim exists to prevent.
 resolve_gha() {
-  if [[ -n "${GHA_BIN:-}" ]]; then
-    if [[ "$GHA_BIN" == */* ]] && [[ ! -x "$GHA_BIN" ]]; then
-      echo "ERROR: GHA_BIN '$GHA_BIN' is not executable." >&2
-      echo "       Refusing to run GitHub operations without the managed identity." >&2
-      exit 1
-    fi
-    if [[ "$GHA_BIN" != */* ]] && ! command -v "$GHA_BIN" >/dev/null 2>&1; then
-      echo "ERROR: GHA_BIN '$GHA_BIN' not found on PATH." >&2
-      echo "       Refusing to run GitHub operations without the managed identity." >&2
-      exit 1
-    fi
-    GHA="$GHA_BIN"
-  elif command -v gha >/dev/null 2>&1; then
-    GHA="gha"
-  else
+  if ! GHA=$(command -v gha); then
     echo "ERROR: 'gha' personal-identity shim not found on PATH." >&2
     echo "       Refusing to run GitHub operations without the managed identity." >&2
     exit 1
   fi
 }
 resolve_gha
+
+gha_bounded() {
+  python3 "$SCRIPT_DIR/gha-bounded.py" "${GHA_TIMEOUT_SECONDS:-20}" "$GHA" "$@"
+}
 
 ARCHIVED_QUERY_LIMIT=500
 
@@ -154,7 +143,7 @@ drop_archived_repos() {
   # transient auth or network blip would disable this filter with no trace --
   # the run would look clean while writing to archived repos anyway.
   local repo_json
-  if ! repo_json="$("$GHA" repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
+  if ! repo_json="$(gha_bounded repo list "$OWNER" --limit "$ARCHIVED_QUERY_LIMIT" \
       --json name,isArchived 2>/dev/null)"; then
     echo "WARNING: could not list repos for '$OWNER' -- archived filter DISABLED," >&2
     echo "         passing all targets through unfiltered. Writes to archived repos" >&2
@@ -217,14 +206,14 @@ decode_base64() {
 }
 
 repo_json() {
-  "$GHA" api "repos/$OWNER/$1" 2>/dev/null
+  gha_bounded api "repos/$OWNER/$1" 2>/dev/null
 }
 
 # A missing resource is expected on first run. Other API failures must never
 # be reported as an already-absent file or branch.
 api_get_optional() {
   local response
-  if response=$("$GHA" api "$1" 2>&1); then
+  if response=$(gha_bounded api "$1" 2>&1); then
     printf '%s' "$response"
     return 0
   fi
@@ -259,7 +248,7 @@ run_standardize() {
 
 delete_file_on_branch() {
   # GitHub contents API DELETE scoped to a branch. $1 slug, $2 path, $3 sha, $4 branch.
-  "$GHA" api -X DELETE "repos/$1/contents/$2" \
+  gha_bounded api -X DELETE "repos/$1/contents/$2" \
     -f "message=Delete dead claude-review wrapper" \
     -f "sha=$3" \
     -f "branch=$4" >/dev/null 2>&1
@@ -269,7 +258,8 @@ delete_dead_claude_review() {
   local repo="$1"
   local slug="$OWNER/$repo"
   local info default_branch archived file_json existing_sha encoded decoded
-  local branch_file_json branch_sha ref_json default_ref default_sha
+  local branch_file_json branch_sha branch_encoded branch_decoded ref_json default_ref default_sha
+  local compare_json branch_has_deletion
   local pr_json pr_number pr_url
 
   if ! info=$(repo_json "$repo"); then
@@ -330,7 +320,7 @@ delete_dead_claude_review() {
 
   # Idempotency gate 1: an open PR from our branch means the change is already
   # staged for review; do not create a second PR or rewrite the branch.
-  if ! pr_json=$("$GHA" pr list --repo "$slug" --head "$SYNC_BRANCH" --state open \
+  if ! pr_json=$(gha_bounded pr list --repo "$slug" --head "$SYNC_BRANCH" --state open \
       --json number,url 2>/dev/null); then
     echo "    ! cannot list open PRs for branch $SYNC_BRANCH"
     FAILURES=$((FAILURES + 1))
@@ -351,10 +341,23 @@ delete_dead_claude_review() {
   # finish the deletion on the branch first.
   if ref_json=$(api_get_optional "repos/$slug/git/ref/heads/$SYNC_BRANCH"); then
     echo "    - branch $SYNC_BRANCH already exists; reusing"
+    if ! compare_json=$(gha_bounded api "repos/$slug/compare/$default_branch...$SYNC_BRANCH" 2>/dev/null) || \
+        ! jq -e --arg path "$DEAD_WRAPPER_PATH" \
+          '(.files | type) == "array" and (.ahead_by | type) == "number" and
+           .ahead_by <= 1 and all(.files[]; .filename == $path and .status == "removed")' \
+          <<< "$compare_json" >/dev/null; then
+      echo "    ! existing branch has unrelated or unverifiable changes; preserve it"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
+    branch_has_deletion=$(jq -r '[.files[] | select(.status == "removed")] | length' <<< "$compare_json")
     if branch_file_json=$(api_get_optional "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$SYNC_BRANCH"); then
-      branch_sha=$(jq -r '.sha // ""' <<< "$branch_file_json")
-      if [[ -z "$branch_sha" ]]; then
-        echo "    ! cannot resolve file sha on $SYNC_BRANCH"
+      if [[ "$branch_has_deletion" != "0" ]] || \
+          ! branch_sha=$(jq -er '.sha | select(type == "string" and length > 0)' <<< "$branch_file_json") || \
+          ! branch_encoded=$(jq -er '.content | select(type == "string" and length > 0)' <<< "$branch_file_json") || \
+          ! branch_decoded=$(decode_base64 "$branch_encoded") || \
+          ! printf '%s' "$branch_decoded" | grep -q "$DEAD_WRAPPER_REF"; then
+        echo "    ! existing branch workflow differs from the dead wrapper; preserve it"
         FAILURES=$((FAILURES + 1))
         return
       fi
@@ -366,7 +369,7 @@ delete_dead_claude_review() {
       echo "    ✓ wrapper deleted on existing branch $SYNC_BRANCH"
     else
       local branch_file_status=$?
-      if [[ "$branch_file_status" -ne 4 ]]; then
+      if [[ "$branch_file_status" -ne 4 || "$branch_has_deletion" != "1" ]]; then
         echo "    ! cannot verify wrapper on $SYNC_BRANCH"
         FAILURES=$((FAILURES + 1))
         return
@@ -381,7 +384,7 @@ delete_dead_claude_review() {
       return
     fi
     # Create the branch from the default branch's current head.
-    if ! default_ref=$("$GHA" api "repos/$slug/git/ref/heads/$default_branch" 2>/dev/null); then
+    if ! default_ref=$(gha_bounded api "repos/$slug/git/ref/heads/$default_branch" 2>/dev/null); then
       echo "    ! cannot resolve default branch ref $default_branch"
       FAILURES=$((FAILURES + 1))
       return
@@ -392,7 +395,7 @@ delete_dead_claude_review() {
       FAILURES=$((FAILURES + 1))
       return
     fi
-    if ! "$GHA" api -X POST "repos/$slug/git/refs" \
+    if ! gha_bounded api -X POST "repos/$slug/git/refs" \
         -f "ref=refs/heads/$SYNC_BRANCH" \
         -f "sha=$default_sha" >/dev/null 2>&1; then
       echo "    ! failed to create branch $SYNC_BRANCH"
@@ -409,7 +412,7 @@ delete_dead_claude_review() {
     echo "    ✓ wrapper deleted on branch $SYNC_BRANCH"
   fi
 
-  if ! pr_url=$("$GHA" pr create --repo "$slug" --head "$OWNER:$SYNC_BRANCH" \
+  if ! pr_url=$(gha_bounded pr create --repo "$slug" --head "$OWNER:$SYNC_BRANCH" \
       --base "$default_branch" \
       --title "Remove dead claude-review workflow" \
       --body "Deletes $DEAD_WRAPPER_PATH, which references the retired $DEAD_WRAPPER_REF reusable workflow.
@@ -466,14 +469,14 @@ rename_default_branch() {
     return
   fi
 
-  if ! "$GHA" api -X POST "repos/$slug/branches/$from_branch/rename" \
+  if ! gha_bounded api -X POST "repos/$slug/branches/$from_branch/rename" \
       -f "new_name=$to_branch" >/dev/null 2>&1; then
     echo "    ! failed to rename $from_branch to $to_branch"
     FAILURES=$((FAILURES + 1))
     return
   fi
 
-  if ! "$GHA" api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1; then
+  if ! gha_bounded api -X PATCH "repos/$slug" -f "default_branch=$to_branch" >/dev/null 2>&1; then
     echo "    ! branch renamed but failed to set default_branch pointer to $to_branch"
     FAILURES=$((FAILURES + 1))
     return

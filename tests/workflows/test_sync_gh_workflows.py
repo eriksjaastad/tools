@@ -13,6 +13,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 
 import pytest
 
@@ -56,6 +57,7 @@ FAKE_GHA = """#!/usr/bin/env python3
 import json
 import os
 import sys
+import time
 
 args = sys.argv[1:]
 with open(os.environ["FAKE_GHA_SCENARIO"]) as f:
@@ -69,6 +71,7 @@ for rule in scenario:
     ):
         sys.stdout.write(rule.get("stdout", ""))
         sys.stderr.write(rule.get("stderr", ""))
+        time.sleep(rule.get("sleep", 0))
         sys.exit(rule.get("status", 0))
 sys.stderr.write("FAKE_GHA_NO_MATCH: " + json.dumps(args) + "\\n")
 sys.exit(99)
@@ -88,7 +91,8 @@ def make_gha(tmp_path, rules):
 
 def run_sync(tmp_path, gha, scenario, log, *args):
     env = os.environ.copy()
-    env["GHA_BIN"] = str(gha)
+    env["PATH"] = str(gha.parent) + os.pathsep + env["PATH"]
+    env.pop("GHA_BIN", None)
     env["FAKE_GHA_SCENARIO"] = str(scenario)
     env["FAKE_GHA_LOG"] = str(log)
     return subprocess.run(
@@ -172,6 +176,13 @@ def default_branch_ref_rule():
             {"ref": "refs/heads/main", "object": {"sha": "abc123"}}
         ),
         "status": 0,
+    }
+
+
+def compare_rule(files, ahead_by=0):
+    return {
+        "match": ["api", f"repos/{SLUG}/compare/main...{SYNC_BRANCH}"],
+        "stdout": json.dumps({"files": files, "ahead_by": ahead_by}),
     }
 
 
@@ -271,6 +282,39 @@ def test_apply_skips_when_pr_already_open(tmp_path):
     calls = read_calls(log)
     assert not any("-X" in call and "POST" in call for call in calls)
     assert not any("pr create" in call[1:3] for call in calls)
+
+
+def test_existing_branch_with_replacement_workflow_is_preserved(tmp_path):
+    rules = [
+        contents_rule(), pr_list_rule(), sync_branch_ref_rule(status=0),
+        compare_rule([{"filename": DEAD_WRAPPER_PATH, "status": "modified"}], 1),
+        repo_info_rule(),
+    ]
+    gha, scenario, log = make_gha(tmp_path, rules)
+    result = run_sync(tmp_path, gha, scenario, log, "--apply",
+                      "delete-dead-claude-review", REPO)
+
+    assert result.returncode == 1
+    assert "existing branch has unrelated or unverifiable changes" in result.stdout
+    assert not any("DELETE" in call for call in read_calls(log))
+    assert not any(call[:2] == ["pr", "create"] for call in read_calls(log))
+
+
+def test_existing_unchanged_branch_deletes_only_dead_wrapper(tmp_path):
+    branch_contents = contents_rule()
+    branch_contents["match"][1] += f"?ref={SYNC_BRANCH}"
+    rules = [
+        branch_contents, contents_rule(), pr_list_rule(),
+        sync_branch_ref_rule(status=0), compare_rule([]),
+        delete_on_branch_rule(), pr_create_rule(), repo_info_rule(),
+    ]
+    gha, scenario, log = make_gha(tmp_path, rules)
+    result = run_sync(tmp_path, gha, scenario, log, "--apply",
+                      "delete-dead-claude-review", REPO)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "wrapper deleted on existing branch" in result.stdout
+    assert any("DELETE" in call for call in read_calls(log))
 
 
 def test_missing_file_is_reported_already_absent(tmp_path):
@@ -379,14 +423,28 @@ def test_api_failure_creating_pr_exits_nonzero(tmp_path):
     assert "Done with 1 failure(s)." in result.stdout
 
 
+def test_github_lookup_timeout_is_bounded_and_nonzero(tmp_path, monkeypatch):
+    slow_info = repo_info_rule()
+    slow_info["sleep"] = 5
+    gha, scenario, log = make_gha(tmp_path, [slow_info])
+    monkeypatch.setenv("GHA_TIMEOUT_SECONDS", "0.5")
+    started = time.monotonic()
+    result = run_sync(tmp_path, gha, scenario, log, "--apply",
+                      "delete-dead-claude-review", REPO)
+
+    assert result.returncode == 1
+    assert time.monotonic() - started < 2
+    assert "cannot fetch repo" in result.stdout
+
+
 def test_missing_gha_shim_fails_visibly(tmp_path):
-    missing = tmp_path / "missing-gha"
     scenario = tmp_path / "scenario.json"
     scenario.write_text("[]")
     log = tmp_path / "gha.log"
     log.write_text("")
     env = os.environ.copy()
-    env["GHA_BIN"] = str(missing)
+    env["PATH"] = "/usr/bin:/bin"
+    env.pop("GHA_BIN", None)
     env["FAKE_GHA_SCENARIO"] = str(scenario)
     env["FAKE_GHA_LOG"] = str(log)
     result = subprocess.run(
@@ -398,15 +456,16 @@ def test_missing_gha_shim_fails_visibly(tmp_path):
     )
 
     assert result.returncode == 1
-    assert "not executable" in result.stderr
+    assert "not found on PATH" in result.stderr
     assert "managed identity" in result.stderr
 
 
 def test_standardize_repo_read_failure_is_not_success(tmp_path):
     gha, scenario, log = make_gha(tmp_path, [repo_info_rule(status=1)])
     env = os.environ.copy()
-    env.update(GHA_BIN=str(gha), FAKE_GHA_SCENARIO=str(scenario),
-               FAKE_GHA_LOG=str(log))
+    env.update(PATH=str(gha.parent) + os.pathsep + env["PATH"],
+               FAKE_GHA_SCENARIO=str(scenario), FAKE_GHA_LOG=str(log))
+    env.pop("GHA_BIN", None)
     result = subprocess.run(
         [str(STANDARDIZE_SCRIPT), "--dry-run", REPO],
         env=env, capture_output=True, text=True, timeout=30,
@@ -423,8 +482,9 @@ def test_standardize_all_active_list_failure_is_not_empty_success(tmp_path):
         "stderr": "gh: Service Unavailable (HTTP 503)\n",
     }])
     env = os.environ.copy()
-    env.update(GHA_BIN=str(gha), FAKE_GHA_SCENARIO=str(scenario),
-               FAKE_GHA_LOG=str(log))
+    env.update(PATH=str(gha.parent) + os.pathsep + env["PATH"],
+               FAKE_GHA_SCENARIO=str(scenario), FAKE_GHA_LOG=str(log))
+    env.pop("GHA_BIN", None)
     result = subprocess.run(
         [str(STANDARDIZE_SCRIPT), "--dry-run", "--all-active"],
         env=env, capture_output=True, text=True, timeout=30,

@@ -29,6 +29,7 @@
 # without --apply.
 
 set -uo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # NOTE: -e omitted intentionally — per-repo gha api calls can fail on edge
 # cases (empty repos, missing main, permissions) and we want to skip the
 # bad repo and continue, not abort the entire sweep. Failures are counted
@@ -42,7 +43,7 @@ APPLY_FAILURES=0
 
 api_get_optional() {
   local response
-  if response=$("$GHA" api "$1" 2>&1); then
+  if response=$(gha_bounded api "$1" 2>&1); then
     printf '%s' "$response"
     return 0
   fi
@@ -92,21 +93,7 @@ fi
 # to bare `gh`: that would silently authenticate as whatever token the
 # environment carries, which is the failure this shim exists to prevent.
 resolve_gha() {
-  if [[ -n "${GHA_BIN:-}" ]]; then
-    if [[ "$GHA_BIN" == */* ]] && [[ ! -x "$GHA_BIN" ]]; then
-      echo "ERROR: GHA_BIN '$GHA_BIN' is not executable." >&2
-      echo "       Refusing to run GitHub operations without the managed identity." >&2
-      exit 1
-    fi
-    if [[ "$GHA_BIN" != */* ]] && ! command -v "$GHA_BIN" >/dev/null 2>&1; then
-      echo "ERROR: GHA_BIN '$GHA_BIN' not found on PATH." >&2
-      echo "       Refusing to run GitHub operations without the managed identity." >&2
-      exit 1
-    fi
-    GHA="$GHA_BIN"
-  elif command -v gha >/dev/null 2>&1; then
-    GHA="gha"
-  else
+  if ! GHA=$(command -v gha); then
     echo "ERROR: 'gha' personal-identity shim not found on PATH." >&2
     echo "       Refusing to run GitHub operations without the managed identity." >&2
     exit 1
@@ -114,9 +101,13 @@ resolve_gha() {
 }
 resolve_gha
 
+gha_bounded() {
+  python3 "$SCRIPT_DIR/gha-bounded.py" "${GHA_TIMEOUT_SECONDS:-20}" "$GHA" "$@"
+}
+
 # Fetch repo list once. For --all-active, list active repos; for single, use as-is.
 if [[ "$TARGET" == "__all__" ]]; then
-  if ! REPOS=$("$GHA" repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
+  if ! REPOS=$(gha_bounded repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
     python3 -c "
 import sys, json
 from datetime import datetime, timezone
@@ -159,7 +150,7 @@ check_repo() {
 
   # 1. Fetch current settings.
   local settings
-  if ! settings=$("$GHA" api "repos/$slug" 2>/dev/null); then
+  if ! settings=$(gha_bounded api "repos/$slug" 2>/dev/null); then
     echo "[$repo] ERROR: cannot fetch repo (missing? no access?)"
     APPLY_FAILURES=$((APPLY_FAILURES + 1))
     return
@@ -193,7 +184,7 @@ check_repo() {
   # 2. Labels — ensure canonical 11 exist (don't delete others).
   local existing_labels
   local labels_readable=1
-  if ! existing_labels=$("$GHA" api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null); then
+  if ! existing_labels=$(gha_bounded api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null); then
     echo "    ! cannot list labels; skipping label enforcement"
     APPLY_FAILURES=$((APPLY_FAILURES + 1))
     existing_labels=""
@@ -281,7 +272,7 @@ check_repo() {
 
   if [[ "$MODE" == "apply" ]]; then
     # Apply repo-level settings.
-    if ! "$GHA" api -X PATCH "repos/$slug" \
+    if ! gha_bounded api -X PATCH "repos/$slug" \
       -f delete_branch_on_merge=true \
       -f allow_squash_merge=false \
       -f allow_merge_commit=true \
@@ -296,7 +287,7 @@ check_repo() {
         local name="${entry%%:*}"
         local color="${entry##*:#}"
         if ! echo "$existing_labels" | grep -qx "$name"; then
-          if ! "$GHA" api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1; then
+          if ! gha_bounded api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1; then
             echo "    ! failed to create label: $name"
             APPLY_FAILURES=$((APPLY_FAILURES + 1))
           fi
@@ -306,7 +297,7 @@ check_repo() {
 
     # Branch protection — only update if main exists and protection is missing.
     if [[ "$has_main" == "main" ]] && [[ "$protection_status" == "missing" ]]; then
-      if ! "$GHA" api -X PUT "repos/$slug/branches/main/protection" \
+      if ! gha_bounded api -X PUT "repos/$slug/branches/main/protection" \
         --input - >/dev/null 2>&1 <<EOF
 {
   "required_status_checks": null,
