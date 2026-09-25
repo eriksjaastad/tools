@@ -5,10 +5,8 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "model-bench"))
 sys.path.insert(0, str(ROOT / "route"))
 
-from model_bench.registry import MODELS
 from pricing import compute_shadow_cost, get_model_pricing, load_registry
 
 
@@ -18,14 +16,44 @@ def registry():
     return load_registry(ROOT / "route" / "model_registry.json")
 
 
-def test_cloud_benchmark_models_have_route_pricing():
-    missing = [
-        model.id
-        for model in MODELS
-        if model.provider != "ollama" and get_model_pricing(model.id) is None
-    ]
+def test_registry_catalog_models_have_complete_pricing(registry):
+    """The route registry is the single model catalog: every entry prices out."""
+    for model in registry["models"]:
+        model_id = model.get("model_id")
+        provider = model.get("provider")
+        assert model_id, f"registry model missing model_id: {model!r}"
+        assert provider, f"registry model missing provider: {model_id!r}"
+        pricing = model.get("pricing_per_1M", {})
+        for key in ("input_usd", "cached_input_usd", "output_usd"):
+            assert isinstance(pricing.get(key), (int, float)), (
+                f"{model_id} pricing.{key} must be numeric, got {pricing.get(key)!r}"
+            )
 
-    assert missing == []
+
+def test_registry_model_ids_are_unique(registry):
+    ids = [model["model_id"] for model in registry["models"]]
+    assert len(ids) == len(set(ids)), f"duplicate model ids: {sorted(ids)}"
+
+
+def test_registry_pricing_lookup_matches_catalog(registry):
+    """get_model_pricing must agree with the checked-in catalog it loads."""
+    for model in registry["models"]:
+        got = get_model_pricing(model["model_id"])
+        assert got is not None, f"no pricing lookup for {model['model_id']}"
+        assert got["provider"] == model["provider"]
+        expected = model["pricing_per_1M"]
+        assert got["input_usd"] == expected["input_usd"]
+        assert got["cached_input_usd"] == expected["cached_input_usd"]
+        assert got["output_usd"] == expected["output_usd"]
+
+
+def test_subscription_shadow_models_exist_in_registry(registry):
+    for name, sub in registry.get("subscriptions", {}).items():
+        shadow = sub.get("shadow_model")
+        assert shadow, f"subscription {name} has no shadow_model"
+        assert get_model_pricing(shadow) is not None, (
+            f"subscription {name} shadow model {shadow!r} is not in the registry"
+        )
 
 
 # Standard input, cached read, output USD/MTok verified against the provider

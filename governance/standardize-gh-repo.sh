@@ -16,6 +16,9 @@
 #     - require PR before merge
 #     - preserve any existing required checks and review settings
 #
+# All GitHub operations use the `gha` personal-identity shim. `gha` clears
+# inherited GH_TOKEN/GITHUB_TOKEN and uses Erik's personal `gh` login.
+#
 # Usage:
 #   standardize-gh-repo.sh --dry-run <repo>          # single repo, report only
 #   standardize-gh-repo.sh --apply   <repo>          # single repo, make changes
@@ -26,14 +29,30 @@
 # without --apply.
 
 set -uo pipefail
-# NOTE: -e omitted intentionally — per-repo gh api calls can fail on edge
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# NOTE: -e omitted intentionally — per-repo gha api calls can fail on edge
 # cases (empty repos, missing main, permissions) and we want to skip the
-# bad repo and continue, not abort the entire sweep.
+# bad repo and continue, not abort the entire sweep. Failures are counted
+# and reported; --apply exits nonzero if any write fails.
 
 OWNER="eriksjaastad"
 MODE="dry-run"
 TARGET=""
 ACTIVE_DAYS="${ACTIVE_DAYS:-30}"
+APPLY_FAILURES=0
+
+api_get_optional() {
+  local response
+  if response=$(gha_bounded api "$1" 2>&1); then
+    printf '%s' "$response"
+    return 0
+  fi
+  if [[ "$response" == *"(HTTP 404)"* ]]; then
+    return 4
+  fi
+  echo "GitHub lookup failed for $1: $response" >&2
+  return 1
+}
 
 CANONICAL_LABELS=(
   "feature:#5319E7"
@@ -70,10 +89,26 @@ if [[ -z "$TARGET" ]]; then
   usage
 fi
 
+# Resolve the managed identity shim before any GitHub call. Never fall back
+# to bare `gh`: that would silently authenticate as whatever token the
+# environment carries, which is the failure this shim exists to prevent.
+resolve_gha() {
+  if ! GHA=$(command -v gha); then
+    echo "ERROR: 'gha' personal-identity shim not found on PATH." >&2
+    echo "       Refusing to run GitHub operations without the managed identity." >&2
+    exit 1
+  fi
+}
+resolve_gha
+
+gha_bounded() {
+  python3 "$SCRIPT_DIR/gha-bounded.py" "${GHA_TIMEOUT_SECONDS:-20}" "$GHA" "$@"
+}
+
 # Fetch repo list once. For --all-active, list active repos; for single, use as-is.
 if [[ "$TARGET" == "__all__" ]]; then
-  REPOS=$(gh repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
-    "$HOME/.local/bin/uv" run python3 -c "
+  if ! REPOS=$(gha_bounded repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
+    python3 -c "
 import sys, json
 from datetime import datetime, timezone
 days = $ACTIVE_DAYS
@@ -87,7 +122,10 @@ for r in repos:
     if (now - pushed).days < days:
         out.append(r['name'])
 print('\n'.join(sorted(out)))
-")
+"); then
+    echo "ERROR: cannot list active repositories" >&2
+    exit 1
+  fi
 else
   REPOS="$TARGET"
 fi
@@ -96,6 +134,7 @@ REPO_COUNT=$(echo "$REPOS" | wc -l | tr -d ' ')
 echo "=== standardize-gh-repo.sh ==="
 echo "Mode:   $MODE"
 echo "Owner:  $OWNER"
+echo "GHA:    $GHA"
 echo "Repos:  $REPO_COUNT"
 echo ""
 
@@ -107,11 +146,24 @@ check_repo() {
   local repo="$1"
   local slug="$OWNER/$repo"
   local changes=()
+  local failures_before="$APPLY_FAILURES"
 
   # 1. Fetch current settings.
   local settings
-  if ! settings=$(gh api "repos/$slug" 2>/dev/null); then
+  if ! settings=$(gha_bounded api "repos/$slug" 2>/dev/null); then
     echo "[$repo] ERROR: cannot fetch repo (missing? no access?)"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    return
+  fi
+
+  local cur_archived
+  if ! cur_archived=$(jq -r 'if (.archived | type) == "boolean" then .archived else error("missing archived flag") end' <<< "$settings"); then
+    echo "[$repo] ERROR: malformed repository metadata"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    return
+  fi
+  if [[ "$cur_archived" == "true" ]]; then
+    echo "[$repo] skip: archived, no write attempted"
     return
   fi
 
@@ -131,22 +183,29 @@ check_repo() {
 
   # 2. Labels — ensure canonical 11 exist (don't delete others).
   local existing_labels
-  existing_labels=$(gh api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null || echo "")
+  local labels_readable=1
+  if ! existing_labels=$(gha_bounded api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null); then
+    echo "    ! cannot list labels; skipping label enforcement"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    existing_labels=""
+    labels_readable=0
+  fi
   local missing_labels=()
-  for entry in "${CANONICAL_LABELS[@]}"; do
-    local name="${entry%%:*}"
-    if ! echo "$existing_labels" | grep -qx "$name"; then
-      missing_labels+=("$name")
-    fi
-  done
+  if [[ "$labels_readable" == "1" ]]; then
+    for entry in "${CANONICAL_LABELS[@]}"; do
+      local name="${entry%%:*}"
+      if ! echo "$existing_labels" | grep -qx "$name"; then
+        missing_labels+=("$name")
+      fi
+    done
+  fi
   if [[ ${#missing_labels[@]} -gt 0 ]]; then
     changes+=("missing labels: ${missing_labels[*]}")
   fi
 
   # 3. Branch protection on main — create only when absent. Existing protection
   # may require unrelated checks; never replace its status contexts or reviews.
-  local has_main
-  has_main=$(gh api "repos/$slug/branches/main" 2>/dev/null | jq -r '.name // "none"')
+  local has_main=""
   local protection_status="not-checked"
   # Branch protection requires a paid plan for private repos. Skip with
   # warning rather than failing apply — the repo-level settings (auto-delete,
@@ -154,21 +213,55 @@ check_repo() {
   if [[ "$cur_private" == "true" ]]; then
     changes+=("WARNING: private repo — branch protection skipped (requires GitHub Pro)")
     has_main="none"
+  else
+    local main_response
+    if main_response=$(api_get_optional "repos/$slug/branches/main"); then
+      if ! has_main=$(jq -er '.name | select(type == "string")' <<< "$main_response"); then
+        echo "    ! malformed main branch response"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
+    else
+      local main_status=$?
+      if [[ "$main_status" -eq 4 ]]; then
+        has_main="none"
+      else
+        echo "    ! cannot verify main branch"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
+    fi
   fi
   if [[ "$has_main" == "main" ]]; then
     local current_protection
-    current_protection=$(gh api "repos/$slug/branches/main/protection" 2>/dev/null || echo "{}")
-    if [[ "$current_protection" == "{}" ]] || echo "$current_protection" | grep -q '"message":"Branch not protected"'; then
-      changes+=("branch protection on main: NONE -> enforce")
-      protection_status="missing"
+    if current_protection=$(api_get_optional "repos/$slug/branches/main/protection"); then
+      if [[ "$current_protection" == "{}" ]]; then
+        echo "    ! malformed branch protection response"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+        protection_status="unreadable"
+      else
+        protection_status="present"
+      fi
     else
-      protection_status="present"
+      local protection_read_status=$?
+      if [[ "$protection_read_status" -eq 4 ]]; then
+        protection_status="missing"
+      else
+        echo "    ! cannot read branch protection; skipping protection enforcement"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+        protection_status="unreadable"
+      fi
+    fi
+    if [[ "$protection_status" == "missing" ]]; then
+      changes+=("branch protection on main: NONE -> enforce")
     fi
   fi
 
   # 4. Report or apply.
   if [[ ${#changes[@]} -eq 0 ]]; then
-    echo "[$repo] ✓ already canonical"
+    if [[ "$APPLY_FAILURES" -gt "$failures_before" ]]; then
+      echo "[$repo] inspection incomplete"
+    else
+      echo "[$repo] ✓ already canonical"
+    fi
     return
   fi
 
@@ -179,26 +272,33 @@ check_repo() {
 
   if [[ "$MODE" == "apply" ]]; then
     # Apply repo-level settings.
-    gh api -X PATCH "repos/$slug" \
+    if ! gha_bounded api -X PATCH "repos/$slug" \
       -f delete_branch_on_merge=true \
       -f allow_squash_merge=false \
       -f allow_merge_commit=true \
-      -f allow_rebase_merge=true >/dev/null
+      -f allow_rebase_merge=true >/dev/null 2>&1; then
+      echo "    ! failed to apply repo settings"
+      APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    fi
 
     # Apply missing labels.
-    for entry in "${CANONICAL_LABELS[@]}"; do
-      local name="${entry%%:*}"
-      local color="${entry##*:#}"
-      if ! echo "$existing_labels" | grep -qx "$name"; then
-        gh api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1 || \
-          echo "    ! failed to create label: $name"
-      fi
-    done
+    if [[ "$labels_readable" == "1" ]]; then
+      for entry in "${CANONICAL_LABELS[@]}"; do
+        local name="${entry%%:*}"
+        local color="${entry##*:#}"
+        if ! echo "$existing_labels" | grep -qx "$name"; then
+          if ! gha_bounded api "repos/$slug/labels" -f "name=$name" -f "color=$color" >/dev/null 2>&1; then
+            echo "    ! failed to create label: $name"
+            APPLY_FAILURES=$((APPLY_FAILURES + 1))
+          fi
+        fi
+      done
+    fi
 
-    # Branch protection — only update if main exists.
+    # Branch protection — only update if main exists and protection is missing.
     if [[ "$has_main" == "main" ]] && [[ "$protection_status" == "missing" ]]; then
-      gh api -X PUT "repos/$slug/branches/main/protection" \
-        --input - <<EOF >/dev/null 2>&1 || echo "    ! failed to set branch protection"
+      if ! gha_bounded api -X PUT "repos/$slug/branches/main/protection" \
+        --input - >/dev/null 2>&1 <<EOF
 {
   "required_status_checks": null,
   "enforce_admins": false,
@@ -209,8 +309,16 @@ check_repo() {
   "required_conversation_resolution": false
 }
 EOF
+      then
+        echo "    ! failed to set branch protection"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
     fi
-    echo "    ✓ applied"
+    if [[ "$APPLY_FAILURES" -eq "$failures_before" ]]; then
+      echo "    ✓ applied"
+    else
+      echo "    ! apply incomplete"
+    fi
   fi
 }
 
@@ -221,5 +329,9 @@ done
 
 echo ""
 echo "Done. Mode was: $MODE"
+if [[ "$APPLY_FAILURES" -gt 0 ]]; then
+  echo "$APPLY_FAILURES inspection/apply failure(s)."
+  exit 1
+fi
 [[ "$MODE" == "dry-run" ]] && echo "Re-run with --apply to make changes."
 exit 0
