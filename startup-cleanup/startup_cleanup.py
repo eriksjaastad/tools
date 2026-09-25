@@ -24,7 +24,8 @@ Anything that fails one of these checks, or anything that cannot be verified,
 is refused and reported. Removal of directories always goes through a
 recoverable Trash path (``send2trash``, macOS ``/usr/bin/trash``, or the
 Finder AppleScript fallback) and never uses ``rm`` or ``git clean``. Branch
-deletion uses compare-and-swap ``git update-ref -d`` after a fresh merge check.
+deletion uses ``git branch -d`` from a verified primary main checkout. Git
+checks the current tip's merge and checked-out state during deletion.
 
 Startup boundedness
 -------------------
@@ -371,19 +372,29 @@ def trash_path(path: Path, timeout: int = DEFAULT_TRASH_TIMEOUT) -> tuple[bool, 
 
 
 def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bool, str]:
-    """Delete only the tip just verified merged into main (compare-and-swap)."""
+    """Use Git's checked-out and current-tip merge protection from main."""
     merged, reason = _branch_merged(repo, main, branch, timeout)
     if not merged:
         return False, reason
-    ok, tip, err = _git_ok(repo, ["rev-parse", "--verify", f"refs/heads/{branch}"], timeout)
+    try:
+        worktrees = _list_worktrees(repo)
+    except StartupCleanupError as exc:
+        return False, str(exc)
+    if not worktrees:
+        return False, "no primary checkout available for safe branch deletion"
+    primary = Path(worktrees[0].path)
+    if worktrees[0].branch != main or not primary.is_dir():
+        return False, f"primary checkout is not on {main}"
+    ok, main_tip, err = _git_ok(repo, ["rev-parse", "--verify", f"refs/heads/{main}"], timeout)
     if not ok:
-        return False, err.strip() or "cannot resolve branch tip"
-    ok, _, err = _git_ok(
-        repo, ["update-ref", "-d", f"refs/heads/{branch}", tip.strip()], timeout
-    )
+        return False, err.strip() or "cannot resolve main tip"
+    ok, primary_head, err = _git_ok(primary, ["rev-parse", "HEAD"], timeout)
+    if not ok or primary_head.strip() != main_tip.strip():
+        return False, "primary checkout HEAD does not match main"
+    ok, _, err = _git_ok(primary, ["branch", "-d", branch], timeout)
     if ok:
         return True, ""
-    return False, err.strip() or "git update-ref -d failed"
+    return False, err.strip() or "git branch -d failed"
 
 
 def _checked_out_branches(worktrees: list[Worktree]) -> set[str]:

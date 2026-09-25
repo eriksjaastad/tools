@@ -52,8 +52,9 @@ If none succeeds, deletion is refused and the item is preserved with a report.
 After the worktree directory is trashed, its per-worktree admin directory under
 `<main>/.git/worktrees/<name>` is trashed the same way (this is the surgical
 equivalent of `git worktree prune`, scoped to exactly one entry), and finally
-the branch is deleted with a compare-and-swap `git update-ref -d` after a fresh
-merge-ancestor check. A changed branch tip makes the deletion fail.
+the branch is deleted with `git branch -d` from a verified primary `main`
+checkout. Git checks the current branch tip and rejects one that has become
+unmerged or checked out in another worktree.
 
 Remote branches are never touched. `git clean -fdx` is never used.
 

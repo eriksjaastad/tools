@@ -529,6 +529,47 @@ def test_deletes_merged_standalone_branch_from_older_task_checkout(sc, tmp_path,
     assert active.exists()
 
 
+def test_branch_delete_refuses_new_worktree_checkout(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    branch = "task/110-race-checkout"
+    make_task_branch(repo, branch, "race.txt")
+    original = sc._git_ok
+    new_wt = tmp_path / "new-active-worktree"
+
+    def with_race(path, args, timeout):
+        if args == ["branch", "-d", branch]:
+            git(repo, "worktree", "add", "-q", str(new_wt), branch)
+        return original(path, args, timeout)
+
+    monkeypatch.setattr(sc, "_git_ok", with_race)
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert not ok
+    assert "used by worktree" in reason
+    assert branch in branch_names(repo)
+    assert new_wt.exists()
+
+
+def test_branch_delete_refuses_new_unmerged_tip(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    branch = "task/111-race-tip"
+    make_task_branch(repo, branch, "race.txt")
+    original = sc._git_ok
+
+    def with_race(path, args, timeout):
+        if args == ["branch", "-d", branch]:
+            tree = git(repo, "rev-parse", f"{branch}^{{tree}}").stdout.strip()
+            parent = git(repo, "rev-parse", branch).stdout.strip()
+            new_tip = git(repo, "commit-tree", tree, "-p", parent, "-m", "new work").stdout.strip()
+            git(repo, "update-ref", f"refs/heads/{branch}", new_tip)
+        return original(path, args, timeout)
+
+    monkeypatch.setattr(sc, "_git_ok", with_race)
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert not ok
+    assert "not fully merged" in reason
+    assert branch in branch_names(repo)
+
+
 def test_refuses_when_no_origin_main(sc, tmp_path):
     repo = make_repo(tmp_path)
     wt = tmp_path / "no-origin-wt"
