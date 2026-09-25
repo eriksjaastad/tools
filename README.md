@@ -74,6 +74,7 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 - [`integrity-warden/`](integrity-warden/README.md) - Security and compliance auditing.
 - [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
 - [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
+- [`startup-cleanup/`](startup-cleanup/README.md) - Safe, bounded per-project startup cleanup for merged local task worktrees and branches.
 - [`claude-cli/`](claude-cli/README.md) - Legacy command-line interface to Claude.
 
 ---
@@ -127,6 +128,7 @@ _tools/
 ├── integrity-warden/       # Security and compliance auditing
 ├── ssh_agent/              # SSH management and host routing
 ├── pdf-converter/          # PDF conversion utilities
+├── startup-cleanup/        # Per-project startup cleanup for merged task worktrees/branches
 └── claude-cli/             # Legacy Claude CLI
 ```
 
