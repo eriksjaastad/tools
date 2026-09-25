@@ -40,6 +40,19 @@ TARGET=""
 ACTIVE_DAYS="${ACTIVE_DAYS:-30}"
 APPLY_FAILURES=0
 
+api_get_optional() {
+  local response
+  if response=$("$GHA" api "$1" 2>&1); then
+    printf '%s' "$response"
+    return 0
+  fi
+  if [[ "$response" == *"(HTTP 404)"* ]]; then
+    return 4
+  fi
+  echo "GitHub lookup failed for $1: $response" >&2
+  return 1
+}
+
 CANONICAL_LABELS=(
   "feature:#5319E7"
   "enhancement:#a2eeef"
@@ -103,7 +116,7 @@ resolve_gha
 
 # Fetch repo list once. For --all-active, list active repos; for single, use as-is.
 if [[ "$TARGET" == "__all__" ]]; then
-  REPOS=$("$GHA" repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
+  if ! REPOS=$("$GHA" repo list "$OWNER" --limit 100 --json name,pushedAt,isArchived | \
     python3 -c "
 import sys, json
 from datetime import datetime, timezone
@@ -118,7 +131,10 @@ for r in repos:
     if (now - pushed).days < days:
         out.append(r['name'])
 print('\n'.join(sorted(out)))
-")
+"); then
+    echo "ERROR: cannot list active repositories" >&2
+    exit 1
+  fi
 else
   REPOS="$TARGET"
 fi
@@ -139,16 +155,22 @@ check_repo() {
   local repo="$1"
   local slug="$OWNER/$repo"
   local changes=()
+  local failures_before="$APPLY_FAILURES"
 
   # 1. Fetch current settings.
   local settings
   if ! settings=$("$GHA" api "repos/$slug" 2>/dev/null); then
     echo "[$repo] ERROR: cannot fetch repo (missing? no access?)"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
     return
   fi
 
   local cur_archived
-  cur_archived=$(echo "$settings" | jq -r '.archived // false')
+  if ! cur_archived=$(jq -r 'if (.archived | type) == "boolean" then .archived else error("missing archived flag") end' <<< "$settings"); then
+    echo "[$repo] ERROR: malformed repository metadata"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
+    return
+  fi
   if [[ "$cur_archived" == "true" ]]; then
     echo "[$repo] skip: archived, no write attempted"
     return
@@ -173,6 +195,7 @@ check_repo() {
   local labels_readable=1
   if ! existing_labels=$("$GHA" api "repos/$slug/labels" --paginate -q '.[].name' 2>/dev/null); then
     echo "    ! cannot list labels; skipping label enforcement"
+    APPLY_FAILURES=$((APPLY_FAILURES + 1))
     existing_labels=""
     labels_readable=0
   fi
@@ -200,28 +223,54 @@ check_repo() {
     changes+=("WARNING: private repo — branch protection skipped (requires GitHub Pro)")
     has_main="none"
   else
-    if has_main=$("$GHA" api "repos/$slug/branches/main" 2>/dev/null | jq -r '.name // "none"'); then
-      :
+    local main_response
+    if main_response=$(api_get_optional "repos/$slug/branches/main"); then
+      if ! has_main=$(jq -er '.name | select(type == "string")' <<< "$main_response"); then
+        echo "    ! malformed main branch response"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
     else
-      has_main=""
+      local main_status=$?
+      if [[ "$main_status" -eq 4 ]]; then
+        has_main="none"
+      else
+        echo "    ! cannot verify main branch"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+      fi
     fi
   fi
   if [[ "$has_main" == "main" ]]; then
     local current_protection
-    if ! current_protection=$("$GHA" api "repos/$slug/branches/main/protection" 2>/dev/null); then
-      echo "    ! cannot read branch protection; skipping protection enforcement"
-      protection_status="unreadable"
-    elif [[ "$current_protection" == "{}" ]] || echo "$current_protection" | grep -q '"message":"Branch not protected"'; then
-      changes+=("branch protection on main: NONE -> enforce")
-      protection_status="missing"
+    if current_protection=$(api_get_optional "repos/$slug/branches/main/protection"); then
+      if [[ "$current_protection" == "{}" ]]; then
+        echo "    ! malformed branch protection response"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+        protection_status="unreadable"
+      else
+        protection_status="present"
+      fi
     else
-      protection_status="present"
+      local protection_read_status=$?
+      if [[ "$protection_read_status" -eq 4 ]]; then
+        protection_status="missing"
+      else
+        echo "    ! cannot read branch protection; skipping protection enforcement"
+        APPLY_FAILURES=$((APPLY_FAILURES + 1))
+        protection_status="unreadable"
+      fi
+    fi
+    if [[ "$protection_status" == "missing" ]]; then
+      changes+=("branch protection on main: NONE -> enforce")
     fi
   fi
 
   # 4. Report or apply.
   if [[ ${#changes[@]} -eq 0 ]]; then
-    echo "[$repo] ✓ already canonical"
+    if [[ "$APPLY_FAILURES" -gt "$failures_before" ]]; then
+      echo "[$repo] inspection incomplete"
+    else
+      echo "[$repo] ✓ already canonical"
+    fi
     return
   fi
 
@@ -274,7 +323,11 @@ EOF
         APPLY_FAILURES=$((APPLY_FAILURES + 1))
       fi
     fi
-    echo "    ✓ applied"
+    if [[ "$APPLY_FAILURES" -eq "$failures_before" ]]; then
+      echo "    ✓ applied"
+    else
+      echo "    ! apply incomplete"
+    fi
   fi
 }
 
@@ -285,8 +338,8 @@ done
 
 echo ""
 echo "Done. Mode was: $MODE"
-if [[ "$MODE" == "apply" && "$APPLY_FAILURES" -gt 0 ]]; then
-  echo "$APPLY_FAILURES apply failure(s)."
+if [[ "$APPLY_FAILURES" -gt 0 ]]; then
+  echo "$APPLY_FAILURES inspection/apply failure(s)."
   exit 1
 fi
 [[ "$MODE" == "dry-run" ]] && echo "Re-run with --apply to make changes."

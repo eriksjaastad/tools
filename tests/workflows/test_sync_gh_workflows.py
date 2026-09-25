@@ -18,6 +18,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "governance" / "sync-gh-workflows.sh"
+STANDARDIZE_SCRIPT = REPO_ROOT / "governance" / "standardize-gh-repo.sh"
 DEAD_WRAPPER_PATH = ".github/workflows/claude-review.yml"
 DEAD_WRAPPER_REF = (
     "eriksjaastad/tools/.github/workflows/claude-review-reusable.yml@main"
@@ -141,6 +142,7 @@ def contents_rule(text=WRAPPER_TEXT, status=0):
             }
         ),
         "status": status,
+        "stderr": "gh: Not Found (HTTP 404)\n" if status == 1 else "",
     }
 
 
@@ -159,6 +161,7 @@ def sync_branch_ref_rule(status):
                   f"repos/{SLUG}/git/ref/heads/{SYNC_BRANCH}"],
         "stdout": "",
         "status": status,
+        "stderr": "gh: Not Found (HTTP 404)\n" if status == 1 else "",
     }
 
 
@@ -311,6 +314,7 @@ def test_archived_repo_is_filtered_from_canonical_list(tmp_path):
                       f"repos/eriksjaastad/{name}/contents/{DEAD_WRAPPER_PATH}"],
             "stdout": "",
             "status": 1,
+            "stderr": "gh: Not Found (HTTP 404)\n",
         })
     for name in CANONICAL_REPOS:
         if name == "ai-journal":
@@ -340,6 +344,19 @@ def test_api_failure_fetching_repo_exits_nonzero(tmp_path):
     assert result.returncode == 1
     assert "ERROR: cannot fetch repo" in result.stdout
     assert "Done with 1 failure(s)." in result.stdout
+
+
+def test_contents_api_failure_is_not_reported_as_missing(tmp_path):
+    failed_lookup = contents_rule(status=1)
+    failed_lookup["stderr"] = "gh: Service Unavailable (HTTP 503)\n"
+    gha, scenario, log = make_gha(tmp_path, [failed_lookup, repo_info_rule()])
+    result = run_sync(tmp_path, gha, scenario, log, "--apply",
+                      "delete-dead-claude-review", REPO)
+
+    assert result.returncode == 1
+    assert "cannot verify" in result.stdout
+    assert "already absent" not in result.stdout
+    assert not any("-X" in call for call in read_calls(log))
 
 
 def test_api_failure_creating_pr_exits_nonzero(tmp_path):
@@ -383,3 +400,35 @@ def test_missing_gha_shim_fails_visibly(tmp_path):
     assert result.returncode == 1
     assert "not executable" in result.stderr
     assert "managed identity" in result.stderr
+
+
+def test_standardize_repo_read_failure_is_not_success(tmp_path):
+    gha, scenario, log = make_gha(tmp_path, [repo_info_rule(status=1)])
+    env = os.environ.copy()
+    env.update(GHA_BIN=str(gha), FAKE_GHA_SCENARIO=str(scenario),
+               FAKE_GHA_LOG=str(log))
+    result = subprocess.run(
+        [str(STANDARDIZE_SCRIPT), "--dry-run", REPO],
+        env=env, capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 1
+    assert "cannot fetch repo" in result.stdout
+    assert "already canonical" not in result.stdout
+
+
+def test_standardize_all_active_list_failure_is_not_empty_success(tmp_path):
+    gha, scenario, log = make_gha(tmp_path, [{
+        "match": ["repo", "list", "eriksjaastad"],
+        "status": 1,
+        "stderr": "gh: Service Unavailable (HTTP 503)\n",
+    }])
+    env = os.environ.copy()
+    env.update(GHA_BIN=str(gha), FAKE_GHA_SCENARIO=str(scenario),
+               FAKE_GHA_LOG=str(log))
+    result = subprocess.run(
+        [str(STANDARDIZE_SCRIPT), "--dry-run", "--all-active"],
+        env=env, capture_output=True, text=True, timeout=30,
+    )
+    assert result.returncode == 1
+    assert "cannot list active repositories" in result.stderr
+    assert "already canonical" not in result.stdout

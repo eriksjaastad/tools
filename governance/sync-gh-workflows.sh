@@ -220,6 +220,21 @@ repo_json() {
   "$GHA" api "repos/$OWNER/$1" 2>/dev/null
 }
 
+# A missing resource is expected on first run. Other API failures must never
+# be reported as an already-absent file or branch.
+api_get_optional() {
+  local response
+  if response=$("$GHA" api "$1" 2>&1); then
+    printf '%s' "$response"
+    return 0
+  fi
+  if [[ "$response" == *"(HTTP 404)"* ]]; then
+    return 4
+  fi
+  echo "GitHub lookup failed for $1: $response" >&2
+  return 1
+}
+
 repo_archived() {
   # Print "true" only when the fetched repo JSON says so. A fetch failure or a
   # malformed payload is a failure, not an active repo: callers check the exit
@@ -253,7 +268,7 @@ delete_file_on_branch() {
 delete_dead_claude_review() {
   local repo="$1"
   local slug="$OWNER/$repo"
-  local info default_branch archived file_json existing_sha decoded
+  local info default_branch archived file_json existing_sha encoded decoded
   local branch_file_json branch_sha ref_json default_ref default_sha
   local pr_json pr_number pr_url
 
@@ -263,8 +278,12 @@ delete_dead_claude_review() {
     return
   fi
 
-  default_branch=$(echo "$info" | jq -r '.default_branch // ""')
-  archived=$(repo_archived "$info")
+  if ! default_branch=$(jq -er '.default_branch | select(type == "string" and length > 0)' <<< "$info") || \
+      ! archived=$(jq -r 'if (.archived | type) == "boolean" then .archived else error("missing archived flag") end' <<< "$info"); then
+    echo "[$repo] ERROR: malformed repository metadata"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
   if [[ "$archived" == "true" ]]; then
     echo "[$repo] skip: archived, no write attempted"
     return
@@ -275,13 +294,26 @@ delete_dead_claude_review() {
     return
   fi
 
-  if ! file_json=$("$GHA" api "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$default_branch" 2>/dev/null); then
-    echo "[$repo] ✓ $DEAD_WRAPPER_PATH already absent on $default_branch"
+  if file_json=$(api_get_optional "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$default_branch"); then
+    :
+  else
+    local lookup_status=$?
+    if [[ "$lookup_status" -eq 4 ]]; then
+      echo "[$repo] ✓ $DEAD_WRAPPER_PATH already absent on $default_branch"
+    else
+      echo "[$repo] ERROR: cannot verify $DEAD_WRAPPER_PATH on $default_branch"
+      FAILURES=$((FAILURES + 1))
+    fi
     return
   fi
 
-  existing_sha=$(echo "$file_json" | jq -r '.sha // ""')
-  decoded="$(decode_base64 "$(echo "$file_json" | jq -r '.content // ""')")"
+  if ! existing_sha=$(jq -er '.sha | select(type == "string" and length > 0)' <<< "$file_json") || \
+      ! encoded=$(jq -er '.content | select(type == "string" and length > 0)' <<< "$file_json") || \
+      ! decoded=$(decode_base64 "$encoded"); then
+    echo "[$repo] ERROR: malformed wrapper response"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
   if ! printf '%s' "$decoded" | grep -q "$DEAD_WRAPPER_REF"; then
     echo "[$repo] skip $DEAD_WRAPPER_PATH: file does not match dead wrapper signature"
     return
@@ -304,7 +336,11 @@ delete_dead_claude_review() {
     FAILURES=$((FAILURES + 1))
     return
   fi
-  pr_number=$(echo "$pr_json" | jq -r '.[0].number // ""')
+  if ! pr_number=$(jq -er 'if type == "array" then (.[0].number // "") else error("not an array") end' <<< "$pr_json"); then
+    echo "    ! malformed open-PR response"
+    FAILURES=$((FAILURES + 1))
+    return
+  fi
   if [[ -n "$pr_number" ]]; then
     echo "    ✓ PR already open: #$pr_number"
     return
@@ -313,12 +349,10 @@ delete_dead_claude_review() {
   # Idempotency gate 2: reuse an existing branch from a previous interrupted
   # run. If the file is already gone on that branch, open the PR; otherwise
   # finish the deletion on the branch first.
-  if ref_json=$("$GHA" api "repos/$slug/git/ref/heads/$SYNC_BRANCH" 2>/dev/null); then
+  if ref_json=$(api_get_optional "repos/$slug/git/ref/heads/$SYNC_BRANCH"); then
     echo "    - branch $SYNC_BRANCH already exists; reusing"
-    if ! branch_file_json=$("$GHA" api "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$SYNC_BRANCH" 2>/dev/null); then
-      echo "    ✓ wrapper already absent on $SYNC_BRANCH"
-    else
-      branch_sha=$(echo "$branch_file_json" | jq -r '.sha // ""')
+    if branch_file_json=$(api_get_optional "repos/$slug/contents/$DEAD_WRAPPER_PATH?ref=$SYNC_BRANCH"); then
+      branch_sha=$(jq -r '.sha // ""' <<< "$branch_file_json")
       if [[ -z "$branch_sha" ]]; then
         echo "    ! cannot resolve file sha on $SYNC_BRANCH"
         FAILURES=$((FAILURES + 1))
@@ -330,8 +364,22 @@ delete_dead_claude_review() {
         return
       fi
       echo "    ✓ wrapper deleted on existing branch $SYNC_BRANCH"
+    else
+      local branch_file_status=$?
+      if [[ "$branch_file_status" -ne 4 ]]; then
+        echo "    ! cannot verify wrapper on $SYNC_BRANCH"
+        FAILURES=$((FAILURES + 1))
+        return
+      fi
+      echo "    ✓ wrapper already absent on $SYNC_BRANCH"
     fi
   else
+    local ref_status=$?
+    if [[ "$ref_status" -ne 4 ]]; then
+      echo "    ! cannot verify whether $SYNC_BRANCH exists"
+      FAILURES=$((FAILURES + 1))
+      return
+    fi
     # Create the branch from the default branch's current head.
     if ! default_ref=$("$GHA" api "repos/$slug/git/ref/heads/$default_branch" 2>/dev/null); then
       echo "    ! cannot resolve default branch ref $default_branch"
