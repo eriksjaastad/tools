@@ -1,9 +1,0 @@
-.env
-results/*.json
-results/*.md
-!results/.gitkeep
-!results/pilot_hypocrisynow_sealed_*.json
-!results/pilot_hypocrisynow_sealed_*.md
-__pycache__/
-*.pyc
-.venv/

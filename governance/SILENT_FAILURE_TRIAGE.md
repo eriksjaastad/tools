@@ -1,5 +1,9 @@
 # `_tools` remediation (#6981 / #6900)
 
+> Note 2026-09-25: `model-bench` was retired under #6453. Rows below that cite
+> `model-bench/tests/...` or `model-bench/model_bench/...` are retained as
+> historical traceability only; the package no longer exists in the tree.
+
 All 26 initial findings below have now been resolved through changed failure
 contracts or reviewed, handler-specific exceptions. Verification on 2026-09-07:
 the local scanner reports zero findings, and the combined CI suite passes

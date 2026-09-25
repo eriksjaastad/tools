@@ -28,8 +28,9 @@ own workflow and required-status context are retired. GitHub Codex review
 and unrelated CI remain independent requirements.
 
 Use `governance/sync-gh-workflows.sh` to delete obsolete
-`claude-review.yml` wrappers and handle the scoped `master` -> `main`
-rename for `eriksjaastad/eriksjaastad`. Run with `--dry-run` first.
+`claude-review.yml` wrappers through a branch-and-PR flow (it never commits
+to a default branch) and to handle the scoped `master` -> `main` rename for
+`eriksjaastad/eriksjaastad`. Run with `--dry-run` first.
 
 ---
 
@@ -68,13 +69,21 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 - [`route/`](route/README.md) - Model routing CLI and `model_registry.json` pricing source of truth.
 - `hooks/` - Claude Code PreToolUse/PostToolUse hooks.
 - `claude-hooks/` - Additional Claude Code hooks for PR enforcement.
-- [`model-bench/`](model-bench/README.md) - Model benchmarking and comparison.
 - [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
 - [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
 - [`integrity-warden/`](integrity-warden/README.md) - Security and compliance auditing.
 - [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
 - [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
 - [`claude-cli/`](claude-cli/README.md) - Legacy command-line interface to Claude.
+
+## Retired Tools
+
+- `model-bench/` — Model benchmarking and comparison. Retired 2026-09-25
+  (#6453): the Mac Mini benchmark effort was discontinued. Sealed pilot
+  results are preserved under
+  [`_archive/model-bench-results/`](_archive/model-bench-results/README.md);
+  full code history remains in Git. Replacement benchmark research is tracked
+  separately (#7001).
 
 ---
 
@@ -121,7 +130,6 @@ _tools/
 ├── route/                  # Model routing CLI and registry
 ├── hooks/                  # Claude Code PreToolUse/PostToolUse hooks
 ├── claude-hooks/           # Additional Claude Code hooks
-├── model-bench/            # Model benchmarking
 ├── claude-mcp-go/          # Go MCP hub for agent communication
 ├── ollama-mcp-go/          # Go MCP server for local Ollama models
 ├── integrity-warden/       # Security and compliance auditing
