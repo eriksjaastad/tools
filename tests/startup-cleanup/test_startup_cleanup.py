@@ -97,6 +97,13 @@ def branch_names(repo: Path) -> list[str]:
     return [line for line in proc.stdout.splitlines() if line.strip()]
 
 
+def track_task_branch(repo: Path, branch: str) -> None:
+    """Give a local task branch the normal origin/task tracking configuration."""
+    git(repo, "config", f"branch.{branch}.remote", "origin")
+    git(repo, "config", f"branch.{branch}.merge", f"refs/heads/{branch}")
+    git(repo, "update-ref", f"refs/remotes/origin/{branch}", branch)
+
+
 class FakeTrash:
     """Recoverable trash stand-in: moves paths into a per-test trash dir."""
 
@@ -166,6 +173,7 @@ def test_removes_merged_clean_worktree_and_branch_outside_claude_dir(sc, tmp_pat
     assert removal["target"] == str(wt)
     assert removal["branch"] == "task/123-isolated"
     assert removal["branch_deleted"] is True
+    assert report["summary"]["branches_deleted"] == 1
     assert not wt.exists()
     assert "task/123-isolated" not in branch_names(repo)
     assert any("worktree" in call or "wt" in call for call in trash.calls)
@@ -179,6 +187,24 @@ def test_removes_merged_clean_worktree_and_branch_outside_claude_dir(sc, tmp_pat
     )
     assert report2["removed"] == []
     assert report2["summary"]["refusals"] == 0
+
+
+def test_removes_merged_clean_worktree_with_tracking_upstream(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    branch = "task/124-tracked-worktree"
+    wt = tmp_path / "tracked-task-worktree"
+    make_task_worktree(repo, branch, wt)
+    merge_branch(repo, branch)
+    track_task_branch(repo, branch)
+    monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
+
+    report = sc.run_startup_cleanup(
+        repo, gh_bin=str(make_fake_gh(tmp_path)), trash_fn=FakeTrash(tmp_path / "trash")
+    )
+    assert report["ok"] is True
+    assert any(item["branch"] == branch and item["branch_deleted"] for item in report["removed"])
+    assert not wt.exists()
+    assert branch not in branch_names(repo)
 
 
 def test_preserves_clean_merged_worktree_used_by_another_session(sc, tmp_path, monkeypatch):
@@ -294,7 +320,12 @@ def test_dry_run_removes_nothing(sc, tmp_path, monkeypatch):
     assert report["dry_run"] is True
     assert wt.exists()
     assert "task/789-dry" in branch_names(repo)
-    assert all(r.get("note", "").startswith("dry-run") for r in report["removed"])
+    assert report["removed"] == []
+    assert report["summary"]["worktrees_removed"] == 0
+    assert report["summary"]["branches_deleted"] == 0
+    assert report["summary"]["worktrees_planned"] == 1
+    assert report["summary"]["branches_planned"] == 1
+    assert all(r.get("note", "").startswith("dry-run") for r in report["planned"])
 
 
 # --- refusal cases ---------------------------------------------------------
@@ -537,7 +568,7 @@ def test_branch_delete_refuses_new_worktree_checkout(sc, tmp_path, monkeypatch):
     new_wt = tmp_path / "new-active-worktree"
 
     def with_race(path, args, timeout):
-        if args == ["branch", "-d", branch]:
+        if args[-3:] == ["branch", "-d", branch]:
             git(repo, "worktree", "add", "-q", str(new_wt), branch)
         return original(path, args, timeout)
 
@@ -556,7 +587,7 @@ def test_branch_delete_refuses_new_unmerged_tip(sc, tmp_path, monkeypatch):
     original = sc._git_ok
 
     def with_race(path, args, timeout):
-        if args == ["branch", "-d", branch]:
+        if args[-3:] == ["branch", "-d", branch]:
             tree = git(repo, "rev-parse", f"{branch}^{{tree}}").stdout.strip()
             parent = git(repo, "rev-parse", branch).stdout.strip()
             new_tip = git(repo, "commit-tree", tree, "-p", parent, "-m", "new work").stdout.strip()
@@ -567,6 +598,80 @@ def test_branch_delete_refuses_new_unmerged_tip(sc, tmp_path, monkeypatch):
     ok, reason = sc._delete_branch(repo, branch, "main", 3)
     assert not ok
     assert "not fully merged" in reason
+    assert branch in branch_names(repo)
+
+
+def test_deletes_merged_branch_with_tracking_upstream(sc, tmp_path):
+    repo = make_repo(tmp_path)
+    branch = "task/112-tracked-merged"
+    make_task_branch(repo, branch, "merged.txt")
+    track_task_branch(repo, branch)
+
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert ok, reason
+    assert branch not in branch_names(repo)
+
+
+def test_branch_delete_refuses_new_tip_even_if_upstream_advances(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    branch = "task/113-tracked-race"
+    make_task_branch(repo, branch, "merged.txt")
+    track_task_branch(repo, branch)
+    original = sc._git_ok
+
+    def with_race(path, args, timeout):
+        if args[-3:] == ["branch", "-d", branch]:
+            tree = git(repo, "rev-parse", f"{branch}^{{tree}}").stdout.strip()
+            parent = git(repo, "rev-parse", branch).stdout.strip()
+            new_tip = git(repo, "commit-tree", tree, "-p", parent, "-m", "new work").stdout.strip()
+            git(repo, "update-ref", f"refs/heads/{branch}", new_tip)
+            git(repo, "update-ref", f"refs/remotes/origin/{branch}", new_tip)
+        return original(path, args, timeout)
+
+    monkeypatch.setattr(sc, "_git_ok", with_race)
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert not ok
+    assert "not fully merged" in reason
+    assert branch in branch_names(repo)
+    assert git(repo, "config", "--get", f"branch.{branch}.remote").stdout.strip() == "origin"
+    assert git(repo, "config", "--get", f"branch.{branch}.merge").stdout.strip() == f"refs/heads/{branch}"
+
+
+def test_branch_delete_uses_main_when_primary_checkout_switches(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    branch = "task/114-primary-switch"
+    make_task_branch(repo, branch, "merged.txt")
+    track_task_branch(repo, branch)
+    original = sc._git_ok
+
+    def with_race(path, args, timeout):
+        if args[-3:] == ["branch", "-d", branch]:
+            git(repo, "checkout", "-q", "-b", "another-branch", branch)
+            tree = git(repo, "rev-parse", f"{branch}^{{tree}}").stdout.strip()
+            parent = git(repo, "rev-parse", branch).stdout.strip()
+            new_tip = git(repo, "commit-tree", tree, "-p", parent, "-m", "new work").stdout.strip()
+            git(repo, "update-ref", f"refs/heads/{branch}", new_tip)
+            git(repo, "update-ref", f"refs/heads/another-branch", new_tip)
+            git(repo, "update-ref", f"refs/remotes/origin/{branch}", new_tip)
+        return original(path, args, timeout)
+
+    monkeypatch.setattr(sc, "_git_ok", with_race)
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert not ok
+    assert "not fully merged" in reason
+    assert branch in branch_names(repo)
+
+
+def test_branch_delete_refuses_ambiguous_tracking_configuration(sc, tmp_path):
+    repo = make_repo(tmp_path)
+    branch = "task/115-ambiguous-tracking"
+    make_task_branch(repo, branch, "merged.txt")
+    track_task_branch(repo, branch)
+    git(repo, "config", "--add", f"branch.{branch}.merge", "refs/heads/another-task")
+
+    ok, reason = sc._delete_branch(repo, branch, "main", 3)
+    assert not ok
+    assert "ambiguous upstream" in reason
     assert branch in branch_names(repo)
 
 

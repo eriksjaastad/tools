@@ -18,14 +18,15 @@ Automatic removal requires *all* of the following to be true:
 * the worktree is not locked, is not the primary checkout, and is not the
   checkout the agent is starting inside (active session);
 * no open GitHub PR has the branch as its head;
-* the GitHub CLI (``gha`` or ``gh``) is available and the PR check succeeds.
+* the managed GitHub CLI (``gha``) is available and the PR check succeeds.
 
 Anything that fails one of these checks, or anything that cannot be verified,
 is refused and reported. Removal of directories always goes through a
 recoverable Trash path (``send2trash``, macOS ``/usr/bin/trash``, or the
 Finder AppleScript fallback) and never uses ``rm`` or ``git clean``. Branch
-deletion uses ``git branch -d`` from a verified primary main checkout. Git
-checks the current tip's merge and checked-out state during deletion.
+deletion uses ``git branch -d`` with a command-local mapping that makes Git
+check the candidate's current tip against local main, regardless of its saved
+upstream. Git also rejects branches checked out in another worktree.
 
 Startup boundedness
 -------------------
@@ -33,7 +34,7 @@ Startup boundedness
   a configured interval (default disabled; ``--force`` bypasses);
 * worktree and branch inventories are capped (``--max-worktrees``,
   ``--max-branches``) and the check fails closed above the cap;
-* every git subprocess has a timeout (``--timeout``, default 10s).
+* every git subprocess has a timeout (``--timeout``, default 3s).
 
 Output and exit codes
 ---------------------
@@ -54,6 +55,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -372,7 +374,7 @@ def trash_path(path: Path, timeout: int = DEFAULT_TRASH_TIMEOUT) -> tuple[bool, 
 
 
 def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bool, str]:
-    """Use Git's checked-out and current-tip merge protection from main."""
+    """Make Git's own deletion check use local main, not the branch's upstream."""
     merged, reason = _branch_merged(repo, main, branch, timeout)
     if not merged:
         return False, reason
@@ -391,7 +393,45 @@ def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bo
     ok, primary_head, err = _git_ok(primary, ["rev-parse", "HEAD"], timeout)
     if not ok or primary_head.strip() != main_tip.strip():
         return False, "primary checkout HEAD does not match main"
-    ok, _, err = _git_ok(primary, ["branch", "-d", branch], timeout)
+    # `git branch -d` normally checks the tracked upstream instead of HEAD.
+    # A task branch can advance alongside origin/task after our ancestry check;
+    # deleting it then would lose a tip that is not in local main. Supply a
+    # command-local remote whose fetch refspec resolves that upstream to main.
+    # The saved branch tracking configuration is never changed.
+    try:
+        config = _git(repo, ["config", "--null", "--get-all", f"branch.{branch}.merge"], timeout)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return False, f"cannot inspect branch upstream: {exc}"
+    if config.returncode == 0:
+        if not config.stdout.endswith("\0"):
+            return False, "malformed branch upstream configuration"
+        merge_values = config.stdout[:-1].split("\0")
+        if len(merge_values) != 1 or not merge_values[0]:
+            return False, "branch has ambiguous upstream merge configuration"
+        merge_ref = merge_values[0]
+    elif config.returncode == 1 and not config.stdout and not config.stderr:
+        merge_ref = f"refs/heads/{branch}"
+    else:
+        return False, config.stderr.strip() or "cannot inspect branch upstream"
+    if not merge_ref.startswith("refs/heads/"):
+        return False, f"unsupported branch upstream ref: {merge_ref}"
+    ok, _, err = _git_ok(repo, ["check-ref-format", merge_ref], timeout)
+    if not ok:
+        return False, err.strip() or "invalid branch upstream ref"
+
+    remote = f"startup-cleanup-{uuid.uuid4().hex}"
+    options = [
+        "-c", f"branch.{branch}.remote={remote}",
+        "-c", f"remote.{remote}.fetch={merge_ref}:refs/heads/{main}",
+    ]
+    if config.returncode == 1:
+        options += ["-c", f"branch.{branch}.merge={merge_ref}"]
+    ok, upstream, err = _git_ok(
+        primary, [*options, "rev-parse", "--symbolic-full-name", f"{branch}@{{upstream}}"], timeout
+    )
+    if not ok or upstream.strip() != f"refs/heads/{main}":
+        return False, err.strip() or "cannot map branch deletion check to local main"
+    ok, _, err = _git_ok(primary, [*options, "branch", "-d", branch], timeout)
     if ok:
         return True, ""
     return False, err.strip() or "git branch -d failed"
@@ -553,6 +593,7 @@ def run_startup_cleanup(
         "throttled": False,
         "project_dir": str(project_dir),
         "removed": [],
+        "planned": [],
         "refused": [],
         "reports": [],
     }
@@ -737,7 +778,7 @@ def run_startup_cleanup(
     except StartupCleanupError as exc:
         report["ok"] = False
         report["error"] = f"could not refresh worktree list after removals: {exc}"
-        report["removed"] = [r.__dict__ for r in removed]
+        report["planned" if dry_run else "removed"] = [r.__dict__ for r in removed]
         report["refused"] = [
             {"type": r.type, "target": r.target, "branch": r.branch, "reasons": r.reasons}
             for r in refusals
@@ -787,7 +828,7 @@ def run_startup_cleanup(
         else:
             refusals.append(Refusal("branch", branch, branch, [f"branch delete failed: {err}"]))
 
-    report["removed"] = [r.__dict__ for r in removed]
+    report["planned" if dry_run else "removed"] = [r.__dict__ for r in removed]
     report["refused"] = [
         {"type": r.type, "target": r.target, "branch": r.branch, "reasons": r.reasons}
         for r in refusals
@@ -795,8 +836,10 @@ def run_startup_cleanup(
     report["summary"] = {
         "worktrees_scanned": max(0, len(worktrees) - 1),
         "branches_scanned": len([b for b in branches if b != main and TASK_BRANCH_RE.match(b)]),
-        "worktrees_removed": sum(1 for r in removed if r.type == "worktree"),
-        "branches_deleted": sum(1 for r in removed if r.type == "branch"),
+        "worktrees_removed": sum(1 for r in removed if r.type == "worktree") if not dry_run else 0,
+        "branches_deleted": sum(1 for r in removed if r.branch_deleted) if not dry_run else 0,
+        "worktrees_planned": sum(1 for r in removed if r.type == "worktree") if dry_run else 0,
+        "branches_planned": sum(1 for r in removed if r.branch) if dry_run else 0,
         "refusals": len(refusals),
     }
     for refusal in refusals:
@@ -860,15 +903,28 @@ def _print_human(report: dict) -> None:
     print(f"startup-cleanup: repo={root} main={report.get('main_branch', '?')} "
           f"fresh={report.get('main_fresh', '?')}")
     summary = report.get("summary", {})
-    print(
-        "summary: "
-        f"worktrees_removed={summary.get('worktrees_removed', 0)} "
-        f"branches_deleted={summary.get('branches_deleted', 0)} "
-        f"refusals={summary.get('refusals', 0)} "
-        f"({report.get('duration_ms', 0)}ms)"
-    )
+    if report.get("dry_run"):
+        print(
+            "summary: dry-run "
+            f"worktrees_planned={summary.get('worktrees_planned', 0)} "
+            f"branches_planned={summary.get('branches_planned', 0)} "
+            f"refusals={summary.get('refusals', 0)} "
+            f"({report.get('duration_ms', 0)}ms)"
+        )
+    else:
+        print(
+            "summary: "
+            f"worktrees_removed={summary.get('worktrees_removed', 0)} "
+            f"branches_deleted={summary.get('branches_deleted', 0)} "
+            f"refusals={summary.get('refusals', 0)} "
+            f"({report.get('duration_ms', 0)}ms)"
+        )
     for item in report.get("removed", []):
         print(f"  removed {item['type']} {item['target']}"
+              f"{(' branch=' + item['branch']) if item.get('branch') else ''}"
+              f"{(' note=' + item['note']) if item.get('note') else ''}")
+    for item in report.get("planned", []):
+        print(f"  planned {item['type']} {item['target']}"
               f"{(' branch=' + item['branch']) if item.get('branch') else ''}"
               f"{(' note=' + item['note']) if item.get('note') else ''}")
     for message in report.get("reports", []):

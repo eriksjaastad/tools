@@ -53,8 +53,11 @@ After the worktree directory is trashed, its per-worktree admin directory under
 `<main>/.git/worktrees/<name>` is trashed the same way (this is the surgical
 equivalent of `git worktree prune`, scoped to exactly one entry), and finally
 the branch is deleted with `git branch -d` from a verified primary `main`
-checkout. Git checks the current branch tip and rejects one that has become
-unmerged or checked out in another worktree.
+checkout. A command-local Git configuration maps the branch's upstream to
+local `main` for that deletion only; the saved tracking settings are untouched.
+The tool verifies the mapping before deletion. Git then checks the current tip
+against `main` and rejects a branch that has become unmerged or checked out in
+another worktree.
 
 Remote branches are never touched. `git clean -fdx` is never used.
 
@@ -94,8 +97,8 @@ the tool itself could not run. This keeps SessionStart hooks non-blocking.
 
 Output schema: `tools.startup-cleanup.v1` with `ok`, `project_dir`,
 `repo_root`, `main_branch`, `main_fresh`, `throttled`, `summary`,
-`removed[]`, `refused[]` (each with `type`, `target`, `branch`, `reasons[]`),
-`reports[]`, and `duration_ms`.
+`removed[]`, `planned[]` (dry-run only), `refused[]` (each with `type`,
+`target`, `branch`, `reasons[]`), `reports[]`, and `duration_ms`.
 
 ## Claude Code installation
 
