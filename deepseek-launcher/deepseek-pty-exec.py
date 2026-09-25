@@ -129,7 +129,8 @@ def main() -> int:
     if os.WIFEXITED(exit_status):
         code = os.WEXITSTATUS(exit_status)
         if code == 0 and args.ping:
-            plain = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", bytes(ping_output))
+            plain = re.sub(rb"\x1b\][^\x07]*(?:\x07|\x1b\\)", b"", bytes(ping_output))
+            plain = re.sub(rb"\x1b\[[0-9;]*[A-Za-z]", b"", plain)
             if b"PONG" not in [line.strip() for line in plain.splitlines()]:
                 print("deepseek-pty-exec: ping response did not contain a standalone PONG", file=sys.stderr)
                 return 1

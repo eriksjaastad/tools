@@ -46,7 +46,8 @@ MODEL="${DEEPCODE_MODEL:-deepseek-v4-pro}"
 
 SETTINGS_DIR="$HOME/.deepcode"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
-SETTINGS_HELPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/settings_file.py"
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SETTINGS_HELPER="$(dirname "$SCRIPT_PATH")/settings_file.py"
 REUSE_EXISTING=0
 WE_CREATED=0
 CREATED_INODE=""
@@ -77,7 +78,7 @@ if [[ "${DEEPCODE_PTY_ACTIVE:-0}" != 1 ]] && [[ ! -t 0 || ! -t 1 ]]; then
   for arg in "$@"; do
     if [[ "$arg" == "-x" || "$arg" == "--execute" ]]; then
       exec python3 "$(dirname "$SETTINGS_HELPER")/deepseek-pty-exec.py" \
-        --cwd "$PWD" --timeout "${DEEPCODE_TIMEOUT:-300}" --bin "$0" -- "$@"
+        --cwd "$PWD" --timeout "${DEEPCODE_TIMEOUT:-300}" --bin "$SCRIPT_PATH" -- "$@"
     fi
   done
 fi

@@ -22,6 +22,7 @@ class LauncherTest(unittest.TestCase):
         self.bin = self.root / "bin"
         self.home.mkdir()
         self.bin.mkdir()
+        (self.bin / "deepseek").symlink_to(LAUNCHER)
         self.write("doppler", "#!/bin/sh\necho sk-0123456789abcdef0123456789abcdef\n")
         self.write("deepcode", "#!/usr/bin/env python3\nimport sys\nsys.exit(0 if sys.stdin.isatty() and sys.stdout.isatty() else 17)\n")
         self.write("trash", "#!/bin/sh\ncat \"$1\" >> \"$TEST_TRASH_CONTENT\"\n: > \"$1\"\nmv \"$1\" \"$TEST_TRASH_FILE\"\n")
@@ -53,7 +54,9 @@ class LauncherTest(unittest.TestCase):
             self.assertEqual(content.read_bytes(), b"")
 
     def test_non_tty_exit_and_cwd(self):
-        result = self.run_launcher("-x", "-p", "synthetic")
+        result = subprocess.run([str(self.bin / "deepseek"), "-x", "-p", "synthetic"],
+                                cwd=self.root, env=self.env, capture_output=True,
+                                text=True, timeout=15)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_secret_cleared()
 
@@ -134,6 +137,9 @@ class LauncherTest(unittest.TestCase):
         self.write("ping-cli", "#!/bin/sh\nprintf 'PONG\\n'\n")
         good = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=10)
         self.assertEqual(good.returncode, 0, good.stderr)
+        self.write("ping-cli", "#!/bin/sh\nprintf '\\033]0;DeepSeek\\007PONG\\r\\n'\n")
+        warp = subprocess.run(cmd, env=self.env, capture_output=True, text=True, timeout=10)
+        self.assertEqual(warp.returncode, 0, warp.stderr)
 
     def test_mode_while_running(self):
         self.write("deepcode", "#!/bin/sh\nsleep 2\n")
