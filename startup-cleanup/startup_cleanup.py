@@ -24,12 +24,12 @@ Anything that fails one of these checks, or anything that cannot be verified,
 is refused and reported. Removal of directories always goes through a
 recoverable Trash path (``send2trash``, macOS ``/usr/bin/trash``, or the
 Finder AppleScript fallback) and never uses ``rm`` or ``git clean``. Branch
-deletion uses ``git branch -d`` (git's own merged-only safety check).
+deletion uses compare-and-swap ``git update-ref -d`` after a fresh merge check.
 
 Startup boundedness
 -------------------
-* a throttle stamp under the repo's git common dir skips runs within a
-  configurable interval (default 6 hours; ``--force`` bypasses);
+* an optional throttle stamp under the repo's git common dir skips runs within
+  a configured interval (default disabled; ``--force`` bypasses);
 * worktree and branch inventories are capped (``--max-worktrees``,
   ``--max-branches``) and the check fails closed above the cap;
 * every git subprocess has a timeout (``--timeout``, default 10s).
@@ -59,13 +59,15 @@ from pathlib import Path
 SCHEMA_VERSION = "tools.startup-cleanup.v1"
 MAIN_BRANCH_CANDIDATES = ("main", "master", "trunk")
 TASK_BRANCH_RE = re.compile(r"^task/[0-9]+(-.+)?$")
-DEFAULT_MIN_INTERVAL_SECONDS = 6 * 60 * 60
+DEFAULT_MIN_INTERVAL_SECONDS = 0
 DEFAULT_MAX_WORKTREES = 40
 DEFAULT_MAX_BRANCHES = 100
-DEFAULT_GIT_TIMEOUT = 10
-DEFAULT_GH_TIMEOUT = 15
-DEFAULT_TRASH_TIMEOUT = 30
+DEFAULT_GIT_TIMEOUT = 3
+DEFAULT_GH_TIMEOUT = 5
+DEFAULT_TRASH_TIMEOUT = 5
+DEFAULT_MAX_DURATION_SECONDS = 35
 THROTTLE_STAMP_NAME = "startup-cleanup-last-run"
+_RUN_DEADLINE: float | None = None
 
 
 class StartupCleanupError(Exception):
@@ -105,6 +107,11 @@ def _run(args: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProces
     Raises subprocess.TimeoutExpired / OSError; callers translate those into
     refusal reasons so a failure never silently looks like success.
     """
+    if _RUN_DEADLINE is not None:
+        remaining = _RUN_DEADLINE - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(args, 0)
+        timeout = min(timeout, remaining)
     return subprocess.run(
         args,
         cwd=str(cwd),
@@ -363,11 +370,20 @@ def trash_path(path: Path, timeout: int = DEFAULT_TRASH_TIMEOUT) -> tuple[bool, 
     return False, "; ".join(filter(None, [reason, reason2, reason3]))
 
 
-def _delete_branch(repo: Path, branch: str, timeout: int) -> tuple[bool, str]:
-    ok, _, err = _git_ok(repo, ["branch", "-d", branch], timeout)
+def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bool, str]:
+    """Delete only the tip just verified merged into main (compare-and-swap)."""
+    merged, reason = _branch_merged(repo, main, branch, timeout)
+    if not merged:
+        return False, reason
+    ok, tip, err = _git_ok(repo, ["rev-parse", "--verify", f"refs/heads/{branch}"], timeout)
+    if not ok:
+        return False, err.strip() or "cannot resolve branch tip"
+    ok, _, err = _git_ok(
+        repo, ["update-ref", "-d", f"refs/heads/{branch}", tip.strip()], timeout
+    )
     if ok:
         return True, ""
-    return False, err.strip() or "git branch -d failed"
+    return False, err.strip() or "git update-ref -d failed"
 
 
 def _checked_out_branches(worktrees: list[Worktree]) -> set[str]:
@@ -458,7 +474,7 @@ def _remove_worktree(
 
     # 3. Delete the now-unregistered branch with git's own merged-only safety.
     if wt.branch:
-        ok, err = _delete_branch(repo, wt.branch, timeout)
+        ok, err = _delete_branch(repo, wt.branch, main, timeout)
         if ok:
             removal.branch_deleted = True
         else:
@@ -504,8 +520,9 @@ def run_startup_cleanup(
     dry_run: bool = False,
     gh_bin: str | None = None,
     trash_fn=trash_path,
-    active_cwds_fn=_active_cwds,
+    active_cwds_fn=None,
     now: float | None = None,
+    max_duration_seconds: int = DEFAULT_MAX_DURATION_SECONDS,
 ) -> dict:
     """Run one bounded per-project startup cleanup check.
 
@@ -515,6 +532,8 @@ def run_startup_cleanup(
     """
     started = time.time()
     now = time.time() if now is None else now
+    global _RUN_DEADLINE
+    _RUN_DEADLINE = time.monotonic() + max_duration_seconds
 
     report: dict = {
         "schema_version": SCHEMA_VERSION,
@@ -564,7 +583,6 @@ def run_startup_cleanup(
             {"level": "warning", "message": "no main/master/trunk branch found; nothing removed"}
         )
         report["summary"] = {"reason": "no main branch"}
-        _maybe_stamp(dry_run, stamp, now)
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
     report["main_branch"] = main
@@ -576,7 +594,6 @@ def run_startup_cleanup(
             {"level": "warning", "message": f"main is not fresh: {fresh_reason}; automatic cleanup disabled"}
         )
         report["summary"] = {"reason": "main not fresh", "detail": fresh_reason}
-        _maybe_stamp(dry_run, stamp, now)
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
 
@@ -598,7 +615,6 @@ def run_startup_cleanup(
             }
         )
         report["summary"] = {"reason": "worktree cap exceeded", "worktrees": len(worktrees)}
-        _maybe_stamp(dry_run, stamp, now)
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
 
@@ -620,7 +636,6 @@ def run_startup_cleanup(
             }
         )
         report["summary"] = {"reason": "branch cap exceeded", "branches": len(branches)}
-        _maybe_stamp(dry_run, stamp, now)
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
 
@@ -632,9 +647,12 @@ def run_startup_cleanup(
     # we are running from (the agent's active session).
     primary_path = worktrees[0].path if worktrees else None
     current_repo_path = str(repo)
+    if active_cwds_fn is None:
+        active_cwds_fn = _active_cwds
     active_cwds, activity_error = active_cwds_fn(timeout)
     refusals: list[Refusal] = []
     removed: list[Removal] = []
+    budget_exhausted = False
 
     for wt in worktrees:
         if wt.path == primary_path:
@@ -645,6 +663,9 @@ def run_startup_cleanup(
             )
             continue
         reasons: list[str] = []
+        if time.monotonic() > _RUN_DEADLINE - 25:
+            reasons.append("startup time budget nearly exhausted; preserve worktree")
+            budget_exhausted = True
         if wt.prunable:
             reasons.append("worktree directory already missing (stale/prunable); report only")
         if wt.branch is None:
@@ -671,7 +692,7 @@ def run_startup_cleanup(
             reasons.append("worktree directory missing; cannot verify clean state")
         if not reasons and wt.branch:
             if gh_bin is None:
-                reasons.append("GitHub CLI unavailable (no gha/gh); cannot verify no open PR")
+                reasons.append("GitHub CLI unavailable (no gha); cannot verify no open PR")
             elif repo_slug is None:
                 reasons.append("no origin remote; cannot verify no open PR")
             else:
@@ -685,6 +706,12 @@ def run_startup_cleanup(
         if reasons:
             _report_worktree_refusal(refusals, wt, reasons)
         else:
+            if time.monotonic() > _RUN_DEADLINE - 27:
+                budget_exhausted = True
+                _report_worktree_refusal(
+                    refusals, wt, ["startup time budget too short for recoverable worktree removal"]
+                )
+                continue
             removal = _remove_worktree(repo, wt, main, trash_fn, timeout, dry_run)
             if removal.note.startswith("refused:"):
                 refusals.append(Refusal("worktree", wt.path, wt.branch, [removal.note]))
@@ -695,6 +722,7 @@ def run_startup_cleanup(
     # not checked out in any remaining worktree.
     try:
         remaining_worktrees = _list_worktrees(repo)
+        current_branches = _list_branches(repo)
     except StartupCleanupError as exc:
         report["ok"] = False
         report["error"] = f"could not refresh worktree list after removals: {exc}"
@@ -707,12 +735,15 @@ def run_startup_cleanup(
         return report
     checked_out = _checked_out_branches(remaining_worktrees)
     current_branch = _current_branch(repo)
-    for branch in sorted(set(_list_branches(repo))):
+    for branch in sorted(set(current_branches)):
         if branch == main:
             continue
         if not TASK_BRANCH_RE.match(branch):
             continue
         reasons: list[str] = []
+        if time.monotonic() > _RUN_DEADLINE - 10:
+            reasons.append("startup time budget nearly exhausted; preserve branch")
+            budget_exhausted = True
         if branch == current_branch:
             reasons.append("current checkout branch (active session)")
         if branch in checked_out:
@@ -722,7 +753,7 @@ def run_startup_cleanup(
             reasons.append(merged_reason)
         if not reasons:
             if gh_bin is None:
-                reasons.append("GitHub CLI unavailable (no gha/gh); cannot verify no open PR")
+                reasons.append("GitHub CLI unavailable (no gha); cannot verify no open PR")
             elif repo_slug is None:
                 reasons.append("no origin remote; cannot verify no open PR")
             else:
@@ -739,7 +770,7 @@ def run_startup_cleanup(
         if dry_run:
             removed.append(Removal("branch", branch, branch, note="dry-run: would delete branch"))
             continue
-        ok, err = _delete_branch(repo, branch, timeout)
+        ok, err = _delete_branch(repo, branch, main, timeout)
         if ok:
             removed.append(Removal("branch", branch, branch, branch_deleted=True))
         else:
@@ -768,7 +799,8 @@ def run_startup_cleanup(
                 ),
             }
         )
-    _maybe_stamp(dry_run, stamp, now)
+    _maybe_stamp(dry_run or budget_exhausted or bool(refusals) or min_interval_seconds <= 0,
+                 stamp, now)
     report["duration_ms"] = int((time.time() - started) * 1000)
     return report
 
@@ -794,18 +826,16 @@ def _read_hook_project_dir() -> str | None:
 
 
 def _resolve_project_dir(cli_dir: str | None) -> Path:
-    candidates = []
     if cli_dir:
-        candidates.append(cli_dir)
-    candidates.append(_read_hook_project_dir() or "")
-    candidates.append(os.environ.get("CLAUDE_PROJECT_DIR"))
-    candidates.append(os.environ.get("CODEBOX_CWD"))
-    candidates.append(os.environ.get("CODEBOX_PROJECT_DIR"))
-    candidates.append(os.getcwd())
+        path = Path(cli_dir)
+        if not path.is_dir():
+            raise StartupCleanupError(f"explicit project directory does not exist: {cli_dir}")
+        return path.resolve()
+    candidates = [_read_hook_project_dir(), os.getcwd()]
     for candidate in candidates:
         if candidate and Path(candidate).is_dir():
             return Path(candidate).resolve()
-    return Path(os.getcwd()).resolve()
+    raise StartupCleanupError("no valid project directory in hook input or current directory")
 
 
 def _print_human(report: dict) -> None:
@@ -845,7 +875,7 @@ def _hook_command(provider: str) -> str:
                     {
                         "type": "command",
                         "command": f'python3 "{script}"',
-                        "timeout": 30,
+                        "timeout": 45,
                     }
                 ]
             },
@@ -857,7 +887,7 @@ def _hook_command(provider: str) -> str:
                 {
                     "type": "command",
                     "command": f'python3 "{script}"',
-                    "timeout": 30,
+                    "timeout": 45,
                 }
             ]
         },
@@ -882,6 +912,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-worktrees", type=int, default=DEFAULT_MAX_WORKTREES)
     parser.add_argument("--max-branches", type=int, default=DEFAULT_MAX_BRANCHES)
     parser.add_argument("--timeout", type=int, default=DEFAULT_GIT_TIMEOUT, help="Per-git-subprocess timeout")
+    parser.add_argument("--max-duration", type=int, default=DEFAULT_MAX_DURATION_SECONDS,
+                        help="Total seconds allowed for one startup scan")
     parser.add_argument("--human", action="store_true", help="Human-readable output instead of JSON")
     parser.add_argument(
         "--print-claude-hook-config",
@@ -915,13 +947,14 @@ def main(argv: list[str] | None = None) -> int:
         timeout=args.timeout,
         force=args.force,
         dry_run=args.dry_run,
+        max_duration_seconds=args.max_duration,
     )
 
     if args.human:
         _print_human(report)
     else:
         print(json.dumps(report, indent=2, sort_keys=True))
-    return 0
+    return 0 if report.get("ok") else 1
 
 
 if __name__ == "__main__":

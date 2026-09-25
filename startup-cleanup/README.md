@@ -52,21 +52,24 @@ If none succeeds, deletion is refused and the item is preserved with a report.
 After the worktree directory is trashed, its per-worktree admin directory under
 `<main>/.git/worktrees/<name>` is trashed the same way (this is the surgical
 equivalent of `git worktree prune`, scoped to exactly one entry), and finally
-the branch is deleted with `git branch -d` (git's own merged-only safety check).
+the branch is deleted with a compare-and-swap `git update-ref -d` after a fresh
+merge-ancestor check. A changed branch tip makes the deletion fail.
 
 Remote branches are never touched. `git clean -fdx` is never used.
 
 ## Bounded startup
 
-- **Throttle**: a stamp file `<repo>/.git/startup-cleanup-last-run` (via
-  `git rev-parse --git-common-dir`, so all worktrees of one project share it)
-  skips runs within the interval. Default 6 hours; `--force` bypasses;
-  `--min-interval 0` disables.
+- **Optional throttle**: a stamp file under the git common directory skips
+  repeated fully checked runs when `--min-interval` is set. It defaults to 0
+  so the next startup after a merge can clean immediately. Refusals and
+  incomplete scans do not write the stamp; `--force` bypasses it.
 - **Caps**: more than `--max-worktrees` (default 40) worktrees or more than
   `--max-branches` (default 100) branches makes the check fail closed and
   report instead of scanning unbounded input.
-- **Timeouts**: every git subprocess has `--timeout` (default 10s), the PR
-  check 15s, and Trash backends 30s.
+- **Timeouts**: the whole scan has a 35s budget and the native hooks allow
+  45s. Each git subprocess has `--timeout` (default 3s), PR lookups 5s,
+  and Trash backends 5s. Cleanup refuses a candidate when too little budget
+  remains to finish its recoverable removal.
 - Reruns are idempotent: once an entry is removed, later runs find nothing.
 
 ## Manual invocation
@@ -81,7 +84,7 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --project-dir ~/pro
 # Preview without removing anything (no stamp is written in dry-run)
 python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --dry-run --human
 
-# Bypass the throttle after a manual `git pull` on main
+# Bypass an optional throttle after a manual `git pull` on main
 python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --force --human
 ```
 
@@ -111,7 +114,7 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
     {
       "type": "command",
       "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\"",
-      "timeout": 30
+      "timeout": 45
     }
   ]
 }
@@ -142,7 +145,7 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --print-codex-hook-
     {
       "type": "command",
       "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\"",
-      "timeout": 30
+      "timeout": 45
     }
   ]
 }
@@ -168,8 +171,9 @@ python3 "$HOME/projects/_tools/startup-cleanup/startup_cleanup.py" \
 exec codex "$@"
 ```
 
-The script reads stdin `cwd`/`CLAUDE_PROJECT_DIR`/`PWD` in that order, so the
-wrapper and the native hook paths are interchangeable.
+An explicit `--project-dir` is checked first and never consumes stdin. Native
+hooks use their stdin `cwd`, then the process working directory. The wrapper
+passes `--project-dir "$PWD"`, so a piped Codex prompt remains untouched.
 
 ## Rollback
 

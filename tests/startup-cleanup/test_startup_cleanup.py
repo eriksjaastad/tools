@@ -30,8 +30,11 @@ def load_module():
 
 
 @pytest.fixture
-def sc():
-    return load_module()
+def sc(monkeypatch):
+    module = load_module()
+    # Synthetic repo behavior should be independent of host lsof availability.
+    monkeypatch.setattr(module, "_active_cwds", lambda timeout: (set(), ""))
+    return module
 
 
 def git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess:
@@ -220,6 +223,24 @@ def test_preserves_worktree_when_session_inspection_fails(sc, tmp_path, monkeypa
     assert "task/125-unverified" in branch_names(repo)
     assert trash.calls == []
     assert "lsof unavailable" in reasons_for(report, str(wt))
+
+
+def test_lsof_cwd_inventory_detects_nested_active_directory(tmp_path, monkeypatch):
+    module = load_module()
+    wt = tmp_path / "worktree"
+    nested = wt / "src"
+    nested.mkdir(parents=True)
+    monkeypatch.setattr(module.shutil, "which", lambda name: "/usr/bin/lsof")
+    monkeypatch.setattr(
+        module, "_run",
+        lambda args, cwd, timeout: subprocess.CompletedProcess(
+            args, 0, stdout=f"p123\nfcwd\nn{nested}\n", stderr=""
+        ),
+    )
+
+    active, error = module._active_cwds(3)
+    assert error == ""
+    assert module._has_active_cwd(wt, active)
 
 
 def test_hook_uses_payload_cwd_before_stale_provider_environment(sc, tmp_path, monkeypatch):
@@ -472,6 +493,42 @@ def test_refuses_main_not_fresh(sc, tmp_path, monkeypatch):
     assert "task/108-stale" in branch_names(repo)
 
 
+def test_fresh_main_after_refusal_can_clean_on_next_startup(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    wt = tmp_path / "fresh-later"
+    make_task_worktree(repo, "task/108-fresh-later", wt)
+    merge_branch(repo, "task/108-fresh-later")
+    git(repo, "update-ref", "refs/remotes/origin/main", "HEAD~1")
+    monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
+    gh = str(make_fake_gh(tmp_path))
+    trash = FakeTrash(tmp_path / "trash")
+
+    first = sc.run_startup_cleanup(repo, min_interval_seconds=3600,
+                                   gh_bin=gh, trash_fn=trash)
+    assert first["summary"]["reason"] == "main not fresh"
+    refresh_origin(repo)
+    second = sc.run_startup_cleanup(repo, min_interval_seconds=3600,
+                                    gh_bin=gh, trash_fn=trash)
+    assert second["throttled"] is False
+    assert not wt.exists()
+
+
+def test_deletes_merged_standalone_branch_from_older_task_checkout(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    active = tmp_path / "active-task"
+    git(repo, "worktree", "add", "-q", "-b", "task/109-active", str(active))
+    make_task_branch(repo, "task/109-merged", "merged.txt")
+    monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
+
+    report = sc.run_startup_cleanup(
+        active, gh_bin=str(make_fake_gh(tmp_path)),
+        trash_fn=FakeTrash(tmp_path / "trash"),
+    )
+    assert "task/109-merged" not in branch_names(repo)
+    assert any(item["branch"] == "task/109-merged" for item in report["removed"])
+    assert active.exists()
+
+
 def test_refuses_when_no_origin_main(sc, tmp_path):
     repo = make_repo(tmp_path)
     wt = tmp_path / "no-origin-wt"
@@ -649,3 +706,39 @@ def test_not_a_repo_reports_error(sc, tmp_path):
     report = sc.run_startup_cleanup(tmp_path, min_interval_seconds=0)
     assert report["ok"] is False
     assert "not a git repository" in report["error"]
+
+
+def test_invalid_explicit_project_never_falls_back_or_consumes_stdin(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    monkeypatch.chdir(repo)
+    prompt = io.StringIO("user prompt stays available")
+    monkeypatch.setattr(sys, "stdin", prompt)
+    with pytest.raises(sc.StartupCleanupError, match="explicit project directory"):
+        sc._resolve_project_dir(str(tmp_path / "missing"))
+    assert prompt.tell() == 0
+    assert sc._resolve_project_dir(str(repo)) == repo
+    assert prompt.tell() == 0
+
+
+def test_cli_returns_failure_for_nonrepository(sc, tmp_path):
+    result = subprocess.run(
+        [sys.executable, str(TOOL), "--project-dir", str(tmp_path), "--dry-run"],
+        capture_output=True, text=True, timeout=10,
+    )
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["ok"] is False
+
+
+def test_total_budget_refuses_slow_pr_lookup(sc, tmp_path, monkeypatch):
+    repo = make_repo(tmp_path)
+    make_task_branch(repo, "task/555-budget", "budget.txt")
+    gh = tmp_path / "slow-gha"
+    gh.write_text("#!/usr/bin/env python3\nimport time\ntime.sleep(10)\nprint('[]')\n")
+    gh.chmod(0o755)
+
+    report = sc.run_startup_cleanup(
+        repo, gh_bin=str(gh), max_duration_seconds=1,
+        active_cwds_fn=lambda timeout: (set(), ""),
+    )
+    assert "task/555-budget" in branch_names(repo)
+    assert report["duration_ms"] < 2500
