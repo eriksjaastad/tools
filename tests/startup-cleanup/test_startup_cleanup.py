@@ -283,6 +283,7 @@ def test_hook_uses_payload_cwd_before_stale_provider_environment(sc, tmp_path, m
         assert config["matcher"] == "^startup$"
         command = config["hooks"][0]["command"]
         assert '"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"' in command
+        assert command.endswith(" --human")
 
 
 def test_deletes_standalone_merged_task_branch(sc, tmp_path, monkeypatch):
