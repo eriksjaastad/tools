@@ -114,6 +114,7 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
 
 ```json
 {
+  "matcher": "^startup$",
   "hooks": [
     {
       "type": "command",
@@ -127,7 +128,8 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
 Insert it into `~/.claude/settings.json` under `"hooks"` → `"SessionStart"`
 (next to the existing entries). Claude runs the hook at session start, passes
 the project `cwd` on stdin, and surfaces the JSON report in the session
-context without blocking startup.
+context without blocking startup. The matcher runs cleanup on a new session
+only; resume, clear, compact, and fork events do not repeat the scan.
 
 After the PR lands, the floor manager installs this entry in the existing
 user-scope hook configuration and checks one real startup.
@@ -145,6 +147,7 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --print-codex-hook-
 
 ```json
 {
+  "matcher": "^startup$",
   "hooks": [
     {
       "type": "command",
@@ -154,6 +157,9 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --print-codex-hook-
   ]
 }
 ```
+
+The matcher runs cleanup on a new session only; resume, clear, and compact
+events do not repeat the scan.
 
 ### Documented wrapper path (fallback)
 

@@ -938,6 +938,7 @@ def _hook_command(provider: str) -> str:
     if provider == "claude":
         return json.dumps(
             {
+                "matcher": "^startup$",
                 "hooks": [
                     {
                         "type": "command",
@@ -950,6 +951,7 @@ def _hook_command(provider: str) -> str:
         )
     return json.dumps(
         {
+            "matcher": "^startup$",
             "hooks": [
                 {
                     "type": "command",

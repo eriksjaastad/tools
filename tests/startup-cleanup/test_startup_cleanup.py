@@ -279,7 +279,9 @@ def test_hook_uses_payload_cwd_before_stale_provider_environment(sc, tmp_path, m
 
     assert sc._resolve_project_dir(None) == current
     for provider in ("claude", "codex"):
-        command = json.loads(sc._hook_command(provider))["hooks"][0]["command"]
+        config = json.loads(sc._hook_command(provider))
+        assert config["matcher"] == "^startup$"
+        command = config["hooks"][0]["command"]
         assert '"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"' in command
 
 
