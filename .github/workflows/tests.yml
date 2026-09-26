@@ -50,6 +50,7 @@ jobs:
             tests/auth/ \
             tests/hooks/ \
             tests/remediation/ \
+            tests/startup-cleanup/ \
             tests/workflows/ \
             route/test_pricing.py \
             route/test_readers.py \
