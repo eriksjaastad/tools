@@ -38,10 +38,10 @@ Startup boundedness
 
 Output and exit codes
 ---------------------
-The default output is JSON (schema ``tools.startup-cleanup.v1``) on stdout so
-Claude/Codex SessionStart hooks can surface it in the session context without
-blocking startup. ``--human`` switches to a readable text report. Exit code 0
-means "check completed" (whether or not anything was removed or refused);
+The default output is JSON (schema ``tools.startup-cleanup.v1``) on stdout for
+direct callers. Claude/Codex SessionStart hooks request ``--human`` so their
+session contexts receive a readable text report. Exit code 0 means "check
+completed" (whether or not anything was removed or refused);
 exit code 1 means the tool itself could not run.
 """
 
@@ -942,7 +942,7 @@ def _hook_command(provider: str) -> str:
                 "hooks": [
                     {
                         "type": "command",
-                        "command": f'python3 "{script}"',
+                        "command": f'python3 "{script}" --human',
                         "timeout": 45,
                     }
                 ]
@@ -955,7 +955,7 @@ def _hook_command(provider: str) -> str:
             "hooks": [
                 {
                     "type": "command",
-                    "command": f'python3 "{script}"',
+                    "command": f'python3 "{script}" --human',
                     "timeout": 45,
                 }
             ]

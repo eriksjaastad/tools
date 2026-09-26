@@ -79,7 +79,7 @@ Remote branches are never touched. `git clean -fdx` is never used.
 ## Manual invocation
 
 ```bash
-# JSON report (default; what the hooks consume)
+# JSON report (default for direct use)
 python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --project-dir ~/projects/<project>
 
 # Human-readable
@@ -118,7 +118,7 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
   "hooks": [
     {
       "type": "command",
-      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\"",
+      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --human",
       "timeout": 45
     }
   ]
@@ -127,7 +127,7 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
 
 Insert it into `~/.claude/settings.json` under `"hooks"` → `"SessionStart"`
 (next to the existing entries). Claude runs the hook at session start, passes
-the project `cwd` on stdin, and surfaces the JSON report in the session
+the project `cwd` on stdin, and surfaces the readable report in the session
 context without blocking startup. The matcher runs cleanup on a new session
 only; resume, clear, compact, and fork events do not repeat the scan.
 
@@ -151,7 +151,7 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --print-codex-hook-
   "hooks": [
     {
       "type": "command",
-      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\"",
+      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --human",
       "timeout": 45
     }
   ]
