@@ -105,10 +105,11 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 > in sync with its registry-declared authoring surface. Refresh through the
 > shared-rule rollout; do not hand-copy rules into individual projects.
 
-These rules apply to Codex and Claude local reviewers. Codex is primary; Claude
-remains supported. This block contains the essential checks for in-repository
-review without requiring workstation files. Additional local detail:
-[full protocol](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/code-review-protocol.md).
+These rules apply to an independent local Codex review process.
+Claude implements authorized coding cards; Codex reviews the exact committed
+HEAD. This block contains the essential
+checks for in-repository review without requiring workstation files. Additional
+local detail: [full protocol](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/code-review-protocol.md).
 
 ### Mechanical checks
 
@@ -154,26 +155,13 @@ Read propagation sources first, execution-critical code next, then reference doc
   a repeated regression family requires reassessing the approach, not another
   isolated patch. Local preflight also consumes resources and must stay bounded.
 
-### Three independent review cycles: assess the result
+### Independent local review
 
-The initial independent review execution counts. Persist the work item's distinct
-review cycles, request/acknowledgement evidence, head SHAs and outcomes in its
-PR/task notes. Multiple comments or findings from one cycle are not multiple
-reviews. Count acknowledged failed/stalled executions; resolve uncertain history
-before triggering another. Follow the full PR policy's counting rules before
-pushes, requests, retries and merges.
-
-The third cycle may be requested after fixes and preflight. At that request or
-detection of an automatic third cycle, all agents on that work item stop edits,
-commits, pushes, further review requests and merges. Let that review finish.
-A clean third review on the unchanged recorded head may merge when CI and all
-other gates pass, without extra approval solely for its count. If findings remain,
-report the PR, SHA, findings, cycle evidence and recurring patterns to Erik; stop
-further fixes or requests until he directs the next step. Pending, unknown,
-ambiguous or stale evidence is not clearance; existing wait limits and unrelated
-user holds still apply. Do not reset the count by changing agents/sessions/branches
-or splitting/recreating the PR. A fourth cycle requires Erik's explicit direction;
-this never waives correctness or CI.
+Run a separate local Codex reviewer process on the exact committed HEAD.
+The reviewer must not be the implementing agent or process.
+Record the reviewed SHA, verdict and findings in the PR or task notes. Address
+findings, test the affected behavior and request a fresh review for each new
+commit. Repeated findings call for reassessing the approach and tests.
 
 ### Verdict and publication
 
@@ -182,9 +170,26 @@ a new commit requires fresh review. Review itself needs no workstation-tool acce
 
 Publishing/merging agents follow the complete [PR review and merge policy](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/pr-review-policy.md),
 also mirrored in `pt info get pr_merge_policy` and `~/projects/Project-workflow.md`.
-Independent review clearance must identify the current head and clear findings;
-pending, stale, missing or ambiguous evidence is insufficient. If that policy is
-unavailable, stop publication/merging, not review. Third-review findings require
-a human discussion; clean third-review clearance follows the normal merge gates.
-An authorized exception is recorded as an exception, never as PASS.
+Independent local code-reviewer clearance must identify the current head and
+clear findings; pending, stale, missing or ambiguous evidence is insufficient.
+If that policy is unavailable, stop publication/merging, not review. An authorized
+exception is recorded as an exception, never as PASS.
 <!-- END runtime-doctor:shared:code-review-rules -->
+
+<!-- BEGIN runtime-doctor:shared:model-seats -->
+## Model seats (Manager / Worker / Judge)
+
+Concrete bindings live in **`~/projects/MODEL_SEATS.md`** (update when vendors bounce). Full policy: **`~/projects/ORCHESTRATOR_CHEAP_CODER_RULES.md`**.
+
+- **Manager** (Codex / Claude / Grok Bot): plan, brief, verify, review, and handle PRs.
+- **Worker** (Claude Code): implement authorized code in an isolated task branch or worktree and run focused tests.
+- **Judge** (separate local Codex CLI process): review the exact committed HEAD under the ChatGPT login.
+
+### Floor-manager default on the MacBook
+
+For an authorized coding card, brief Claude Code with the card ID, acceptance criteria, working directory, owned files, focused tests, a finite timeout when delegated, and action limits. Keep implementation in an isolated task branch or worktree. A Claude manager may implement directly. When Erik directs Codex manager implementation, or Claude is unavailable or unsuitable, record the reason on the card.
+
+Inspect the coder's diff, tests, and handoff before accepting its work. Invoke a separate local Codex reviewer process on the exact committed HEAD and record its full-SHA PASS or FAIL verdict. The implementing process cannot review its own work. A missing, stale, timed-out, or inconclusive review blocks publication; repeat review after a new commit. The floor manager owns integration, the PR, CI, and merge. The coder's response alone does not complete a card.
+
+Do not use DeepSeek as the coding Worker on the MacBook or Mini. The linked cutover cards own launcher and credential retirement; preserve their dependency gates. Current binding and rollback: `~/projects/MODEL_SEATS.md`.
+<!-- END runtime-doctor:shared:model-seats -->
