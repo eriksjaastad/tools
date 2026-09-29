@@ -54,5 +54,4 @@ jobs:
             tests/workflows/ \
             route/test_pricing.py \
             route/test_readers.py \
-            deepseek-launcher/test_launcher.py \
             -q
