@@ -488,3 +488,58 @@ def test_staged_merge_ignores_findings_brought_in_from_the_other_parent(repo):
     result = changed_cli(repo, "--staged", "--json")
     assert result.returncode == 1
     assert [item["rule"] for item in json.loads(result.stdout)["findings"]] == ["SF001"]
+
+
+# Review round 1 on 0c4b06f: a finding is governed by its handler, and
+# explicit filters name files however the caller spells them.
+
+BROAD = handler("logger.warning('failed')\nreturn []", "ValueError") + "\nVALUE = 1\n"
+
+
+def test_broadening_the_handler_clause_blocks(silent_check):
+    after = BROAD.replace("except ValueError:", "except Exception:")
+    assert rules(silent_check.changed_findings(BROAD, after, "m.py")) == [(6, "SF002")]
+
+
+def test_deleting_a_guard_inside_the_handler_blocks(silent_check):
+    before = handler("if fatal():\n    raise\nreturn []")
+    after = handler("return []")
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
+
+
+def test_edit_in_the_try_body_does_not_touch_the_handler_finding(silent_check):
+    after = BROAD.replace("query()", "query(timeout=5)")
+    assert silent_check.changed_findings(BROAD, after, "m.py") == []
+
+
+def test_finally_override_is_governed_by_its_handler(silent_check):
+    before = ("def f():\n    try:\n        work()\n    except OSError:\n        return Failure(exc)\n"
+              "    finally:\n        return []\n")
+    after = before.replace("except OSError:", "except Exception:")
+    assert rules(silent_check.scan_source(before)) == [(7, "SF002")]
+    assert silent_check.changed_findings(before, before, "m.py") == []
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
+
+
+@pytest.mark.parametrize("spelling", ["./pkg/m.py", "pkg/../pkg/m.py", "ABSOLUTE"])
+def test_explicit_filter_spellings_select_the_staged_file(repo, spelling):
+    (repo[0] / "pkg").mkdir()
+    stage_in(repo, "pkg/m.py", handler("pass"))
+    if spelling == "ABSOLUTE":
+        spelling = str(repo[0] / "pkg" / "m.py")
+    assert changed_cli(repo, "--staged", spelling).returncode == 1
+
+
+def test_filter_relative_to_a_subdirectory(repo):
+    (repo[0] / "pkg").mkdir()
+    stage_in(repo, "pkg/m.py", handler("pass"))
+    root, env = repo
+    result = subprocess.run([sys.executable, VALIDATOR_PATH, "--staged", "m.py"], cwd=root / "pkg",
+                            env=env, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 1
+
+
+def test_filter_matching_nothing_checks_nothing(repo, tmp_path):
+    stage_in(repo, "m.py", handler("pass"))
+    assert changed_cli(repo, "--staged", str(tmp_path / "elsewhere.py")).returncode == 0
+    assert changed_cli(repo, "--staged").returncode == 1

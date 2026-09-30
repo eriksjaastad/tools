@@ -19,8 +19,8 @@ Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
 
 With --staged (pre-commit) or --base REV (CI), only changed code is checked:
-a finding blocks when a line of its own statement or handler was added or
-edited, or when it did not exist before (for example, a deleted `raise` that
+a finding blocks when a line of its own statement or handler was added,
+edited or deleted, or when it did not exist before (for example, a deleted `raise` that
 leaves an inert handler). Findings on untouched lines stay in the portfolio
 backlog. Source is read from Git blobs, never from the working tree.
 """
@@ -31,6 +31,7 @@ from collections import Counter
 import difflib
 import io
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -254,22 +255,25 @@ def _immediately_validated(statement, parents, candidate):
 
 def scan_source(source: str, path: str = "<memory>") -> list[dict]:
     """Scan one source string. Parse/tokenization errors propagate to callers."""
-    return [finding for finding, _, _ in _scan_entries(source, path)]
+    return [finding for finding, _, _, _ in _scan_entries(source, path)]
 
 
-def _scan_entries(source: str, path: str) -> list[tuple[dict, int, tuple]]:
-    """Findings with the last line of the flagged node and a position-free identity.
+def _scan_entries(source: str, path: str) -> list[tuple[dict, int, int, tuple]]:
+    """Findings with the line span that governs them and a position-free identity.
 
-    The identity (rule plus the node's AST without positions) lets changed-line
-    mode recognize a finding that merely moved from one that is new.
+    The span covers the flagged node plus, for SF002, the handler whose clause
+    and body decide what the return masks: broadening `except ValueError` to
+    `except Exception` above an unchanged `return []` is a change to that
+    finding. The identity (rule plus the node's AST without positions) lets
+    changed-line mode recognize a finding that merely moved from one that is new.
     """
     tree = ast.parse(source, filename=path)
     parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
     comments = _suppressions(source)
-    findings = []
-    entries = []
+    entries = {}
 
-    def add(node: ast.AST, rule: str, anchor: ast.AST | None = None, suppressible: bool = True):
+    def add(node: ast.AST, rule: str, anchor: ast.AST | None = None, suppressible: bool = True,
+            governs: ast.AST | None = None):
         anchor = node if anchor is None else anchor
         same_line = comments.get(anchor.lineno)
         previous = comments.get(anchor.lineno - 1)
@@ -281,10 +285,17 @@ def _scan_entries(source: str, path: str) -> list[tuple[dict, int, tuple]]:
             "path": str(path), "line": node.lineno, "column": node.col_offset + 1,
             "rule": rule, "message": MESSAGES[rule],
         }
-        if finding not in findings:
-            findings.append(finding)
-            key = (rule, ast.dump(node, include_attributes=False))
-            entries.append((finding, node.end_lineno or node.lineno, key))
+        spans = [node] if governs is None else [node, governs]
+        start = min(item.lineno for item in spans)
+        end = max(item.end_lineno or item.lineno for item in spans)
+        marker = tuple(finding[field] for field in ("path", "line", "column", "rule"))
+        if marker in entries:
+            # The same return can be reached from several handlers (a finally
+            # override); every one of them governs it.
+            old, old_start, old_end, key = entries[marker]
+            entries[marker] = (old, min(start, old_start), max(end, old_end), key)
+        else:
+            entries[marker] = (finding, start, end, (rule, ast.dump(node, include_attributes=False)))
 
     for node in ast.walk(tree):
         if _empty_environment_fallback(node):
@@ -303,8 +314,8 @@ def _scan_entries(source: str, path: str) -> list[tuple[dict, int, tuple]]:
                         # handler. Its rationale must belong to its own actual
                         # enclosing handler, never to the overridden return.
                         anchor = _enclosing_handler(effective, parents)
-                        add(effective, "SF002", anchor=anchor, suppressible=anchor is not None)
-    return sorted(entries, key=lambda entry: tuple(entry[0][field] for field in ("path", "line", "column", "rule")))
+                        add(effective, "SF002", anchor=anchor, suppressible=anchor is not None, governs=node)
+    return [entries[marker] for marker in sorted(entries)]
 
 
 def scan_file(path: str | Path) -> list[dict]:
@@ -323,13 +334,13 @@ def scan_file(path: str | Path) -> list[dict]:
 
 
 def changed_findings(before: str, after: str, path: str) -> list[dict]:
-    """Findings in `after` that are new or sit on lines edited since `before`.
+    """Findings in `after` that are new or whose governing lines changed since `before`.
 
     An unparseable `before` gives no baseline, so every finding in `after` counts.
     Parse errors in `after` propagate to the caller.
     """
     try:
-        old = Counter(key for _, _, key in _scan_entries(before, path))
+        old = Counter(key for _, _, _, key in _scan_entries(before, path))
     except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):
         before, old = "", Counter()
     edited = set()
@@ -337,11 +348,15 @@ def changed_findings(before: str, after: str, path: str) -> list[dict]:
     for tag, _, _, start, end in matcher.get_opcodes():
         if tag in {"insert", "replace"}:
             edited.update(range(start + 1, end + 1))
+        elif tag == "delete":
+            # Removed lines leave nothing to mark, so mark both neighbours: a
+            # deleted `raise` or guard inside a handler changes what it masks.
+            edited.update((start, start + 1))
     findings = []
-    for finding, last, key in _scan_entries(after, path):
+    for finding, first, last, key in _scan_entries(after, path):
         existed = old[key] > 0
         old[key] -= 1
-        if not existed or not edited.isdisjoint(range(finding["line"], last + 1)):
+        if not existed or not edited.isdisjoint(range(first, last + 1)):
             findings.append(finding)
     return findings
 
@@ -404,7 +419,24 @@ def _tree_oid(commit: str, path: str) -> str:
     return parts[2].decode("ascii") if len(parts) == 4 and parts[1] == b"blob" else "0" * 40
 
 
-def _scan_changes(base: str | None, only: list[str]) -> tuple[list[dict], list[dict]]:
+def _repo_paths(paths: list[str]) -> set[str]:
+    """Caller paths in the repository-root-relative form Git reports.
+
+    `./m.py`, `pkg/../m.py`, a path relative to a subdirectory and an absolute
+    path all name the same staged file. Only the parent directory is resolved,
+    so a symlinked file keeps its own name.
+    """
+    top = Path(os.path.realpath(_git("rev-parse", "--show-toplevel").decode().strip()))
+    names = set()
+    for raw in paths:
+        absolute = Path(os.path.abspath(raw))
+        resolved = Path(os.path.realpath(absolute.parent)) / absolute.name
+        if resolved.is_relative_to(top):
+            names.add(resolved.relative_to(top).as_posix())
+    return names
+
+
+def _scan_changes(base: str | None, only: set[str] | None) -> tuple[list[dict], list[dict]]:
     """Changed-line findings for the staged index (base None) or base..HEAD.
 
     For a staged merge, a finding blocks only when it is new or edited relative
@@ -414,7 +446,7 @@ def _scan_changes(base: str | None, only: list[str]) -> tuple[list[dict], list[d
     findings, errors = [], []
     others = [] if base else _merge_heads()
     for path, old_oid, new_oid in _changed_python(base):
-        if only and path not in only:
+        if only is not None and path not in only:
             continue
         try:
             after = _blob_source(new_oid)
@@ -442,7 +474,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.staged or args.base:
         try:
-            findings, errors = _scan_changes(args.base, args.paths)
+            findings, errors = _scan_changes(args.base, _repo_paths(args.paths) if args.paths else None)
         except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
             print(f"Unable to read changed Git source ({type(error).__name__}).", file=sys.stderr)
             return 2
