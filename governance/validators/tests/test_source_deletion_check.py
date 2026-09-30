@@ -19,7 +19,10 @@ def repository(tmp_path):
     home = tmp_path / "home"
     uv = home / ".local/bin/uv"
     uv.parent.mkdir(parents=True)
-    uv.write_text('#!/bin/sh\nshift\nexec ' + shlex.quote(sys.executable) + ' "$@"\n')
+    # Stands in for `uv run --no-project`; any other invocation fails loudly
+    # so the master script cannot drift back to syncing the host project.
+    uv.write_text('#!/bin/sh\n[ "$1 $2" = "run --no-project" ] || { echo "unexpected uv: $*" >&2; exit 97; }\n'
+                  'shift 2\nexec ' + shlex.quote(sys.executable) + ' "$@"\n')
     uv.chmod(0o700)
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     env.update(HOME=str(home), GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",

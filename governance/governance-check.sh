@@ -95,8 +95,11 @@ for validator in "${VALIDATORS[@]}"; do
     
     echo -n "Running $validator... "
     
-    # Run validator with uv, passing all staged files
-    if "$HOME/.local/bin/uv" run "$VALIDATOR_PATH" "${STAGED_FILES[@]}" 2>&1; then
+    # Run validator with uv, passing all staged files. --no-project keeps uv
+    # from treating the repo being committed as the project: without it, a
+    # validator lacking a PEP 723 block made uv create or sync that repo's
+    # .venv, which then shadowed the real interpreter in fresh worktrees (#7647).
+    if "$HOME/.local/bin/uv" run --no-project "$VALIDATOR_PATH" "${STAGED_FILES[@]}" 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
     else
         VALIDATOR_EXIT_CODE=$?

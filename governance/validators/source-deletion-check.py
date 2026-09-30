@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
 """Check changed Python deletion sites in Git's index (or HEAD vs --base).
 
 This is bounded static analysis, not a Python sandbox. It recognizes imported
