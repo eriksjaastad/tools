@@ -309,10 +309,15 @@ uv run governance/validators/content-guard.py file1.py file2.yaml
 
 ### Adding New Validators
 
-1. Create a new Python script in `validators/`
+1. Create a new Python script in `validators/` with a PEP 723 `# /// script` block
 2. Accept file paths as arguments: `sys.argv[1:]`
 3. Exit with `0` (pass) or `1` (fail)
 4. Add to `VALIDATORS` array in `governance-check.sh`
+
+`governance-check.sh` runs each validator with `uv run --no-project` from the
+repository being committed, so uv never creates or syncs that repository's
+`.venv` (#7647). The PEP 723 block keeps direct `uv run <validator>` calls
+isolated the same way.
 
 Example validator structure:
 
