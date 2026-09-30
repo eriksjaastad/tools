@@ -156,6 +156,8 @@ From the repository root:
 ```bash
 uv run governance/validators/silent-failure-check.py module.py
 uv run governance/validators/silent-failure-check.py --dry-run --json module.py
+uv run governance/validators/silent-failure-check.py --staged            # changed lines, pre-commit
+uv run governance/validators/silent-failure-check.py --base origin/main # changed lines, CI
 uv run governance/silent-failure-gate.py
 mkdir -p governance/reports  # output is gitignored (#7091) — never commit it
 uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json \
@@ -177,8 +179,21 @@ It returns 1 for findings and 2 for scan/enumeration errors, unsafe paths or no
 Python coverage. It scans working-tree content, appropriate to a CI checkout;
 it is not a staged-index pre-commit scanner. The isolated Git-hook regression
 demonstrates automatic invocation with matching staged/working-tree content,
-not protection against partially staged files. This change does not install a
-hook or modify the shared validator array.
+not protection against partially staged files.
+
+**Shared pre-commit hook: changed lines only (#6900, 2026-09-30).**
+`governance-check.sh` runs `silent-failure-check.py --staged`. It reads the
+staged and HEAD blobs, never the working tree, and blocks a finding only when
+a line of its own statement or handler was added or edited, or when the
+finding did not exist before (a deleted `raise` that leaves an inert handler,
+or a deleted rationale comment). Findings on untouched lines, including ones
+that merely moved or were renamed with their file, do not block. They are the
+portfolio backlog that _tools remediates. `--base <commit>` applies the same
+rule to a committed range for CI. In a staged merge, a finding blocks only
+when it is new or edited relative to every parent, so code the merge brings
+in from the other side does not count. Changed symlinks and submodules are skipped.
+Unparseable staged source exits `2`; an unparseable previous version gives no
+baseline, so every finding in the new version counts.
 
 The portfolio reporter examines immediate child Git repositories, including
 worktrees, and only their tracked `.py` working-tree files. It records the

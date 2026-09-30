@@ -1,5 +1,33 @@
 # Silent-failure enforcement rollout (#6900)
 
+## Shared gate: changed lines only — 2026-09-30
+
+Erik changed the activation rule on 2026-09-30: the check gates changed lines,
+not whole files, and existing findings no longer have to be cleared first.
+`silent-failure-check.py` is now in `governance-check.sh`'s `VALIDATORS` array
+with `--staged`. A commit is blocked only by a finding on an added or edited
+line of its own statement or handler, or by a finding that did not exist
+before. The model is the one `source-deletion-check.py` already uses.
+
+Why the old rule was dropped: the whole-file plan waited for owners to clear
+every finding before activation, and it did not converge. The 2026-09-30
+dry-run found 949 candidates in 413 files across 32 repositories, up from 933
+on 09-25, while the owner cards each fixed one slice. A `--base` replay of
+September history found 169 new or changed-line findings across about 1,466
+commits in the five largest repositories (image-workflow 8, ai-memory 44,
+project-tracker 35, muffinpanrecipes 52, hypocrisynow 30). That is the flow
+the gate now stops.
+
+This is not a baseline exemption. No finding is recorded as allowed, and
+editing a flagged line brings it back under the gate. The existing findings
+are remediation backlog owned end to end by `_tools` (Erik, 2026-09-30); the
+owner triage cards were moved to the `_tools` board. As of 2026-09-30 only
+`ai-memory` and `project-tracker` have effective pre-commit hooks that call
+the shared script; wider installation is a separate decision.
+
+The sections below are the history that led here. The "Activation boundary"
+section describes the state before this change.
+
 ## Repository enforcement — 2026-09-07
 
 #6981 resolves all 26 initial local findings; see the final dispositions in
@@ -74,7 +102,7 @@ the proposed scanner; this is not a claim that they pass all existing
 governance validators. The shared validator set remains unchanged, so this
 delivery introduces no newly blocked commits.
 
-## Activation boundary
+## Activation boundary (superseded 2026-09-30)
 
 The scanner is not in `governance-check.sh`'s `VALIDATORS` array. M2 remains a
 manual review requirement while rollout findings are unresolved. Running the

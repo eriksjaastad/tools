@@ -17,15 +17,24 @@ required lookup or validate missing values explicitly instead of hiding them.
 Constructor names are matched syntactically, without resolving shadowed builtins.
 Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
+
+With --staged (pre-commit) or --base REV (CI), only changed code is checked:
+a finding blocks when a line of its own statement or handler was added or
+edited, or when it did not exist before (for example, a deleted `raise` that
+leaves an inert handler). Findings on untouched lines stay in the portfolio
+backlog. Source is read from Git blobs, never from the working tree.
 """
 
 import argparse
 import ast
+from collections import Counter
+import difflib
 import io
 import json
 from pathlib import Path
 import re
 import stat
+import subprocess
 import sys
 import tokenize
 
@@ -245,10 +254,20 @@ def _immediately_validated(statement, parents, candidate):
 
 def scan_source(source: str, path: str = "<memory>") -> list[dict]:
     """Scan one source string. Parse/tokenization errors propagate to callers."""
+    return [finding for finding, _, _ in _scan_entries(source, path)]
+
+
+def _scan_entries(source: str, path: str) -> list[tuple[dict, int, tuple]]:
+    """Findings with the last line of the flagged node and a position-free identity.
+
+    The identity (rule plus the node's AST without positions) lets changed-line
+    mode recognize a finding that merely moved from one that is new.
+    """
     tree = ast.parse(source, filename=path)
     parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
     comments = _suppressions(source)
     findings = []
+    entries = []
 
     def add(node: ast.AST, rule: str, anchor: ast.AST | None = None, suppressible: bool = True):
         anchor = node if anchor is None else anchor
@@ -264,6 +283,8 @@ def scan_source(source: str, path: str = "<memory>") -> list[dict]:
         }
         if finding not in findings:
             findings.append(finding)
+            key = (rule, ast.dump(node, include_attributes=False))
+            entries.append((finding, node.end_lineno or node.lineno, key))
 
     for node in ast.walk(tree):
         if _empty_environment_fallback(node):
@@ -283,7 +304,7 @@ def scan_source(source: str, path: str = "<memory>") -> list[dict]:
                         # enclosing handler, never to the overridden return.
                         anchor = _enclosing_handler(effective, parents)
                         add(effective, "SF002", anchor=anchor, suppressible=anchor is not None)
-    return sorted(findings, key=lambda item: (item["path"], item["line"], item["column"], item["rule"]))
+    return sorted(entries, key=lambda entry: tuple(entry[0][field] for field in ("path", "line", "column", "rule")))
 
 
 def scan_file(path: str | Path) -> list[dict]:
@@ -301,12 +322,133 @@ def scan_file(path: str | Path) -> list[dict]:
         return scan_source(stream.read(), str(path))
 
 
+def changed_findings(before: str, after: str, path: str) -> list[dict]:
+    """Findings in `after` that are new or sit on lines edited since `before`.
+
+    An unparseable `before` gives no baseline, so every finding in `after` counts.
+    Parse errors in `after` propagate to the caller.
+    """
+    try:
+        old = Counter(key for _, _, key in _scan_entries(before, path))
+    except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):
+        before, old = "", Counter()
+    edited = set()
+    matcher = difflib.SequenceMatcher(None, before.splitlines(), after.splitlines(), autojunk=False)
+    for tag, _, _, start, end in matcher.get_opcodes():
+        if tag in {"insert", "replace"}:
+            edited.update(range(start + 1, end + 1))
+    findings = []
+    for finding, last, key in _scan_entries(after, path):
+        existed = old[key] > 0
+        old[key] -= 1
+        if not existed or not edited.isdisjoint(range(finding["line"], last + 1)):
+            findings.append(finding)
+    return findings
+
+
+def _git(*args) -> bytes:
+    return subprocess.run(["git", *args], capture_output=True, check=True, timeout=20).stdout
+
+
+def _blob_source(oid: str) -> str:
+    blob = _git("cat-file", "blob", oid)
+    encoding, _ = tokenize.detect_encoding(io.BytesIO(blob).readline)
+    return blob.decode(encoding)
+
+
+def _changed_python(base: str | None):
+    """Yield (path, old_oid, new_oid) for changed regular Python blobs.
+
+    Symlinks and submodules carry no Python source of their own and are skipped.
+    """
+    args = ["diff", "--raw", "-z", "--no-abbrev", "--no-ext-diff", "--no-textconv",
+            "--find-renames", "--diff-filter=ACMRT"]
+    if base:
+        sha = _git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").decode().strip()
+        args += [sha, "HEAD", "--"]
+    else:
+        args += ["--cached", "--"]
+    fields = _git(*args).split(b"\0")
+    i = 0
+    while i < len(fields) and fields[i]:
+        _, new_mode, old_oid, new_oid, status = fields[i].decode("ascii").lstrip(":").split()
+        path = fields[i + 1].decode("utf-8", "surrogateescape")
+        i += 2
+        if status[0] in "RC":
+            path = fields[i].decode("utf-8", "surrogateescape")
+            i += 1
+        if path.lower().endswith((".py", ".pyi")) and new_mode in {"100644", "100755"}:
+            yield path, old_oid, new_oid
+
+
+def _merge_heads() -> list[str]:
+    """Other parents of a staged merge commit; empty outside a merge."""
+    merge_head = Path(_git("rev-parse", "--git-path", "MERGE_HEAD").decode().strip())
+    try:
+        return merge_head.read_text(encoding="ascii").split()
+    except FileNotFoundError:  # governance: allow-silent SF002: an absent MERGE_HEAD means the commit is not a merge
+        return []
+
+
+def _old_source(oid: str) -> str:
+    try:
+        return "" if set(oid) == {"0"} else _blob_source(oid)
+    except (UnicodeError, SyntaxError, LookupError):  # governance: allow-silent SF002: no baseline makes every finding count, which is stricter
+        return ""
+
+
+def _tree_oid(commit: str, path: str) -> str:
+    """Blob id of `path` in `commit`, or all zeros when the commit lacks it."""
+    entry = _git("ls-tree", "-z", "--full-tree", commit, "--", path).split(b"\0")[0]
+    parts = entry.split(None, 3)
+    return parts[2].decode("ascii") if len(parts) == 4 and parts[1] == b"blob" else "0" * 40
+
+
+def _scan_changes(base: str | None, only: list[str]) -> tuple[list[dict], list[dict]]:
+    """Changed-line findings for the staged index (base None) or base..HEAD.
+
+    For a staged merge, a finding blocks only when it is new or edited relative
+    to every parent, so code the merge brings in from the other side does not
+    count against this commit.
+    """
+    findings, errors = [], []
+    others = [] if base else _merge_heads()
+    for path, old_oid, new_oid in _changed_python(base):
+        if only and path not in only:
+            continue
+        try:
+            after = _blob_source(new_oid)
+            found = changed_findings(_old_source(old_oid), after, path)
+            for other in others:
+                if not found:
+                    break
+                relative = changed_findings(_old_source(_tree_oid(other, path)), after, path)
+                found = [finding for finding in found if finding in relative]
+            findings.extend(found)
+        except (UnicodeError, SyntaxError, LookupError, tokenize.TokenError, ValueError, RecursionError) as error:
+            errors.append({"path": path, "error": type(error).__name__, "message": "Unable to read or parse Python source."})
+    return findings, errors
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("paths", nargs="+", help="Explicit Python files; no recursive discovery")
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("paths", nargs="*", help="Explicit Python files; no recursive discovery. "
+                        "With --staged/--base, optional filter on the changed paths")
     parser.add_argument("--json", action="store_true", help="Print findings and errors as JSON")
     parser.add_argument("--dry-run", action="store_true", help="Report findings without failing; scan errors still fail")
+    changed = parser.add_mutually_exclusive_group()
+    changed.add_argument("--staged", action="store_true", help="Check only changed lines of staged Python files (pre-commit)")
+    changed.add_argument("--base", help="Check only lines changed between this commit and HEAD (CI)")
     args = parser.parse_args(argv)
+    if args.staged or args.base:
+        try:
+            findings, errors = _scan_changes(args.base, args.paths)
+        except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
+            print(f"Unable to read changed Git source ({type(error).__name__}).", file=sys.stderr)
+            return 2
+        return _report(findings, errors, args)
+    if not args.paths:
+        parser.error("explicit paths are required unless --staged or --base is given")
     findings, errors = [], []
     for path in sorted(set(args.paths)):
         try:
@@ -315,6 +457,10 @@ def main(argv: list[str] | None = None) -> int:
             # Never print exception text: SyntaxError and decoding errors can
             # contain source snippets or values from the file being scanned.
             errors.append({"path": path, "error": type(error).__name__, "message": "Unable to read or parse Python source."})
+    return _report(findings, errors, args)
+
+
+def _report(findings: list[dict], errors: list[dict], args) -> int:
     if args.json:
         print(json.dumps({"findings": findings, "errors": errors}, sort_keys=True))
     else:

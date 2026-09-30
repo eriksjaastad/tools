@@ -310,3 +310,181 @@ def test_cli_rejects_fifo_before_open(tmp_path):
     report = json.loads(stdout)
     assert report["errors"][0]["error"] == "OSError"
     assert report["findings"] == []
+
+
+# --- Changed-lines mode (--staged / --base) --------------------------------
+
+HISTORICAL = handler("logger.warning('failed')\nreturn []") + "\nVALUE = 1\n"
+
+
+def rules(findings):
+    return [(item["line"], item["rule"]) for item in findings]
+
+
+def test_untouched_historical_finding_does_not_block_unrelated_edit(silent_check):
+    after = HISTORICAL.replace("VALUE = 1", "VALUE = 2")
+    assert silent_check.changed_findings(HISTORICAL, after, "m.py") == []
+
+
+def test_moved_historical_finding_does_not_block(silent_check):
+    after = "import logging\n\n\n" + HISTORICAL
+    assert silent_check.changed_findings(HISTORICAL, after, "m.py") == []
+
+
+def test_editing_the_flagged_line_blocks(silent_check):
+    after = HISTORICAL.replace("return []", "return {}")
+    assert rules(silent_check.changed_findings(HISTORICAL, after, "m.py")) == [(6, "SF002")]
+
+
+def test_new_finding_blocks_beside_untouched_historical_one(silent_check):
+    after = HISTORICAL + "\n" + handler("pass").replace("collect", "other")
+    assert [rule for _, rule in rules(silent_check.changed_findings(HISTORICAL, after, "m.py"))] == ["SF001"]
+
+
+def test_deleting_a_raise_that_leaves_an_inert_handler_blocks(silent_check):
+    before = handler("pass\nraise")
+    after = handler("pass")
+    assert rules(silent_check.changed_findings(before, after, "m.py")) == [(4, "SF001")]
+
+
+def test_deleting_a_rationale_comment_blocks(silent_check):
+    comment = "    # governance: allow-silent SF001: best-effort cleanup of a disposable file\n"
+    before = "def clean():\n    try:\n        remove()\n" + comment + "    except OSError:\n        pass\n"
+    after = before.replace(comment, "")
+    assert silent_check.scan_source(before) == []
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF001"]
+
+
+def test_new_empty_env_fallback_blocks_and_historical_one_does_not(silent_check):
+    before = 'import os\nTOKEN = os.getenv("TOKEN", "")\n'
+    assert silent_check.changed_findings(before, before + "DEBUG = True\n", "m.py") == []
+    after = before + 'KEY = os.environ.get("KEY") or ""\n'
+    assert rules(silent_check.changed_findings(before, after, "m.py")) == [(3, "SF003")]
+
+
+def test_unparseable_before_gives_no_baseline(silent_check):
+    assert rules(silent_check.changed_findings("broken = (\n", HISTORICAL, "m.py")) == [(6, "SF002")]
+
+
+@pytest.fixture
+def repo(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update(GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
+               GIT_AUTHOR_NAME="Fixture", GIT_AUTHOR_EMAIL="fixture@example.invalid",
+               GIT_COMMITTER_NAME="Fixture", GIT_COMMITTER_EMAIL="fixture@example.invalid")
+    subprocess.run(["git", "init", "-q", str(root)], env=env, check=True, timeout=10)
+    return root, env
+
+
+def git_in(repo, *args):
+    root, env = repo
+    return subprocess.run(["git", *args], cwd=root, env=env, check=True,
+                          capture_output=True, text=True, timeout=10).stdout
+
+
+def stage_in(repo, name, text):
+    (repo[0] / name).write_text(text)
+    git_in(repo, "add", name)
+
+
+def changed_cli(repo, *args):
+    root, env = repo
+    return subprocess.run([sys.executable, VALIDATOR_PATH, *args], cwd=root, env=env,
+                          capture_output=True, text=True, timeout=30)
+
+
+def test_staged_mode_blocks_new_and_passes_historical(repo):
+    stage_in(repo, "m.py", HISTORICAL)
+    first = changed_cli(repo, "--staged")
+    assert first.returncode == 1 and "m.py:6:" in first.stdout and "SF002" in first.stdout
+    git_in(repo, "commit", "-qm", "historical baseline")
+    stage_in(repo, "m.py", HISTORICAL.replace("VALUE = 1", "VALUE = 2"))
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+def test_staged_mode_reads_the_index_not_the_worktree(repo):
+    stage_in(repo, "m.py", "VALUE = 1\n")
+    (repo[0] / "m.py").write_text(handler("pass"))
+    assert changed_cli(repo, "--staged").returncode == 0
+    stage_in(repo, "clean.py", "VALUE = 1\n")
+    git_in(repo, "add", "m.py")
+    assert changed_cli(repo, "--staged").returncode == 1
+
+
+def test_staged_mode_path_filter_and_non_python(repo):
+    stage_in(repo, "m.py", handler("pass"))
+    stage_in(repo, "notes.txt", "except: pass\n")
+    assert changed_cli(repo, "--staged", "notes.txt", "other.py").returncode == 0
+    assert changed_cli(repo, "--staged", "notes.txt", "m.py").returncode == 1
+
+
+def test_pure_rename_of_historical_findings_passes(repo):
+    stage_in(repo, "old name.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    git_in(repo, "mv", "old name.py", "new name.py")
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+def test_base_mode_checks_committed_changes(repo):
+    stage_in(repo, "m.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    base = git_in(repo, "rev-parse", "HEAD").strip()
+    stage_in(repo, "m.py", HISTORICAL.replace("VALUE = 1", "VALUE = 2"))
+    git_in(repo, "commit", "-qm", "unrelated edit")
+    assert changed_cli(repo, "--base", base).returncode == 0
+    stage_in(repo, "m.py", HISTORICAL + "\n" + handler("return None").replace("collect", "other"))
+    git_in(repo, "commit", "-qm", "new silent handler")
+    result = changed_cli(repo, "--base", base, "--json")
+    assert result.returncode == 1
+    assert [item["rule"] for item in json.loads(result.stdout)["findings"]] == ["SF002"]
+
+
+def test_changed_mode_parse_error_is_an_error_without_source_leak(repo):
+    stage_in(repo, "m.py", "secret_do_not_echo = ('private-value'\n")
+    for args in (["--staged"], ["--staged", "--dry-run", "--json"]):
+        result = changed_cli(repo, *args)
+        assert result.returncode == 2
+        assert "secret_do_not_echo" not in result.stdout + result.stderr
+        assert "private-value" not in result.stdout + result.stderr
+
+
+@pytest.mark.skipif(not hasattr(os, "symlink"), reason="Platform lacks symlinks")
+def test_changed_mode_skips_symlinked_python(repo):
+    stage_in(repo, "real.txt", handler("pass"))
+    os.symlink("real.txt", repo[0] / "link.py")
+    git_in(repo, "add", "link.py")
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+def test_changed_mode_outside_git_fails_closed(tmp_path):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env["GIT_CEILING_DIRECTORIES"] = str(tmp_path)
+    result = subprocess.run([sys.executable, VALIDATOR_PATH, "--staged"], cwd=tmp_path, env=env,
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2
+    assert "Unable to read changed Git source" in result.stderr
+
+
+def test_staged_and_base_are_exclusive(repo):
+    assert changed_cli(repo, "--staged", "--base", "HEAD").returncode == 2
+
+
+def test_staged_merge_ignores_findings_brought_in_from_the_other_parent(repo):
+    stage_in(repo, "base.py", "VALUE = 1\n")
+    git_in(repo, "commit", "-qm", "base")
+    trunk = git_in(repo, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    git_in(repo, "checkout", "-qb", "feature")
+    stage_in(repo, "feature.py", "FEATURE = 1\n")
+    git_in(repo, "commit", "-qm", "feature work")
+    git_in(repo, "checkout", "-q", trunk)
+    stage_in(repo, "incoming.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "someone else's silent handler")
+    git_in(repo, "checkout", "-q", "feature")
+    git_in(repo, "merge", "--no-commit", "--no-ff", trunk)
+    assert changed_cli(repo, "--staged").returncode == 0
+    stage_in(repo, "incoming.py", HISTORICAL + "\n" + handler("pass").replace("collect", "resolved"))
+    result = changed_cli(repo, "--staged", "--json")
+    assert result.returncode == 1
+    assert [item["rule"] for item in json.loads(result.stdout)["findings"]] == ["SF001"]
