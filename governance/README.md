@@ -188,15 +188,17 @@ pairs one-to-one with an old finding that has the same rule, the same AST and
 exactly the same governing source text. For SF002 the governing text includes
 the handler, so broadening `except ValueError` to `except Exception`, deleting
 a guard or trailing `raise` inside it, or editing a comment in it all make the
-finding new. So do a deleted rationale comment and a copied handler. Untouched
-findings, including ones that moved or were renamed with their Python file,
-pass. They are the portfolio backlog that _tools remediates.
+finding new. So do a deleted rationale comment and a copied handler. The
+baseline is every Python file the commit modifies or deletes, pooled, so
+untouched findings that moved within a file, between files, or with a renamed
+file pass, whether or not Git detects the rename. They are the portfolio
+backlog that _tools remediates.
 
 `--base <commit>` applies the same rule to a committed range for CI. In a
 staged merge, a finding blocks only when it is new relative to every parent, so
 code the merge brings in from the other side does not count. Only an old side
-that was already a regular `.py`/`.pyi` file is a baseline: a `.txt` renamed
-to `.py` is new coverage. Changed symlinks and submodules are skipped.
+that was already a regular `.py`/`.pyi` file joins the baseline: a `.txt`
+renamed to `.py` is new coverage. Changed symlinks and submodules are skipped.
 Unparseable staged source exits `2`; an unparseable previous version gives no
 baseline, so every finding in the new version counts.
 

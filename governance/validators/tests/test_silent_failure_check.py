@@ -605,19 +605,86 @@ def test_symlink_replaced_by_python_file_is_new_coverage(repo):
     assert changed_cli(repo, "--staged").returncode == 1
 
 
+def start_merge(repo, theirs):
+    """Commit `theirs` (name -> text, or name -> ('link', target)) on trunk, then
+    begin merging trunk into a feature branch that lacks those files."""
+    stage_in(repo, "base.py", "VALUE = 1\n")
+    git_in(repo, "commit", "-qm", "base")
+    trunk = git_in(repo, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    git_in(repo, "checkout", "-qb", "feature")
+    stage_in(repo, "feature.py", "FEATURE = 1\n")
+    git_in(repo, "commit", "-qm", "feature work")
+    git_in(repo, "checkout", "-q", trunk)
+    for name, content in theirs.items():
+        if isinstance(content, tuple):
+            os.symlink(content[1], repo[0] / name)
+            git_in(repo, "add", name)
+        else:
+            stage_in(repo, name, content)
+    git_in(repo, "commit", "-qm", "their side")
+    git_in(repo, "checkout", "-q", "feature")
+    git_in(repo, "merge", "--no-commit", "--no-ff", trunk)
+
+
 @pytest.mark.skipif(not hasattr(os, "symlink"), reason="Platform lacks symlinks")
-def test_merge_parent_symlink_is_not_a_baseline(silent_check, repo, monkeypatch):
-    stage_in(repo, "target.txt", HISTORICAL)
-    os.symlink("target.txt", repo[0] / "m.py")
-    stage_in(repo, "real.py", HISTORICAL)
+def test_merge_parent_symlink_is_not_a_baseline(repo):
+    start_merge(repo, {"target.txt": HISTORICAL, "m.py": ("link", "target.txt")})
+    assert changed_cli(repo, "--staged").returncode == 0
+    (repo[0] / "replacement").write_text(HISTORICAL)
+    os.replace(repo[0] / "replacement", repo[0] / "m.py")
     git_in(repo, "add", "m.py")
-    git_in(repo, "commit", "-qm", "symlink and regular file")
-    monkeypatch.chdir(repo[0])
-    for name, value in repo[1].items():
-        monkeypatch.setenv(name, value)
-    assert silent_check._tree_oid("HEAD", "m.py") == silent_check.NO_BASELINE
-    assert silent_check._tree_oid("HEAD", "missing.py") == silent_check.NO_BASELINE
-    assert silent_check._tree_oid("HEAD", "real.py") != silent_check.NO_BASELINE
+    assert changed_cli(repo, "--staged").returncode == 1
+
+
+# Review round 5 on c5a1d09: the baseline is every Python file the commit
+# changes or deletes, so renames Git does not detect and moves between files
+# keep their findings.
+
+CLEAN_BULK = "".join(f"def helper_{n}():\n    return {n}\n\n\n" for n in range(60))
+
+
+def test_rename_below_git_similarity_threshold_keeps_baseline(repo):
+    stage_in(repo, "old.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    git_in(repo, "mv", "old.py", "new.py")
+    stage_in(repo, "new.py", HISTORICAL + "\n\n" + CLEAN_BULK)
+    status = git_in(repo, "diff", "--cached", "--name-status", "-M")
+    assert "R" not in status.split()[0::2], status
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+def test_moving_a_handler_between_files_passes(repo):
+    stage_in(repo, "a.py", HISTORICAL)
+    stage_in(repo, "b.py", "OTHER = 1\n")
+    git_in(repo, "commit", "-qm", "historical baseline")
+    stage_in(repo, "a.py", "VALUE = 1\n")
+    stage_in(repo, "b.py", "OTHER = 1\n\n" + handler("logger.warning('failed')\nreturn []"))
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+def test_copying_a_handler_into_another_file_blocks(repo):
+    stage_in(repo, "a.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    stage_in(repo, "b.py", HISTORICAL)
+    result = changed_cli(repo, "--staged", "--json")
+    assert result.returncode == 1
+    assert [item["path"] for item in json.loads(result.stdout)["findings"]] == ["b.py"]
+
+
+def test_deleted_file_cannot_excuse_an_edited_handler_elsewhere(repo):
+    stage_in(repo, "a.py", BROAD)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    git_in(repo, "rm", "-q", "a.py")
+    stage_in(repo, "b.py", BROAD.replace("except ValueError:", "except Exception:"))
+    assert changed_cli(repo, "--staged").returncode == 1
+
+
+def test_initial_commit_checks_everything(repo):
+    stage_in(repo, "m.py", HISTORICAL)
+    stage_in(repo, "clean.py", "VALUE = 1\n")
+    result = changed_cli(repo, "--staged", "--json")
+    assert result.returncode == 1
+    assert [item["path"] for item in json.loads(result.stdout)["findings"]] == ["m.py"]
 
 
 # Review round 4 on 9570d87: historical findings pair one-to-one, so one

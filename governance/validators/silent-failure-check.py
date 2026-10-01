@@ -47,7 +47,6 @@ MESSAGES = {
 SUPPRESSION = re.compile(r"#\s*governance: allow-silent (SF00[123]):\s*(\S.*)\Z")
 SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
 REGULAR = {"100644", "100755"}  # Git modes of regular files; symlinks and submodules are not source
-NO_BASELINE = "0" * 40  # Git's null object id: nothing to compare against
 
 
 def _inert(statement: ast.stmt) -> bool:
@@ -344,6 +343,25 @@ def _identities(source: str, path: str) -> list[tuple[dict, tuple]]:
             for finding, first, last, key in _scan_entries(source, path)]
 
 
+def _baseline(source: str, path: str) -> Counter:
+    """Identities of the findings in an old version, ready for one-to-one pairing."""
+    try:
+        return Counter(identity for _, identity in _identities(source, path))
+    except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):  # governance: allow-silent SF002: an unparseable old version gives no baseline, so every finding counts, which is stricter
+        return Counter()
+
+
+def _unpaired(pool: Counter, entries: list[tuple[dict, tuple]]) -> list[dict]:
+    """Pair findings with identical old ones, consuming the pool; return the rest."""
+    findings = []
+    for finding, identity in entries:
+        if pool[identity] > 0:
+            pool[identity] -= 1
+        else:
+            findings.append(finding)
+    return findings
+
+
 def changed_findings(before: str, after: str, path: str) -> list[dict]:
     """Findings in `after` that do not pair one-to-one with an identical finding in `before`.
 
@@ -354,17 +372,7 @@ def changed_findings(before: str, after: str, path: str) -> list[dict]:
     historical finding can never vouch for two. An unparseable `before` gives
     no baseline, so every finding counts; parse errors in `after` propagate.
     """
-    try:
-        old = Counter(identity for _, identity in _identities(before, path))
-    except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):
-        old = Counter()
-    findings = []
-    for finding, identity in _identities(after, path):
-        if old[identity] > 0:
-            old[identity] -= 1
-        else:
-            findings.append(finding)
-    return findings
+    return _unpaired(_baseline(before, path), _identities(after, path))
 
 
 def _git(*args) -> bytes:
@@ -381,31 +389,30 @@ def _python_source(path: str, mode: str) -> bool:
     return path.lower().endswith((".py", ".pyi")) and mode in REGULAR
 
 
-def _changed_python(base: str | None):
-    """Yield (path, old_oid, new_oid) for changed regular Python blobs.
+def _changed_files(revisions: list[str]) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+    """Old and new regular Python blobs of every file that differs between revisions.
 
-    Symlinks and submodules carry no Python source of their own and are skipped.
-    Only an old side that was itself a regular Python file is a baseline: a
-    `.txt` renamed to `.py`, or a symlink replaced by a file, is new coverage.
+    Renames are not detected. The old sides of modified and deleted files form
+    one baseline pool for the whole commit, so a rename below Git's similarity
+    threshold, or a function moved between files, keeps its findings without a
+    rename heuristic. Only an old side that was itself a regular Python file
+    contributes: a `.txt` that becomes `.py`, or a symlink replaced by a file,
+    is new coverage. Symlinks and submodules carry no Python source and are skipped.
     """
     args = ["diff", "--raw", "-z", "--no-abbrev", "--no-ext-diff", "--no-textconv",
-            "--find-renames", "--diff-filter=ACMRT"]
-    if base:
-        sha = _git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").decode().strip()
-        args += [sha, "HEAD", "--"]
-    else:
-        args += ["--cached", "--"]
+            "--no-renames", *revisions, "--"]
     fields = _git(*args).split(b"\0")
+    old, new = [], []
     i = 0
-    while i < len(fields) and fields[i]:
-        old_mode, new_mode, old_oid, new_oid, status = fields[i].decode("ascii").lstrip(":").split()
-        old_path = path = fields[i + 1].decode("utf-8", "surrogateescape")
+    while i + 1 < len(fields) and fields[i]:
+        old_mode, new_mode, old_oid, new_oid, _ = fields[i].decode("ascii").lstrip(":").split()
+        path = fields[i + 1].decode("utf-8", "surrogateescape")
         i += 2
-        if status[0] in "RC":
-            path = fields[i].decode("utf-8", "surrogateescape")
-            i += 1
+        if _python_source(path, old_mode):
+            old.append((path, old_oid))
         if _python_source(path, new_mode):
-            yield path, old_oid if _python_source(old_path, old_mode) else NO_BASELINE, new_oid
+            new.append((path, new_oid))
+    return old, new
 
 
 def _merge_heads() -> list[str]:
@@ -422,15 +429,6 @@ def _old_source(oid: str) -> str:
         return "" if set(oid) == {"0"} else _blob_source(oid)
     except (UnicodeError, SyntaxError, LookupError):  # governance: allow-silent SF002: no baseline makes every finding count, which is stricter
         return ""
-
-
-def _tree_oid(commit: str, path: str) -> str:
-    """Blob id of regular file `path` in `commit`, or NO_BASELINE when it is not one."""
-    entry = _git("ls-tree", "-z", "--full-tree", commit, "--", path).split(b"\0")[0]
-    parts = entry.split(None, 3)
-    if len(parts) == 4 and parts[1] == b"blob" and parts[0].decode("ascii") in REGULAR:
-        return parts[2].decode("ascii")
-    return NO_BASELINE
 
 
 def _repo_paths(paths: list[str]) -> set[str]:
@@ -450,29 +448,42 @@ def _repo_paths(paths: list[str]) -> set[str]:
     return names
 
 
-def _scan_changes(base: str | None, only: set[str] | None) -> tuple[list[dict], list[dict]]:
-    """Changed-line findings for the staged index (base None) or base..HEAD.
-
-    For a staged merge, a finding blocks only when it is new or edited relative
-    to every parent, so code the merge brings in from the other side does not
-    count against this commit.
-    """
-    findings, errors = [], []
-    others = [] if base else _merge_heads()
-    for path, old_oid, new_oid in _changed_python(base):
+def _new_against(revisions: list[str], only: set[str] | None, errors: list[dict]) -> list[dict]:
+    """Findings in the new side of `revisions` that pair with nothing in the old side."""
+    old, new = _changed_files(revisions)
+    pool = Counter()
+    for path, oid in old:
+        pool.update(_baseline(_old_source(oid), path))
+    findings = []
+    for path, oid in new:
         if only is not None and path not in only:
             continue
         try:
-            after = _blob_source(new_oid)
-            found = changed_findings(_old_source(old_oid), after, path)
-            for other in others:
-                if not found:
-                    break
-                relative = changed_findings(_old_source(_tree_oid(other, path)), after, path)
-                found = [finding for finding in found if finding in relative]
-            findings.extend(found)
+            entries = _identities(_blob_source(oid), path)
         except (UnicodeError, SyntaxError, LookupError, tokenize.TokenError, ValueError, RecursionError) as error:
             errors.append({"path": path, "error": type(error).__name__, "message": "Unable to read or parse Python source."})
+            continue
+        findings.extend(_unpaired(pool, entries))
+    return findings
+
+
+def _scan_changes(base: str | None, only: set[str] | None) -> tuple[list[dict], list[dict]]:
+    """Changed-code findings for the staged index (base None) or base..HEAD.
+
+    For a staged merge, a finding blocks only when it is new relative to every
+    parent, so code the merge brings in from the other side does not count
+    against this commit.
+    """
+    errors = []
+    if base:
+        sha = _git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").decode().strip()
+        return _new_against([sha, "HEAD"], only, errors), errors
+    findings = _new_against(["--cached"], only, errors)
+    for other in _merge_heads():
+        if not findings:
+            break
+        relative = _new_against(["--cached", other], only, [])
+        findings = [finding for finding in findings if finding in relative]
     return findings, errors
 
 
