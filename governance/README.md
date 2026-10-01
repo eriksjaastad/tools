@@ -183,16 +183,20 @@ not protection against partially staged files.
 
 **Shared pre-commit hook: changed lines only (#6900, 2026-09-30).**
 `governance-check.sh` runs `silent-failure-check.py --staged`. It reads the
-staged and HEAD blobs, never the working tree, and blocks a finding only when
-its own statement or governing handler changed (an SF002 return is governed
-by its handler, so broadening `except ValueError` to `except Exception` or
-deleting a guard inside it counts), or when the finding did not exist before (a deleted `raise` that leaves an inert handler,
-or a deleted rationale comment). Findings on untouched lines, including ones
-that merely moved or were renamed with their file, do not block. They are the
-portfolio backlog that _tools remediates. `--base <commit>` applies the same
-rule to a committed range for CI. In a staged merge, a finding blocks only
-when it is new or edited relative to every parent, so code the merge brings
-in from the other side does not count. Changed symlinks and submodules are skipped.
+staged and HEAD blobs, never the working tree. A finding passes only when it
+pairs one-to-one with an old finding that has the same rule, the same AST and
+exactly the same governing source text. For SF002 the governing text includes
+the handler, so broadening `except ValueError` to `except Exception`, deleting
+a guard or trailing `raise` inside it, or editing a comment in it all make the
+finding new. So do a deleted rationale comment and a copied handler. Untouched
+findings, including ones that moved or were renamed with their Python file,
+pass. They are the portfolio backlog that _tools remediates.
+
+`--base <commit>` applies the same rule to a committed range for CI. In a
+staged merge, a finding blocks only when it is new relative to every parent, so
+code the merge brings in from the other side does not count. Only an old side
+that was already a regular `.py`/`.pyi` file is a baseline: a `.txt` renamed
+to `.py` is new coverage. Changed symlinks and submodules are skipped.
 Unparseable staged source exits `2`; an unparseable previous version gives no
 baseline, so every finding in the new version counts.
 

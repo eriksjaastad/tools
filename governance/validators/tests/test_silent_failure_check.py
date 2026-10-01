@@ -618,3 +618,28 @@ def test_merge_parent_symlink_is_not_a_baseline(silent_check, repo, monkeypatch)
     assert silent_check._tree_oid("HEAD", "m.py") == silent_check.NO_BASELINE
     assert silent_check._tree_oid("HEAD", "missing.py") == silent_check.NO_BASELINE
     assert silent_check._tree_oid("HEAD", "real.py") != silent_check.NO_BASELINE
+
+
+# Review round 4 on 9570d87: historical findings pair one-to-one, so one
+# unchanged finding can never vouch for an edited twin.
+
+def twin(name, note):
+    return handler(f"# {note}\nreturn []").replace("collect", name)
+
+
+def test_editing_one_twin_to_match_the_other_blocks(silent_check):
+    before = twin("first", "retry later") + "\n" + twin("second", "give up")
+    after = twin("first", "retry later") + "\n" + twin("second", "retry later")
+    assert silent_check.changed_findings(before, before, "m.py") == []
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
+
+
+def test_copying_a_historical_handler_blocks_the_copy(silent_check):
+    before = twin("first", "retry later")
+    after = before + "\n" + before
+    assert len(silent_check.changed_findings(before, after, "m.py")) == 1
+
+
+def test_identical_untouched_twins_pass_and_swap(silent_check):
+    first, second = twin("first", "same"), twin("second", "same")
+    assert silent_check.changed_findings(first + "\n" + second, second + "\n" + first, "m.py") == []

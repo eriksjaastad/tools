@@ -336,27 +336,33 @@ def scan_file(path: str | Path) -> list[dict]:
         return scan_source(stream.read(), str(path))
 
 
-def changed_findings(before: str, after: str, path: str) -> list[dict]:
-    """Findings in `after` that are new or whose governing lines changed since `before`.
+def _identities(source: str, path: str) -> list[tuple[dict, tuple]]:
+    """Each finding with its full identity: rule, positionless AST of the flagged
+    node and governing handlers, and the exact source text of that span."""
+    lines = source.splitlines()
+    return [(finding, (key, tuple(lines[first - 1:last])))
+            for finding, first, last, key in _scan_entries(source, path)]
 
-    A finding blocks when its identity (rule, flagged node and governing handler,
-    without positions) is new, or when the exact text of its span appears nowhere
-    in `before`. Moving untouched code, in either direction, changes neither.
-    An unparseable `before` gives no baseline, so every finding in `after` counts.
-    Parse errors in `after` propagate to the caller.
+
+def changed_findings(before: str, after: str, path: str) -> list[dict]:
+    """Findings in `after` that do not pair one-to-one with an identical finding in `before`.
+
+    Identity is the rule, the flagged node and its governing handlers' AST, and
+    the exact text of that span, so any edit to what a finding depends on (a
+    broadened clause, a deleted guard, a changed comment) makes it new, while
+    moving untouched code keeps it. Old findings are counted, so one unchanged
+    historical finding can never vouch for two. An unparseable `before` gives
+    no baseline, so every finding counts; parse errors in `after` propagate.
     """
     try:
-        old = Counter(key for _, _, _, key in _scan_entries(before, path))
+        old = Counter(identity for _, identity in _identities(before, path))
     except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):
-        before, old = "", Counter()
-    previous = "\n" + "\n".join(before.splitlines()) + "\n"
-    lines = after.splitlines()
+        old = Counter()
     findings = []
-    for finding, first, last, key in _scan_entries(after, path):
-        existed = old[key] > 0
-        old[key] -= 1
-        block = "\n" + "\n".join(lines[first - 1:last]) + "\n"
-        if not existed or block not in previous:
+    for finding, identity in _identities(after, path):
+        if old[identity] > 0:
+            old[identity] -= 1
+        else:
             findings.append(finding)
     return findings
 
