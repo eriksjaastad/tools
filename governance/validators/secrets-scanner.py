@@ -36,7 +36,15 @@ SECRET_PATTERNS = [
 
     # AWS
     (r"AKIA[A-Z0-9]{16}", "AWS Access Key ID", "Starts with AKIA"),
-    (r"(?<![A-Za-z0-9/+])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])", "Potential AWS Secret Key", "40-char base64 string"),
+    # A real secret key is random base64: it all but certainly mixes upper and
+    # lower case and holds a digit, '/' or '+'. Requiring those keeps hex digests
+    # such as 40-char git SHAs and 40-letter CamelCase identifiers from matching
+    # (#7840). About 1 key in 4,000 is letters only and is missed here; the AKIA
+    # access key ID it is issued with still matches above. The lookaheads stay
+    # inside the 40-char run.
+    (r"(?<![A-Za-z0-9/+])(?=[A-Za-z0-9/+=]{0,39}[A-Z])(?=[A-Za-z0-9/+=]{0,39}[a-z])"
+     r"(?=[A-Za-z0-9/+=]{0,39}[0-9/+])[A-Za-z0-9/+=]{40}(?![A-Za-z0-9/+=])",
+     "Potential AWS Secret Key", "40-char mixed-case base64 string"),
 
     # GitHub
     (r"ghp_[a-zA-Z0-9]{36,}", "GitHub Personal Access Token", "Starts with ghp_"),

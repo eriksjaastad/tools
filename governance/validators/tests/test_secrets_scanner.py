@@ -122,3 +122,37 @@ class TestSkipPatterns:
     ])
     def test_real_source_is_not_skipped(self, scanner, path):
         assert scanner.should_skip_file(path) is False
+
+
+class TestAwsSecretKeyShape:
+    """#7840: 40-char hex digests (git SHAs) are not AWS secret keys."""
+
+    # AWS's documented example secret key, plus base64 shapes with / and +.
+    @pytest.mark.parametrize("key", [
+        "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/ab",
+        "zYXWVUTSRQPONMLKJIHGFEDCBAzyxwvutsrqpon7",
+    ])
+    def test_real_secret_key_shapes_are_reported(self, scanner, key):
+        findings = scanner.scan_for_secrets(f"aws_secret = '{key}'")
+        assert [f["type"] for f in findings] == ["Potential AWS Secret Key"]
+
+    @pytest.mark.parametrize("text", [
+        "583ec6519aa50e5ba0aa1b5af6c1e0d3c79a6d42",  # git SHA
+        "583EC6519AA50E5BA0AA1B5AF6C1E0D3C79A6D42",  # uppercase hex digest
+        '{"commit": "a257e715689a57d00479c8a727a4d491b28b99d6"}',
+        "merged at 845b8632b881be4d8d375801e2da6fc270d07dfd today",
+        "docs/history/cleanup/log/archive/entries",  # all-lowercase path run
+        "LazyBrokerSessionHostUnixSocketTransport",  # 40-letter Swift type name
+    ])
+    def test_single_case_runs_are_not_reported(self, scanner, text):
+        assert scanner.scan_for_secrets(text) == []
+
+    def test_mixed_case_needs_both_cases_inside_the_run(self, scanner):
+        # Uppercase just outside the 40-char hex run must not satisfy the lookahead.
+        text = "Z-583ec6519aa50e5ba0aa1b5af6c1e0d3c79a6d42-Z"
+        assert scanner.scan_for_secrets(text) == []
+
+    def test_digit_or_symbol_needs_to_be_inside_the_run(self, scanner):
+        text = "1-LazyBrokerSessionHostUnixSocketTransport-/"
+        assert scanner.scan_for_secrets(text) == []
