@@ -184,9 +184,9 @@ not protection against partially staged files.
 **Shared pre-commit hook: changed lines only (#6900, 2026-09-30).**
 `governance-check.sh` runs `silent-failure-check.py --staged`. It reads the
 staged and HEAD blobs, never the working tree, and blocks a finding only when
-a line of its own statement or handler was added, edited or deleted (an SF002
-return is governed by its handler, so broadening `except ValueError` to
-`except Exception` counts), or when the finding did not exist before (a deleted `raise` that leaves an inert handler,
+its own statement or governing handler changed (an SF002 return is governed
+by its handler, so broadening `except ValueError` to `except Exception` or
+deleting a guard inside it counts), or when the finding did not exist before (a deleted `raise` that leaves an inert handler,
 or a deleted rationale comment). Findings on untouched lines, including ones
 that merely moved or were renamed with their file, do not block. They are the
 portfolio backlog that _tools remediates. `--base <commit>` applies the same

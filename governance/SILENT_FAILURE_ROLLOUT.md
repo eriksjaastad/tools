@@ -13,9 +13,9 @@ Why the old rule was dropped: the whole-file plan waited for owners to clear
 every finding before activation, and it did not converge. The 2026-09-30
 dry-run found 949 candidates in 413 files across 32 repositories, up from 933
 on 09-25, while the owner cards each fixed one slice. A `--base` replay of
-September history found 203 new or changed-line findings across about 1,466
-commits in the five largest repositories (image-workflow 12, ai-memory 57,
-project-tracker 40, muffinpanrecipes 59, hypocrisynow 35). That is the flow
+September history found 196 new or changed-line findings across about 1,466
+commits in the five largest repositories (image-workflow 12, ai-memory 55,
+project-tracker 39, muffinpanrecipes 56, hypocrisynow 34). That is the flow
 the gate now stops.
 
 This is not a baseline exemption. No finding is recorded as allowed, and

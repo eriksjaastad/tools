@@ -18,17 +18,16 @@ Constructor names are matched syntactically, without resolving shadowed builtins
 Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
 
-With --staged (pre-commit) or --base REV (CI), only changed code is checked:
-a finding blocks when a line of its own statement or handler was added,
-edited or deleted, or when it did not exist before (for example, a deleted `raise` that
-leaves an inert handler). Findings on untouched lines stay in the portfolio
-backlog. Source is read from Git blobs, never from the working tree.
+With --staged (pre-commit) or --base REV (CI), only changed code is checked.
+A finding blocks when it is new, or when its own statement or governing handler
+changed: a broadened clause, a deleted guard or `raise`, or any edited line.
+Untouched findings, including moved ones, stay in the portfolio backlog.
+Source is read from Git blobs, never from the working tree.
 """
 
 import argparse
 import ast
 from collections import Counter
-import difflib
 import io
 import json
 import os
@@ -261,11 +260,11 @@ def scan_source(source: str, path: str = "<memory>") -> list[dict]:
 def _scan_entries(source: str, path: str) -> list[tuple[dict, int, int, tuple]]:
     """Findings with the line span that governs them and a position-free identity.
 
-    The span covers the flagged node plus, for SF002, the handler whose clause
-    and body decide what the return masks: broadening `except ValueError` to
-    `except Exception` above an unchanged `return []` is a change to that
-    finding. The identity (rule plus the node's AST without positions) lets
-    changed-line mode recognize a finding that merely moved from one that is new.
+    For SF002 both the span and the identity include the handler whose clause
+    and body decide what the return masks, so broadening `except ValueError` to
+    `except Exception`, or deleting a guard or `raise` inside it, changes the
+    finding even though the return line is untouched. Identities carry no
+    positions, so a finding that merely moved keeps its identity.
     """
     tree = ast.parse(source, filename=path)
     parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
@@ -288,14 +287,16 @@ def _scan_entries(source: str, path: str) -> list[tuple[dict, int, int, tuple]]:
         spans = [node] if governs is None else [node, governs]
         start = min(item.lineno for item in spans)
         end = max(item.end_lineno or item.lineno for item in spans)
+        handlers = frozenset() if governs is None else frozenset({ast.dump(governs, include_attributes=False)})
         marker = tuple(finding[field] for field in ("path", "line", "column", "rule"))
         if marker in entries:
             # The same return can be reached from several handlers (a finally
             # override); every one of them governs it.
-            old, old_start, old_end, key = entries[marker]
+            old, old_start, old_end, (_, dump, old_handlers) = entries[marker]
+            key = (rule, dump, old_handlers | handlers)
             entries[marker] = (old, min(start, old_start), max(end, old_end), key)
         else:
-            entries[marker] = (finding, start, end, (rule, ast.dump(node, include_attributes=False)))
+            entries[marker] = (finding, start, end, (rule, ast.dump(node, include_attributes=False), handlers))
 
     for node in ast.walk(tree):
         if _empty_environment_fallback(node):
@@ -336,6 +337,9 @@ def scan_file(path: str | Path) -> list[dict]:
 def changed_findings(before: str, after: str, path: str) -> list[dict]:
     """Findings in `after` that are new or whose governing lines changed since `before`.
 
+    A finding blocks when its identity (rule, flagged node and governing handler,
+    without positions) is new, or when the exact text of its span appears nowhere
+    in `before`. Moving untouched code, in either direction, changes neither.
     An unparseable `before` gives no baseline, so every finding in `after` counts.
     Parse errors in `after` propagate to the caller.
     """
@@ -343,20 +347,14 @@ def changed_findings(before: str, after: str, path: str) -> list[dict]:
         old = Counter(key for _, _, _, key in _scan_entries(before, path))
     except (SyntaxError, tokenize.TokenError, ValueError, RecursionError):
         before, old = "", Counter()
-    edited = set()
-    matcher = difflib.SequenceMatcher(None, before.splitlines(), after.splitlines(), autojunk=False)
-    for tag, _, _, start, end in matcher.get_opcodes():
-        if tag in {"insert", "replace"}:
-            edited.update(range(start + 1, end + 1))
-        elif tag == "delete":
-            # Removed lines leave nothing to mark, so mark both neighbours: a
-            # deleted `raise` or guard inside a handler changes what it masks.
-            edited.update((start, start + 1))
+    previous = "\n" + "\n".join(before.splitlines()) + "\n"
+    lines = after.splitlines()
     findings = []
     for finding, first, last, key in _scan_entries(after, path):
         existed = old[key] > 0
         old[key] -= 1
-        if not existed or not edited.isdisjoint(range(first, last + 1)):
+        block = "\n" + "\n".join(lines[first - 1:last]) + "\n"
+        if not existed or block not in previous:
             findings.append(finding)
     return findings
 

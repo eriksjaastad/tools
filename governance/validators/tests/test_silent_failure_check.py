@@ -543,3 +543,31 @@ def test_filter_matching_nothing_checks_nothing(repo, tmp_path):
     stage_in(repo, "m.py", handler("pass"))
     assert changed_cli(repo, "--staged", str(tmp_path / "elsewhere.py")).returncode == 0
     assert changed_cli(repo, "--staged").returncode == 1
+
+
+# Review round 2 on 7845008: moving code next to an untouched handler is not a
+# change to it, whichever block a line diff decides moved.
+
+SMALL = "def helper():\n    return 1\n"
+LARGE = "def helper():\n" + "".join(f"    step_{n}()\n" for n in range(40)) + "    return 1\n"
+
+
+@pytest.mark.parametrize("moved", [SMALL, LARGE], ids=["small", "large"])
+def test_moving_a_function_across_an_untouched_handler_passes(silent_check, moved):
+    finding = handler("logger.warning('failed')\nreturn []")
+    below, above = finding + "\n\n" + moved, moved + "\n\n" + finding
+    assert silent_check.changed_findings(below, above, "m.py") == []
+    assert silent_check.changed_findings(above, below, "m.py") == []
+
+
+def test_editing_a_comment_inside_the_handler_blocks(silent_check):
+    before = handler("# retry later\nreturn []")
+    after = handler("# give up\nreturn []")
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
+
+
+def test_deleting_a_trailing_raise_after_a_guarded_default_blocks(silent_check):
+    before = handler("if missing():\n    return []\nraise")
+    after = handler("if missing():\n    return []")
+    assert silent_check.changed_findings(before, before, "m.py") == []
+    assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
