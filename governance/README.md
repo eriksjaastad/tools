@@ -156,6 +156,8 @@ From the repository root:
 ```bash
 uv run governance/validators/silent-failure-check.py module.py
 uv run governance/validators/silent-failure-check.py --dry-run --json module.py
+uv run governance/validators/silent-failure-check.py --staged            # changed lines, pre-commit
+uv run governance/validators/silent-failure-check.py --base origin/main # changed lines, CI
 uv run governance/silent-failure-gate.py
 mkdir -p governance/reports  # output is gitignored (#7091) — never commit it
 uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json \
@@ -177,8 +179,28 @@ It returns 1 for findings and 2 for scan/enumeration errors, unsafe paths or no
 Python coverage. It scans working-tree content, appropriate to a CI checkout;
 it is not a staged-index pre-commit scanner. The isolated Git-hook regression
 demonstrates automatic invocation with matching staged/working-tree content,
-not protection against partially staged files. This change does not install a
-hook or modify the shared validator array.
+not protection against partially staged files.
+
+**Shared pre-commit hook: changed lines only (#6900, 2026-09-30).**
+`governance-check.sh` runs `silent-failure-check.py --staged`. It reads the
+staged and HEAD blobs, never the working tree. A finding passes only when it
+pairs one-to-one with an old finding that has the same rule, the same AST and
+exactly the same governing source text. For SF002 the governing text includes
+the handler, so broadening `except ValueError` to `except Exception`, deleting
+a guard or trailing `raise` inside it, or editing a comment in it all make the
+finding new. So do a deleted rationale comment and a copied handler. The
+baseline is every Python file the commit modifies or deletes, pooled, so
+untouched findings that moved within a file, between files, or with a renamed
+file pass, whether or not Git detects the rename. They are the portfolio
+backlog that _tools remediates.
+
+`--base <commit>` applies the same rule to a committed range for CI. In a
+staged merge, a finding blocks only when it is new relative to every parent, so
+code the merge brings in from the other side does not count. Only an old side
+that was already a regular `.py`/`.pyi` file joins the baseline: a `.txt`
+renamed to `.py` is new coverage. Changed symlinks and submodules are skipped.
+Unparseable staged source exits `2`; an unparseable previous version gives no
+baseline, so every finding in the new version counts.
 
 The portfolio reporter examines immediate child Git repositories, including
 worktrees, and only their tracked `.py` working-tree files. It records the

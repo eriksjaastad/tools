@@ -71,3 +71,28 @@ def test_commit_leaves_existing_host_venv_untouched(host):
     result = run_master(host)
     assert result.returncode == 0, result.stdout + result.stderr
     assert snapshot(venv) == before
+
+
+SILENT = "def load():\n    try:\n        return fetch()\n    except Exception:\n        return []\n"
+
+
+def commit_all(host, message):
+    root, env = host
+    env = dict(env, GIT_AUTHOR_NAME="Fixture", GIT_AUTHOR_EMAIL="fixture@example.invalid",
+               GIT_COMMITTER_NAME="Fixture", GIT_COMMITTER_EMAIL="fixture@example.invalid")
+    subprocess.run(["git", "commit", "-qm", message, "--no-verify"], cwd=root, env=env,
+                   check=True, timeout=10)
+
+
+def test_master_blocks_new_silent_failure_but_not_historical(host):
+    root, env = host
+    (root / "module.py").write_text(SILENT)
+    subprocess.run(["git", "add", "module.py"], cwd=root, env=env, check=True, timeout=10)
+    blocked = run_master(host)
+    assert blocked.returncode == 1
+    assert "SF002" in blocked.stdout + blocked.stderr
+    commit_all(host, "historical silent handler")
+    (root / "module.py").write_text(SILENT + "\nVALUE = 2\n")
+    subprocess.run(["git", "add", "module.py"], cwd=root, env=env, check=True, timeout=10)
+    result = run_master(host)
+    assert result.returncode == 0, result.stdout + result.stderr

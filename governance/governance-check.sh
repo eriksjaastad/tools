@@ -60,7 +60,18 @@ VALIDATORS=(
     "absolute-path-check.py"
     "api-wrapper-check.py"
     "source-deletion-check.py"
+    "silent-failure-check.py"
 )
+
+# Extra arguments for validators that need them. silent-failure-check.py
+# checks only added or edited lines of the staged blobs (#6900): existing
+# findings on untouched lines are the portfolio remediation backlog, not a
+# reason to block an unrelated commit.
+validator_args() {
+    case "$1" in
+        silent-failure-check.py) echo "--staged" ;;
+    esac
+}
 
 # Ecosystem-level validators (not file-based). Empty since 2026-09-01.
 #
@@ -99,7 +110,9 @@ for validator in "${VALIDATORS[@]}"; do
     # from treating the repo being committed as the project: without it, a
     # validator lacking a PEP 723 block made uv create or sync that repo's
     # .venv, which then shadowed the real interpreter in fresh worktrees (#7647).
-    if "$HOME/.local/bin/uv" run --no-project "$VALIDATOR_PATH" "${STAGED_FILES[@]}" 2>&1; then
+    # Unquoted on purpose: validator_args prints zero or more plain flags.
+    # shellcheck disable=SC2046
+    if "$HOME/.local/bin/uv" run --no-project "$VALIDATOR_PATH" $(validator_args "$validator") "${STAGED_FILES[@]}" 2>&1; then
         echo -e "${GREEN}✓ PASS${NC}"
     else
         VALIDATOR_EXIT_CODE=$?
