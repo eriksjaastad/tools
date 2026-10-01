@@ -85,4 +85,4 @@ Committed once to `_tools/` via `e9d1a6e feat(tools): add new scripts, docs, mod
 
 - `_tools/model-bench/` — benchmark tool, separate concern (retired 2026-09-25, #6453; history in Git)
 - `_tools/route/` — token usage tracking CLI
-- `~/projects/auxesis-research-labs/` — uses the same "bounded iteration" philosophy for research sessions, not code
+- `~/projects/_archive/auxesis-research-labs/` (archived 2026-10-01) — uses the same "bounded iteration" philosophy for research sessions, not code
