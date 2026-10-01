@@ -571,3 +571,50 @@ def test_deleting_a_trailing_raise_after_a_guarded_default_blocks(silent_check):
     after = handler("if missing():\n    return []")
     assert silent_check.changed_findings(before, before, "m.py") == []
     assert [rule for _, rule in rules(silent_check.changed_findings(before, after, "m.py"))] == ["SF002"]
+
+
+# Review round 3 on 60a76c8: only an old side that was already scanned Python
+# is a baseline.
+
+def test_rename_from_text_to_python_is_new_coverage(repo):
+    stage_in(repo, "notes.txt", HISTORICAL)
+    git_in(repo, "commit", "-qm", "not python yet")
+    git_in(repo, "mv", "notes.txt", "notes.py")
+    result = changed_cli(repo, "--staged", "--json")
+    assert result.returncode == 1
+    assert [item["rule"] for item in json.loads(result.stdout)["findings"]] == ["SF002"]
+
+
+@pytest.mark.parametrize("suffix", [".py", ".pyi"])
+def test_rename_between_python_files_keeps_its_baseline(repo, suffix):
+    stage_in(repo, "old.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "historical baseline")
+    git_in(repo, "mv", "old.py", "new" + suffix)
+    assert changed_cli(repo, "--staged").returncode == 0
+
+
+@pytest.mark.skipif(not hasattr(os, "symlink"), reason="Platform lacks symlinks")
+def test_symlink_replaced_by_python_file_is_new_coverage(repo):
+    stage_in(repo, "target.txt", HISTORICAL)
+    os.symlink("target.txt", repo[0] / "m.py")
+    git_in(repo, "add", "m.py")
+    git_in(repo, "commit", "-qm", "symlinked module")
+    (repo[0] / "replacement").write_text(HISTORICAL)
+    os.replace(repo[0] / "replacement", repo[0] / "m.py")
+    git_in(repo, "add", "m.py")
+    assert changed_cli(repo, "--staged").returncode == 1
+
+
+@pytest.mark.skipif(not hasattr(os, "symlink"), reason="Platform lacks symlinks")
+def test_merge_parent_symlink_is_not_a_baseline(silent_check, repo, monkeypatch):
+    stage_in(repo, "target.txt", HISTORICAL)
+    os.symlink("target.txt", repo[0] / "m.py")
+    stage_in(repo, "real.py", HISTORICAL)
+    git_in(repo, "add", "m.py")
+    git_in(repo, "commit", "-qm", "symlink and regular file")
+    monkeypatch.chdir(repo[0])
+    for name, value in repo[1].items():
+        monkeypatch.setenv(name, value)
+    assert silent_check._tree_oid("HEAD", "m.py") == silent_check.NO_BASELINE
+    assert silent_check._tree_oid("HEAD", "missing.py") == silent_check.NO_BASELINE
+    assert silent_check._tree_oid("HEAD", "real.py") != silent_check.NO_BASELINE

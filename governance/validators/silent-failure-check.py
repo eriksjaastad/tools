@@ -46,6 +46,8 @@ MESSAGES = {
 }
 SUPPRESSION = re.compile(r"#\s*governance: allow-silent (SF00[123]):\s*(\S.*)\Z")
 SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+REGULAR = {"100644", "100755"}  # Git modes of regular files; symlinks and submodules are not source
+NO_BASELINE = "0" * 40  # Git's null object id: nothing to compare against
 
 
 def _inert(statement: ast.stmt) -> bool:
@@ -369,10 +371,16 @@ def _blob_source(oid: str) -> str:
     return blob.decode(encoding)
 
 
+def _python_source(path: str, mode: str) -> bool:
+    return path.lower().endswith((".py", ".pyi")) and mode in REGULAR
+
+
 def _changed_python(base: str | None):
     """Yield (path, old_oid, new_oid) for changed regular Python blobs.
 
     Symlinks and submodules carry no Python source of their own and are skipped.
+    Only an old side that was itself a regular Python file is a baseline: a
+    `.txt` renamed to `.py`, or a symlink replaced by a file, is new coverage.
     """
     args = ["diff", "--raw", "-z", "--no-abbrev", "--no-ext-diff", "--no-textconv",
             "--find-renames", "--diff-filter=ACMRT"]
@@ -384,14 +392,14 @@ def _changed_python(base: str | None):
     fields = _git(*args).split(b"\0")
     i = 0
     while i < len(fields) and fields[i]:
-        _, new_mode, old_oid, new_oid, status = fields[i].decode("ascii").lstrip(":").split()
-        path = fields[i + 1].decode("utf-8", "surrogateescape")
+        old_mode, new_mode, old_oid, new_oid, status = fields[i].decode("ascii").lstrip(":").split()
+        old_path = path = fields[i + 1].decode("utf-8", "surrogateescape")
         i += 2
         if status[0] in "RC":
             path = fields[i].decode("utf-8", "surrogateescape")
             i += 1
-        if path.lower().endswith((".py", ".pyi")) and new_mode in {"100644", "100755"}:
-            yield path, old_oid, new_oid
+        if _python_source(path, new_mode):
+            yield path, old_oid if _python_source(old_path, old_mode) else NO_BASELINE, new_oid
 
 
 def _merge_heads() -> list[str]:
@@ -411,10 +419,12 @@ def _old_source(oid: str) -> str:
 
 
 def _tree_oid(commit: str, path: str) -> str:
-    """Blob id of `path` in `commit`, or all zeros when the commit lacks it."""
+    """Blob id of regular file `path` in `commit`, or NO_BASELINE when it is not one."""
     entry = _git("ls-tree", "-z", "--full-tree", commit, "--", path).split(b"\0")[0]
     parts = entry.split(None, 3)
-    return parts[2].decode("ascii") if len(parts) == 4 and parts[1] == b"blob" else "0" * 40
+    if len(parts) == 4 and parts[1] == b"blob" and parts[0].decode("ascii") in REGULAR:
+        return parts[2].decode("ascii")
+    return NO_BASELINE
 
 
 def _repo_paths(paths: list[str]) -> set[str]:
