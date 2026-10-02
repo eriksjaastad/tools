@@ -349,8 +349,10 @@ Design decisions:
 - **Which validators get a range mode:** none needs a range mode. The
   whole-file validators (secrets, absolute paths, API wrapper) read the
   commit's blobs, written under their repository-relative names to a
-  temporary directory, so path rules apply as at commit time. Symlinks and
-  submodules carry no file content and are skipped. The changed-code
+  temporary directory, so path rules apply as at commit time. Paths that
+  would collide on a case-insensitive or normalizing filesystem (`A.py` and
+  `a.py`) go to separate directories, and every copy is read back against its
+  blob. Symlinks and submodules carry no file content and are skipped. The changed-code
   validators gained `--commit REV`: `silent-failure-check.py` and
   `source-deletion-check.py` compare the commit with each parent.
 - **Merges:** a merge is judged only on what it introduces: files and

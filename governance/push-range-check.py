@@ -27,7 +27,8 @@ pre-push checks too.
 How each commit is judged: against its parents, as pre-commit would have
 judged it. The whole-file validators (secrets, absolute paths, API wrapper)
 read the committed blobs of the files the commit added or changed, written to a
-temporary directory under their repository-relative names. Symlinks and
+temporary directory under their repository-relative names (paths that would
+collide on a case-insensitive filesystem go to separate directories). Symlinks and
 submodules carry no file content in the commit and are skipped. The
 changed-code validators (silent failure, source deletion) read Git directly
 through their `--commit` mode. A merge is judged only on what it introduces:
@@ -44,6 +45,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unicodedata
 
 VALIDATORS_DIR = Path(__file__).resolve().parent / "validators"
 FILE_VALIDATORS = ("secrets-scanner.py", "absolute-path-check.py", "api-wrapper-check.py")
@@ -142,20 +144,57 @@ def introduced_files(sha: str) -> dict[str, tuple[str, str]]:
     return files
 
 
-def materialize(files: dict[str, tuple[str, str]], root: Path) -> list[str]:
-    """Write regular-file blobs under `root`; return their relative paths."""
-    written = []
+def _fold(path: str) -> str:
+    """The name a case-insensitive, normalizing filesystem sees for `path`."""
+    return unicodedata.normalize("NFD", path).casefold()
+
+
+def layers(files: dict[str, tuple[str, str]]) -> list[dict[str, str]]:
+    """Regular-file blobs split into layers whose paths cannot collide on disk.
+
+    On a case-insensitive or normalizing filesystem (macOS by default), `A.py`
+    and `a.py` in one commit would be written to the same file, and one blob
+    would never be scanned. Colliding paths, and a file whose name is another
+    path's directory, go into separate layers. Each layer keeps the real
+    repository-relative names, so validator path rules see what they see at
+    commit time.
+    """
+    result: list[tuple[dict[str, str], set[str], set[str]]] = []
     for path, (mode, oid) in sorted(files.items()):
         if mode not in REGULAR:
             continue  # symlink or submodule: no file content in this commit
-        parts = PurePosixPath(path).parts
-        if not parts or any(part in ("", ".", "..") for part in parts) or PurePosixPath(path).is_absolute():
+        pure = PurePosixPath(path)
+        if pure.is_absolute() or not pure.parts or any(part in ("", ".", "..") for part in pure.parts):
             raise ValueError(f"refusing to write unexpected Git path: {path!r}")
-        target = root.joinpath(*parts)
+        key = _fold(path)
+        parents = {_fold(str(parent)) for parent in pure.parents if str(parent) != "."}
+        for blobs, names, directories in result:
+            if key not in names and key not in directories and not parents & names:
+                break
+        else:
+            blobs, names, directories = {}, set(), set()
+            result.append((blobs, names, directories))
+        blobs[path] = oid
+        names.add(key)
+        directories.update(parents)
+    return [blobs for blobs, _, _ in result]
+
+
+def materialize(blobs: dict[str, str], root: Path) -> list[str]:
+    """Write one layer's blobs under `root`; return their relative paths.
+
+    Every file is read back after all are written, so any collision the
+    layering did not foresee fails closed instead of hiding a blob.
+    """
+    contents = {path: git("cat-file", "blob", oid) for path, oid in blobs.items()}
+    for path, content in contents.items():
+        target = root.joinpath(*PurePosixPath(path).parts)
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(git("cat-file", "blob", oid))
-        written.append(path)
-    return written
+        target.write_bytes(content)
+    for path, content in contents.items():
+        if root.joinpath(*PurePosixPath(path).parts).read_bytes() != content:
+            raise ValueError(f"scratch copy of {path!r} does not match its blob (filesystem name collision)")
+    return sorted(contents)
 
 
 def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, str]:
@@ -170,10 +209,12 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
-    files = materialize(introduced_files(sha), scratch)
-    if files:
+    for index, blobs in enumerate(layers(introduced_files(sha))):
+        root = scratch / str(index)
+        root.mkdir()
+        files = materialize(blobs, root)
         for name in FILE_VALIDATORS:
-            code, output = run_validator(name, files, scratch)
+            code, output = run_validator(name, files, root)
             if code != 0:
                 failures.append((name, code, output))
     for name in COMMIT_VALIDATORS:
@@ -203,12 +244,14 @@ def main(argv: list[str] | None = None) -> int:
             scratch.mkdir()
             try:
                 failures = check_commit(sha, scratch)
+                if failures:
+                    subject = git("log", "-1", "--format=%h %s", sha).decode(errors="replace").strip()
             except (OSError, ValueError, UnicodeError, subprocess.SubprocessError) as error:
                 failures = [("push-range-check", 1, f"unable to read the commit ({type(error).__name__}: {error})\n")]
+                subject = sha
             if not failures:
                 continue
             blocked += 1
-            subject = git("log", "-1", "--format=%h %s", sha).decode(errors="replace").strip()
             print(f"\n✗ commit {subject}", file=sys.stderr)
             for name, code, output in failures:
                 print(f"  {name} (exit {code}):", file=sys.stderr)

@@ -8,6 +8,7 @@ or `--no-verify` put commits on the branch that pre-commit never saw.
 Bad content is assembled at runtime so this file does not trip the
 repository's own pre-commit gate.
 """
+import importlib.util
 import os
 from pathlib import Path
 import shlex
@@ -196,3 +197,91 @@ def test_unreadable_hook_input_blocks(repo, line):
                             capture_output=True, text=True, timeout=30)
     assert result.returncode == 1
     assert "unable to list the pushed commits" in result.stderr
+
+
+# Review round 1 on ffbdc91: case-colliding paths, and the enumeration edges.
+
+def load_driver():
+    spec = importlib.util.spec_from_file_location("push_range_check", DRIVER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def blob(repo, text):
+    root, env, _ = repo
+    return subprocess.run(["git", "hash-object", "-w", "--stdin"], input=text, cwd=root, env=env,
+                          check=True, capture_output=True, text=True, timeout=10).stdout.strip()
+
+
+def test_case_colliding_paths_are_each_scanned(repo):
+    # Built with plumbing: a case-insensitive worktree cannot stage both names.
+    for name, text in (("A.py", SECRET), ("a.py", "VALUE = 1\n")):
+        git(repo, "update-index", "--add", "--cacheinfo", f"100644,{blob(repo, text)},{name}")
+    git(repo, "commit", "-qm", "colliding names")
+    result = push(repo, "main")
+    assert result.returncode != 0
+    assert "A.py" in result.stderr and "secrets-scanner.py" in result.stderr
+
+
+def test_layers_separate_names_that_collide_on_disk():
+    driver = load_driver()
+    files = {name: ("100644", name) for name in ("A.py", "a.py", "B", "b/c.py", "d/e.py", "café.py", "café.py")}
+    files["link.py"] = ("120000", "link")
+    placed = driver.layers(files)
+    for left in ("A.py", "B", "café.py"):
+        right = {"A.py": "a.py", "B": "b/c.py", "café.py": "café.py"}[left]
+        assert not any(left in layer and right in layer for layer in placed)
+    assert sorted(name for layer in placed for name in layer) == sorted(set(files) - {"link.py"})
+    assert len(placed) == 2
+
+
+def test_force_push_checks_only_the_rewritten_commits(repo):
+    commit(repo, "m.py", "VALUE = 1\n", "base")
+    commit(repo, "n.py", "VALUE = 2\n", "tip")
+    assert push(repo, "main").returncode == 0
+    git(repo, "reset", "-q", "--hard", "HEAD~1")
+    commit(repo, "n.py", DELETE, "rewritten tip")
+    blocked = push(repo, "--force", "main")
+    assert blocked.returncode != 0 and "1 of 1 commit(s)" in blocked.stderr
+    git(repo, "reset", "-q", "--hard", "HEAD~1")
+    commit(repo, "n.py", "VALUE = 3\n", "clean rewrite")
+    clean = push(repo, "--force", "main")
+    assert clean.returncode == 0, clean.stderr
+    assert "1 commit(s)" in clean.stderr
+
+
+def test_one_commit_pushed_to_two_refs_is_checked_once(repo):
+    commit(repo, "m.py", ABSOLUTE, "shared bad commit")
+    result = push(repo, "main", "main:refs/heads/copy")
+    assert result.returncode != 0
+    assert "1 of 1 commit(s)" in result.stderr
+    assert remote_tip(repo) is None and remote_tip(repo, "copy") is None
+
+
+def test_annotated_tag_of_unpublished_commit_is_checked(repo):
+    commit(repo, "m.py", "VALUE = 1\n", "published")
+    assert push(repo, "main").returncode == 0
+    git(repo, "checkout", "-q", "--detach")
+    commit(repo, "m.py", ABSOLUTE, "tagged only")
+    git(repo, "tag", "-a", "v2", "-m", "release")
+    result = push(repo, "v2")
+    assert result.returncode != 0 and "tagged only" in result.stderr
+
+
+def test_tag_of_a_blob_publishes_no_commits(repo):
+    commit(repo, "m.py", "VALUE = 1\n")
+    assert push(repo, "main").returncode == 0
+    git(repo, "tag", "loose", blob(repo, SECRET))
+    result = push(repo, "loose")
+    assert result.returncode == 0 and "commit(s)" not in result.stderr
+
+
+def test_validator_timeout_fails_closed(tmp_path, monkeypatch):
+    driver = load_driver()
+    (tmp_path / "slow.py").write_text("import time\ntime.sleep(30)\n")
+    monkeypatch.setattr(driver, "VALIDATORS_DIR", tmp_path)
+    monkeypatch.setattr(driver, "VALIDATOR_TIMEOUT", 0.5)
+    code, output = driver.run_validator("slow.py", [], None)
+    assert code == 124 and "timed out" in output
