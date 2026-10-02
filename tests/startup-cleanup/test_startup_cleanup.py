@@ -8,6 +8,7 @@ path is ever touched.
 import importlib.util
 import io
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -283,7 +284,8 @@ def test_hook_uses_payload_cwd_before_stale_provider_environment(sc, tmp_path, m
         assert config["matcher"] == "^startup$"
         command = config["hooks"][0]["command"]
         assert '"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"' in command
-        assert command.endswith(" --human")
+        assert command.endswith(" --hook --human")
+        assert config["hooks"][0]["timeout"] == 45
 
 
 def test_deletes_standalone_merged_task_branch(sc, tmp_path, monkeypatch):
@@ -876,6 +878,207 @@ def test_cli_returns_failure_for_nonrepository(sc, tmp_path):
     )
     assert result.returncode == 1
     assert json.loads(result.stdout)["ok"] is False
+
+
+# --- SessionStart hook mode ------------------------------------------------
+
+
+def run_cli(args: list[str], stdin: str, cwd: Path, path_prefix: Path | None = None,
+            path: str | None = None,
+            extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update(extra_env or {})
+    if path is not None:
+        env["PATH"] = path
+    elif path_prefix is not None:
+        env["PATH"] = f"{path_prefix}{os.pathsep}{env.get('PATH', '')}"
+    return subprocess.run(
+        [sys.executable, str(TOOL), *args],
+        input=stdin, capture_output=True, text=True, timeout=30, cwd=str(cwd), env=env,
+    )
+
+
+def make_fake_gha(tmp_path: Path) -> Path:
+    gh = make_fake_gh(tmp_path)
+    gh.rename(gh.with_name("gha"))
+    return gh.parent
+
+
+def make_home_with_project(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """A home-like non-Git folder holding a project with a merged task worktree."""
+    home = tmp_path / "home"
+    (home / "Documents").mkdir(parents=True)
+    (home / "notes.txt").write_text("not a repository\n")
+    (home / "projects").mkdir()
+    project = make_repo(home / "projects", "project")
+    wt = home / "projects" / "project-task-wt"
+    make_task_worktree(project, "task/700-home", wt)
+    merge_branch(project, "task/700-home")
+    make_task_branch(project, "task/701-home", "home.txt")
+    return home, project, wt
+
+
+def test_hook_mode_skips_home_folder_without_touching_projects(tmp_path):
+    home, project, wt = make_home_with_project(tmp_path)
+    branches = branch_names(project)
+    payload = json.dumps({"cwd": str(home), "hook_event_name": "SessionStart"})
+    gha_dir = make_fake_gha(tmp_path)
+
+    # The process runs inside the project; the stdin cwd (home) is authoritative.
+    # A non-English session locale must not change the classification.
+    human = run_cli(["--hook", "--human"], payload, project, gha_dir,
+                    extra_env={"LC_ALL": "de_DE.UTF-8", "LANGUAGE": "de"})
+    assert human.returncode == 0, human.stdout + human.stderr
+    assert human.stdout == (
+        f"startup-cleanup: skipped — {home.resolve()} is not in a Git repository; "
+        "no cleanup applies\n"
+    )
+
+    machine = run_cli(["--hook"], payload, project, gha_dir)
+    assert machine.returncode == 0
+    report = json.loads(machine.stdout)
+    assert report["ok"] is True
+    assert report["applicable"] is False
+    assert report["project_dir"] == str(home.resolve())
+    assert "repo_root" not in report
+    assert report["removed"] == [] and report["refused"] == []
+
+    assert wt.exists()
+    assert branch_names(project) == branches
+    assert not (project / ".git" / "startup-cleanup-last-run").exists()
+
+
+def test_direct_cli_still_fails_for_home_folder(tmp_path):
+    home, project, _ = make_home_with_project(tmp_path)
+    payload = json.dumps({"cwd": str(home)})
+
+    for args in (["--human"], []):
+        result = run_cli(args, payload, home)
+        assert result.returncode == 1
+    report = json.loads(run_cli([], payload, home).stdout)
+    assert report["ok"] is False
+    assert "not a git repository" in report["error"]
+    assert "applicable" not in report
+
+
+@pytest.mark.parametrize("subdir", ["", "src/nested"])
+def test_hook_mode_in_repository_runs_normal_cleanup_for_stdin_repo(tmp_path, subdir):
+    home, other, other_wt = make_home_with_project(tmp_path)
+    repo = make_repo(tmp_path, "target")
+    make_task_branch(repo, "task/702-target", "target.txt")
+    session_dir = repo / subdir
+    session_dir.mkdir(parents=True, exist_ok=True)
+    other_branches = branch_names(other)
+
+    # Process cwd is another repository; only the stdin cwd repo is in scope.
+    result = run_cli(["--hook"], json.dumps({"cwd": str(session_dir)}), other,
+                     make_fake_gha(tmp_path))
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads(result.stdout)
+    assert report["ok"] is True
+    assert "applicable" not in report
+    assert report["repo_root"] == str(repo.resolve())
+    assert [item["target"] for item in report["removed"]] == ["task/702-target"]
+    assert "task/702-target" not in branch_names(repo)
+    assert branch_names(other) == other_branches
+    assert other_wt.exists()
+
+
+def test_hook_mode_rejects_missing_or_malformed_input(tmp_path):
+    home, project, _ = make_home_with_project(tmp_path)
+    cases = {
+        "missing cwd path": json.dumps({"cwd": str(home / "deleted")}),
+        "cwd is a file": json.dumps({"cwd": str(home / "notes.txt")}),
+        "not json": "{cwd: home",
+        "not an object": json.dumps([str(home)]),
+        "no cwd": json.dumps({"hook_event_name": "SessionStart"}),
+        "cwd not a string": json.dumps({"cwd": 7}),
+        "empty input": "",
+    }
+    for name, stdin in cases.items():
+        # The process cwd is a valid folder; hook mode must not fall back to it.
+        result = run_cli(["--hook", "--human"], stdin, home)
+        assert result.returncode == 1, name
+        assert json.loads(result.stdout)["ok"] is False, name
+
+
+def test_hook_mode_fails_on_corrupt_repository_markers(tmp_path):
+    home = tmp_path / "home"
+    broken_link = home / "broken-linked-worktree"
+    broken_link.mkdir(parents=True)
+    (broken_link / ".git").write_text(f"gitdir: {tmp_path / 'gone' / '.git' / 'worktrees' / 'x'}\n")
+    empty_ancestor = home / "empty-git-ancestor"
+    (empty_ancestor / ".git").mkdir(parents=True)
+    (empty_ancestor / "sub").mkdir()
+    bare = home / "bare.git"
+    git(home, "init", "-q", "--bare", str(bare))
+
+    for session_dir in (broken_link, empty_ancestor / "sub", bare):
+        result = run_cli(["--hook"], json.dumps({"cwd": str(session_dir)}), home)
+        assert result.returncode == 1, session_dir
+        report = json.loads(result.stdout)
+        assert report["ok"] is False
+        assert "applicable" not in report
+    assert (broken_link / ".git").is_file()
+    assert (empty_ancestor / ".git").is_dir()
+
+
+def test_hook_mode_fails_when_git_cannot_run(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    empty_bin = tmp_path / "empty-bin"
+    empty_bin.mkdir()
+    failing_bin = tmp_path / "failing-bin"
+    failing_bin.mkdir()
+    failing_git = failing_bin / "git"
+    failing_git.write_text("#!/bin/sh\nexit 1\n")
+    failing_git.chmod(0o755)
+
+    for path in (str(empty_bin), str(failing_bin)):
+        result = run_cli(["--hook", "--human"], json.dumps({"cwd": str(home)}), home, path=path)
+        assert result.returncode == 1, path
+        assert result.stdout.startswith("startup-cleanup: could not run — not a git repository")
+
+
+def test_hook_mode_fails_on_malformed_git_config_exit_128(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    bad_config = tmp_path / "bad-gitconfig"
+    bad_config.write_text("[core\n  broken\n")
+
+    result = run_cli(["--hook"], json.dumps({"cwd": str(home)}), home,
+                     extra_env={"GIT_CONFIG_GLOBAL": str(bad_config)})
+    assert result.returncode == 1
+    report = json.loads(result.stdout)
+    assert report["ok"] is False
+    assert "applicable" not in report
+    assert "exited 128: fatal: bad config line 1" in report["error"]
+
+
+@pytest.mark.parametrize("stderr", [
+    "",
+    "fatal: unable to read config file '/etc/gitconfig': Permission denied",
+    "warning: ignoring broken ref\nfatal: not a git repository (or any of the parent directories): .git",
+    "fatal: not a git repository (or any parent up to mount point /Volumes)",
+])
+def test_hook_mode_requires_exact_absence_diagnostic_with_exit_128(tmp_path, stderr):
+    home = tmp_path / "home"
+    home.mkdir()
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_git = fake_bin / "git"
+    fake_git.write_text(
+        "#!/usr/bin/env python3\nimport sys\n"
+        f"sys.stderr.write({stderr!r} + '\\n' if {stderr!r} else '')\nsys.exit(128)\n"
+    )
+    fake_git.chmod(0o755)
+
+    result = run_cli(["--hook"], json.dumps({"cwd": str(home)}), home, path_prefix=fake_bin)
+    assert result.returncode == 1
+    report = json.loads(result.stdout)
+    assert report["ok"] is False
+    assert "applicable" not in report
+    assert "rev-parse --git-dir exited 128" in report["error"]
 
 
 def test_total_budget_refuses_slow_pr_lookup(sc, tmp_path, monkeypatch):

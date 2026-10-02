@@ -95,6 +95,38 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --force --human
 Exit code is `0` for a completed check (including refusals) and `1` only if
 the tool itself could not run. This keeps SessionStart hooks non-blocking.
 
+### Direct runs versus hook mode
+
+A direct run is repository-oriented: a folder outside any Git repository is
+an error (`ok: false`, exit `1`).
+
+SessionStart hooks run in every new session, including valid sessions in a
+home folder. Their registered commands therefore pass `--hook`, which changes
+only that applicability question:
+
+- The session folder comes from the stdin JSON `cwd` (or an explicit
+  `--project-dir`). The process working directory is never used as a
+  fallback. Missing or malformed input, or a `cwd` that is not an existing
+  directory, fails with exit `1`.
+- Inside a repository, root or subdirectory, the normal check runs with every
+  gate above.
+- Outside any repository the report is `ok: true` with `applicable: false`,
+  exit `0`, and `--human` prints
+  `startup-cleanup: skipped — <dir> is not in a Git repository; no cleanup applies`.
+  No cleanup runs, no other folder is searched, and nothing is written.
+
+The skip requires positive evidence: `GIT_DIR` is unset, no `.git` file or
+directory exists in the folder or any ancestor, and a confirmation probe,
+`git rev-parse --git-dir` run with `LC_ALL=C` so the message is untranslated,
+exits `128` with exactly
+`fatal: not a git repository (or any of the parent directories): .git` on
+stderr. Exit `128` alone is not enough, because Git also uses it for real
+errors. A malformed Git configuration file, any other or additional
+diagnostic, a mount-boundary stop (`GIT_DISCOVERY_ACROSS_FILESYSTEM`), a
+corrupt `.git` directory, a linked-worktree `.git` file whose `gitdir` is
+gone, a bare repository, an unreadable ancestor, or a Git that cannot start or
+exits otherwise all remain failures.
+
 Output schema: `tools.startup-cleanup.v1` with `ok`, `project_dir`,
 `repo_root`, `main_branch`, `main_fresh`, `throttled`, `summary`,
 `removed[]`, `planned[]` (dry-run only), `refused[]` (each with `type`,
@@ -118,7 +150,7 @@ The printed snippet is the value for one element of `hooks.SessionStart`:
   "hooks": [
     {
       "type": "command",
-      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --human",
+      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --hook --human",
       "timeout": 45
     }
   ]
@@ -151,7 +183,7 @@ python3 ~/projects/_tools/startup-cleanup/startup_cleanup.py --print-codex-hook-
   "hooks": [
     {
       "type": "command",
-      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --human",
+      "command": "python3 \"$HOME/projects/_tools/startup-cleanup/startup_cleanup.py\" --hook --human",
       "timeout": 45
     }
   ]
@@ -227,4 +259,8 @@ untracked, meaningful ignored, unmerged, open PR, `gh` unavailable, locked,
 active-session worktree (including another session with a clean checkout),
 unknown session activity, stale main, missing origin, ambiguous provenance,
 detached worktree, branch checked out in a refused worktree, cross-project
-scope, bounded caps, and throttle behavior.
+scope, bounded caps, and throttle behavior. Hook-mode tests run the CLI as a
+subprocess: a home-like folder is skipped while the direct CLI still fails;
+repository roots and subdirectories keep normal scope; missing or malformed
+input, corrupt markers, a bare repository, malformed Git configuration, other
+exit-128 diagnostics, and Git failures stay failures.
