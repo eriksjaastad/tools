@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # uninstall-hooks.sh
-# Removes pre-commit hook from a project
+# Removes the governance pre-commit and pre-push hooks from a project
 # Usage: ./uninstall-hooks.sh [project-directory]
 
 set -euo pipefail
@@ -24,28 +24,38 @@ if [ ! -d "$PROJECT_DIR/.git" ]; then
     exit 1
 fi
 
-# Path to pre-commit hook
-HOOK_FILE="$PROJECT_DIR/.git/hooks/pre-commit"
+STATUS=0
 
-# Check if hook exists
-if [ ! -f "$HOOK_FILE" ]; then
-    echo -e "${YELLOW}No pre-commit hook found${NC}"
-    exit 0
-fi
+# remove_hook <hook name> <marker>: remove the hook only when it carries the
+# governance marker. pre-commit keeps the original loose "governance" marker so
+# hooks installed by older versions are still recognized; pre-push (#7841) is
+# matched on the exact installer line, since projects may have their own.
+remove_hook() {
+    local name="$1" marker="$2"
+    local hook_file="$PROJECT_DIR/.git/hooks/$name"
 
-# Check if it's our hook (contains "governance")
-if grep -q "governance" "$HOOK_FILE" 2>/dev/null; then
-    # Use trash if available, otherwise rm
-    if command -v trash &> /dev/null; then
-        trash "$HOOK_FILE"
-        echo -e "${GREEN}✓ Pre-commit hook moved to trash${NC}"
-    else
-        rm "$HOOK_FILE"
-        echo -e "${GREEN}✓ Pre-commit hook removed${NC}"
+    if [ ! -f "$hook_file" ]; then
+        echo -e "${YELLOW}No $name hook found${NC}"
+        return
     fi
-else
-    echo -e "${YELLOW}⚠ Pre-commit hook exists but doesn't appear to be a governance hook${NC}"
-    echo "File: $HOOK_FILE"
-    echo "Not removing it automatically. Please review and remove manually if needed."
-    exit 1
-fi
+
+    if grep -q "$marker" "$hook_file" 2>/dev/null; then
+        # Use trash if available, otherwise rm
+        if command -v trash &> /dev/null; then
+            trash "$hook_file"
+            echo -e "${GREEN}✓ $name hook moved to trash${NC}"
+        else
+            rm "$hook_file"
+            echo -e "${GREEN}✓ $name hook removed${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠ $name hook exists but doesn't appear to be a governance hook${NC}"
+        echo "File: $hook_file"
+        echo "Not removing it automatically. Please review and remove manually if needed."
+        STATUS=1
+    fi
+}
+
+remove_hook pre-commit "governance"
+remove_hook pre-push "installed by governance system"
+exit $STATUS

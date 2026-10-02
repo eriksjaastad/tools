@@ -18,7 +18,8 @@ Constructor names are matched syntactically, without resolving shadowed builtins
 Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
 
-With --staged (pre-commit) or --base REV (CI), only changed code is checked.
+With --staged (pre-commit), --base REV (CI) or --commit REV (pre-push, one
+commit against its parents), only changed code is checked.
 A finding blocks when it is new, or when its own statement or governing handler
 changed: a broadened clause, a deleted guard or `raise`, or any edited line.
 Untouched findings, including moved ones, stay in the portfolio backlog.
@@ -467,45 +468,68 @@ def _new_against(revisions: list[str], only: set[str] | None, errors: list[dict]
     return findings
 
 
-def _scan_changes(base: str | None, only: set[str] | None) -> tuple[list[dict], list[dict]]:
-    """Changed-code findings for the staged index (base None) or base..HEAD.
+def _commit_sha(revision: str) -> str:
+    return _git("rev-parse", "--verify", "--end-of-options", revision + "^{commit}").decode().strip()
 
-    For a staged merge, a finding blocks only when it is new relative to every
-    parent, so code the merge brings in from the other side does not count
-    against this commit.
+
+def commit_parents(sha: str) -> list[str]:
+    """Parents of a commit; a root commit is compared with the empty tree."""
+    parents = _git("rev-list", "--parents", "-n", "1", sha).decode().split()[1:]
+    return parents or [_git("hash-object", "-t", "tree", os.devnull).decode().strip()]
+
+
+def _new_against_all(first: list[str], others: list[list[str]], only: set[str] | None,
+                     errors: list[dict]) -> list[dict]:
+    """Findings new relative to `first` that are also new relative to every other side."""
+    findings = _new_against(first, only, errors)
+    for revisions in others:
+        if not findings:
+            break
+        relative = _new_against(revisions, only, [])
+        findings = [finding for finding in findings if finding in relative]
+    return findings
+
+
+def _scan_changes(base: str | None, only: set[str] | None,
+                  commit: str | None = None) -> tuple[list[dict], list[dict]]:
+    """Changed-code findings for the staged index, base..HEAD, or one commit.
+
+    For a merge, staged or committed, a finding blocks only when it is new
+    relative to every parent, so code the merge brings in from the other side
+    does not count against this commit.
     """
     errors = []
     if base:
-        sha = _git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").decode().strip()
-        return _new_against([sha, "HEAD"], only, errors), errors
-    findings = _new_against(["--cached"], only, errors)
-    for other in _merge_heads():
-        if not findings:
-            break
-        relative = _new_against(["--cached", other], only, [])
-        findings = [finding for finding in findings if finding in relative]
-    return findings, errors
+        return _new_against([_commit_sha(base), "HEAD"], only, errors), errors
+    if commit:
+        sha = _commit_sha(commit)
+        parents = commit_parents(sha)
+        return _new_against_all([parents[0], sha], [[p, sha] for p in parents[1:]], only, errors), errors
+    others = [["--cached", other] for other in _merge_heads()]
+    return _new_against_all(["--cached"], others, only, errors), errors
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("paths", nargs="*", help="Explicit Python files; no recursive discovery. "
-                        "With --staged/--base, optional filter on the changed paths")
+                        "With --staged/--base/--commit, optional filter on the changed paths")
     parser.add_argument("--json", action="store_true", help="Print findings and errors as JSON")
     parser.add_argument("--dry-run", action="store_true", help="Report findings without failing; scan errors still fail")
     changed = parser.add_mutually_exclusive_group()
     changed.add_argument("--staged", action="store_true", help="Check only changed lines of staged Python files (pre-commit)")
     changed.add_argument("--base", help="Check only lines changed between this commit and HEAD (CI)")
+    changed.add_argument("--commit", help="Check only lines this commit changed relative to its parents (pre-push)")
     args = parser.parse_args(argv)
-    if args.staged or args.base:
+    if args.staged or args.base or args.commit:
         try:
-            findings, errors = _scan_changes(args.base, _repo_paths(args.paths) if args.paths else None)
+            findings, errors = _scan_changes(args.base, _repo_paths(args.paths) if args.paths else None,
+                                             args.commit)
         except (OSError, UnicodeError, ValueError, subprocess.SubprocessError) as error:
             print(f"Unable to read changed Git source ({type(error).__name__}).", file=sys.stderr)
             return 2
         return _report(findings, errors, args)
     if not args.paths:
-        parser.error("explicit paths are required unless --staged or --base is given")
+        parser.error("explicit paths are required unless --staged, --base or --commit is given")
     findings, errors = [], []
     for path in sorted(set(args.paths)):
         try:

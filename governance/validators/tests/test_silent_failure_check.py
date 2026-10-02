@@ -469,6 +469,29 @@ def test_changed_mode_outside_git_fails_closed(tmp_path):
 
 def test_staged_and_base_are_exclusive(repo):
     assert changed_cli(repo, "--staged", "--base", "HEAD").returncode == 2
+    assert changed_cli(repo, "--staged", "--commit", "HEAD").returncode == 2
+
+
+def test_commit_mode_judges_a_merge_against_every_parent(repo):
+    stage_in(repo, "base.py", "VALUE = 1\n")
+    git_in(repo, "commit", "-qm", "base")
+    trunk = git_in(repo, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    git_in(repo, "checkout", "-qb", "feature")
+    stage_in(repo, "feature.py", "FEATURE = 1\n")
+    git_in(repo, "commit", "-qm", "feature work")
+    git_in(repo, "checkout", "-q", trunk)
+    stage_in(repo, "incoming.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "someone else's silent handler")
+    assert changed_cli(repo, "--commit", "HEAD").returncode == 1
+    git_in(repo, "checkout", "-q", "feature")
+    git_in(repo, "merge", "-q", "--no-ff", "--no-edit", trunk)
+    assert changed_cli(repo, "--commit", "HEAD").returncode == 0
+
+
+def test_commit_mode_checks_a_root_commit_against_the_empty_tree(repo):
+    stage_in(repo, "m.py", HISTORICAL)
+    git_in(repo, "commit", "-qm", "root")
+    assert changed_cli(repo, "--commit", "HEAD").returncode == 1
 
 
 def test_staged_merge_ignores_findings_brought_in_from_the_other_parent(repo):

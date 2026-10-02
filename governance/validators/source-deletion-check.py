@@ -3,7 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Check changed Python deletion sites in Git's index (or HEAD vs --base).
+"""Check changed Python deletion sites in Git's index (or HEAD vs --base, or one --commit).
 
 This is bounded static analysis, not a Python sandbox. It recognizes imported
 stdlib deletion aliases and Path-style unlink/rmdir calls. Temporary cleanup
@@ -16,6 +16,7 @@ import ast
 from collections import Counter
 import difflib
 import io
+import os
 import re
 import subprocess
 import sys
@@ -414,14 +415,19 @@ def source(blob):
     return blob.decode(encoding)
 
 
-def changes(base):
+def commit_sha(revision):
+    return git("rev-parse", "--verify", "--end-of-options", revision + "^{commit}").decode().strip()
+
+
+def commit_parents(sha):
+    """Parents of a commit; a root commit is compared with the empty tree."""
+    parents = git("rev-list", "--parents", "-n", "1", sha).decode().split()[1:]
+    return parents or [git("hash-object", "-t", "tree", os.devnull).decode().strip()]
+
+
+def changes(revisions):
     args = ["diff", "--raw", "-z", "--no-abbrev", "--no-ext-diff", "--no-textconv",
-            "--find-renames", "--diff-filter=ACMRT"]
-    if base:
-        sha = git("rev-parse", "--verify", "--end-of-options", base + "^{commit}").decode().strip()
-        args += [sha, "HEAD", "--"]
-    else:
-        args += ["--cached", "--"]
+            "--find-renames", "--diff-filter=ACMRT", *revisions, "--"]
     fields = git(*args).split(b"\0")
     i = 0
     while i < len(fields) and fields[i]:
@@ -436,30 +442,58 @@ def changes(base):
         yield path, new_mode, old_oid, new_oid
 
 
+def findings_between(revisions, paths):
+    """(path, line) of deletion sites the new side of `revisions` adds or edits."""
+    findings = []
+    for path, mode, old_oid, new_oid in changes(revisions):
+        if not path.endswith((".py", ".pyi")) or paths and path not in paths:
+            continue
+        if mode not in {"100644", "100755"}:
+            raise ValueError("changed Python source is not a regular Git blob")
+        before = "" if set(old_oid) == {"0"} else source(git("cat-file", "blob", old_oid))
+        after = source(git("cat-file", "blob", new_oid))
+        old = Counter(key for _, _, key in unsafe_sites(before))
+        edited = set()
+        for tag, _, _, start, end in difflib.SequenceMatcher(None, before.splitlines(), after.splitlines(), autojunk=False).get_opcodes():
+            if tag in {"insert", "replace"}:
+                edited.update(range(start + 1, end + 1))
+        for start, end, key in unsafe_sites(after):
+            existed = old[key] > 0
+            old[key] -= 1
+            if not existed or any(line in edited for line in range(start, end + 1)):
+                findings.append((path, start))
+    return findings
+
+
+def commit_findings(commit, paths):
+    """Findings of one commit. A merge counts only sites new relative to every
+    parent, so code it brings in from the other side is judged where it was
+    written, not again in the merge."""
+    sha = commit_sha(commit)
+    parents = commit_parents(sha)
+    findings = findings_between([parents[0], sha], paths)
+    for other in parents[1:]:
+        if not findings:
+            break
+        relative = set(findings_between([other, sha], paths))
+        findings = [finding for finding in findings if finding in relative]
+    return findings
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("paths", nargs="*")
-    parser.add_argument("--base", help="Compare committed HEAD with this commit (CI); default is staged index")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--base", help="Compare committed HEAD with this commit (CI); default is staged index")
+    mode.add_argument("--commit", help="Check one commit against its parents (pre-push)")
     args = parser.parse_args(argv)
-    findings = []
     try:
-        for path, mode, old_oid, new_oid in changes(args.base):
-            if not path.endswith((".py", ".pyi")) or args.paths and path not in args.paths:
-                continue
-            if mode not in {"100644", "100755"}:
-                raise ValueError("changed Python source is not a regular Git blob")
-            before = "" if set(old_oid) == {"0"} else source(git("cat-file", "blob", old_oid))
-            after = source(git("cat-file", "blob", new_oid))
-            old = Counter(key for _, _, key in unsafe_sites(before))
-            edited = set()
-            for tag, _, _, start, end in difflib.SequenceMatcher(None, before.splitlines(), after.splitlines(), autojunk=False).get_opcodes():
-                if tag in {"insert", "replace"}:
-                    edited.update(range(start + 1, end + 1))
-            for start, end, key in unsafe_sites(after):
-                existed = old[key] > 0
-                old[key] -= 1
-                if not existed or any(line in edited for line in range(start, end + 1)):
-                    findings.append((path, start))
+        if args.commit:
+            findings = commit_findings(args.commit, args.paths)
+        elif args.base:
+            findings = findings_between([commit_sha(args.base), "HEAD"], args.paths)
+        else:
+            findings = findings_between(["--cached"], args.paths)
     except (OSError, UnicodeError, SyntaxError, tokenize.TokenError, ValueError,
             subprocess.SubprocessError, RecursionError) as exc:
         print(f"DS000: unable to read or parse changed Git source ({type(exc).__name__}).", file=sys.stderr)
