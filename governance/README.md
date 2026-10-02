@@ -58,8 +58,9 @@ existing pre-push hook that the installer did not write is never overwritten:
 the install stops before writing anything and prints the line to merge in by
 hand. Git ignores `.git/hooks` in a repository whose hooks come from a
 `core.hooksPath` (on these machines the global one is `~/.claude/.githooks`,
-owned by claude-user-config); there, that hooks directory has to call the
-backstop itself.
+owned by claude-user-config). There the installer writes nothing: it reports
+whether the active hooks directory runs `governance-check.sh` (pre-commit) and
+`push-range-check.py` (pre-push), and exits 1 unless both do.
 
 ### Uninstalling Hooks
 

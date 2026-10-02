@@ -28,6 +28,44 @@ if [ ! -d "$PROJECT_DIR/.git" ]; then
     exit 1
 fi
 
+# With core.hooksPath set (locally, or globally as on these machines), Git
+# never runs .git/hooks, so writing there would report an install that does
+# nothing. Write nothing; report whether the active hooks directory runs each
+# check, and succeed only when both do. `git config` exits 1 when unset; any
+# other failure is an error, not "unset".
+set +e
+ACTIVE_HOOKS="$(git -C "$PROJECT_DIR" config --type=path --get core.hooksPath)"
+CONFIG_STATUS=$?
+set -e
+if [ $CONFIG_STATUS -ne 0 ] && [ $CONFIG_STATUS -ne 1 ]; then
+    echo -e "${RED}Error: could not read core.hooksPath (git config exit $CONFIG_STATUS)${NC}" >&2
+    exit 1
+fi
+if [ -n "$ACTIVE_HOOKS" ]; then
+    case "$ACTIVE_HOOKS" in
+        /*) ;;
+        *) ACTIVE_HOOKS="$PROJECT_DIR/$ACTIVE_HOOKS" ;;
+    esac
+    echo -e "${YELLOW}core.hooksPath is set to $ACTIVE_HOOKS; Git ignores .git/hooks here, so nothing was written.${NC}"
+    ACTIVE_STATUS=0
+    for pair in "pre-commit:governance-check.sh" "pre-push:push-range-check.py"; do
+        hook="${pair%%:*}"
+        check="${pair#*:}"
+        if [ -f "$ACTIVE_HOOKS/$hook" ] && grep -q "$check" "$ACTIVE_HOOKS/$hook" 2>/dev/null; then
+            echo -e "${GREEN}✓ $ACTIVE_HOOKS/$hook runs $check${NC}"
+        else
+            echo -e "${RED}✗ $ACTIVE_HOOKS/$hook does not run $check: the check is NOT active${NC}" >&2
+            ACTIVE_STATUS=1
+        fi
+    done
+    if [ $ACTIVE_STATUS -ne 0 ]; then
+        echo "Add the missing call to the hook in $ACTIVE_HOOKS (its owner's change), e.g.:" >&2
+        echo "  pre-commit: bash \"$GOVERNANCE_DIR/governance-check.sh\"" >&2
+        echo "  pre-push:   \"\$HOME/.local/bin/uv\" run --no-project \"$GOVERNANCE_DIR/push-range-check.py\" \"\$@\"" >&2
+    fi
+    exit $ACTIVE_STATUS
+fi
+
 # Create hooks directory if it doesn't exist
 HOOKS_DIR="$PROJECT_DIR/.git/hooks"
 mkdir -p "$HOOKS_DIR"
