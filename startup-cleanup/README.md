@@ -104,10 +104,12 @@ SessionStart hooks run in every new session, including valid sessions in a
 home folder. Their registered commands therefore pass `--hook`, which changes
 only that applicability question:
 
-- The session folder comes from the stdin JSON `cwd` (or an explicit
-  `--project-dir`). The process working directory is never used as a
-  fallback. Missing or malformed input, or a `cwd` that is not an existing
-  directory, fails with exit `1`.
+- The session folder comes only from the stdin JSON object's `cwd`, which
+  must be a non-empty string, or from an explicit `--project-dir`. The
+  `project_dir`/`working_directory` aliases and the process working directory
+  are never used as fallbacks. Missing or malformed input, an invalid `cwd`
+  (even when an alias is valid), or a `cwd` that is not an existing directory
+  fails with exit `1`.
 - Inside a repository, root or subdirectory, the normal check runs with every
   gate above.
 - Outside any repository the report is `ok: true` with `applicable: false`,
@@ -115,17 +117,20 @@ only that applicability question:
   `startup-cleanup: skipped — <dir> is not in a Git repository; no cleanup applies`.
   No cleanup runs, no other folder is searched, and nothing is written.
 
-The skip requires positive evidence: `GIT_DIR` is unset, no `.git` file or
-directory exists in the folder or any ancestor, and a confirmation probe,
-`git rev-parse --git-dir` run with `LC_ALL=C` so the message is untranslated,
-exits `128` with exactly
+Hook mode decides from a single probe, `git rev-parse --show-toplevel` run
+with `LC_ALL=C` so its message is untranslated; no later probe can turn an
+unexpected first failure into a skip. The skip requires that probe to exit
+`128` with exactly
 `fatal: not a git repository (or any of the parent directories): .git` on
-stderr. Exit `128` alone is not enough, because Git also uses it for real
-errors. A malformed Git configuration file, any other or additional
-diagnostic, a mount-boundary stop (`GIT_DISCOVERY_ACROSS_FILESYSTEM`), a
-corrupt `.git` directory, a linked-worktree `.git` file whose `gitdir` is
-gone, a bare repository, an unreadable ancestor, or a Git that cannot start or
-exits otherwise all remain failures.
+stderr, plus distinct evidence: `GIT_DIR` is unset and no `.git` file or
+directory exists in the folder or any ancestor. Exit `128` alone is not
+enough, because Git also uses it for real errors. A timeout, a Git that
+cannot start or exits otherwise, a malformed Git configuration file, any
+other or additional diagnostic, a mount-boundary stop
+(`GIT_DISCOVERY_ACROSS_FILESYSTEM`), a corrupt `.git` directory, a
+linked-worktree `.git` file whose `gitdir` is gone, a bare repository, or an
+unreadable ancestor all remain failures. Direct runs keep their original
+repository probe and messages.
 
 Output schema: `tools.startup-cleanup.v1` with `ok`, `project_dir`,
 `repo_root`, `main_branch`, `main_fresh`, `throttled`, `summary`,
@@ -213,9 +218,12 @@ python3 "$HOME/projects/_tools/startup-cleanup/startup_cleanup.py" \
 exec codex "$@"
 ```
 
-An explicit `--project-dir` is checked first and never consumes stdin. Native
-hooks use their stdin `cwd`, then the process working directory. The wrapper
-passes `--project-dir "$PWD"`, so a piped Codex prompt remains untouched.
+An explicit `--project-dir` is checked first and never consumes stdin. The
+registered native hooks pass `--hook`, which requires the stdin `cwd` with no
+fallback (see "Direct runs versus hook mode"). A direct run without either
+uses the stdin `cwd`, `project_dir` or `working_directory`, then the process
+working directory. The wrapper is a direct run that passes
+`--project-dir "$PWD"`, so a piped Codex prompt remains untouched.
 
 ## Rollback
 
@@ -262,5 +270,6 @@ detached worktree, branch checked out in a refused worktree, cross-project
 scope, bounded caps, and throttle behavior. Hook-mode tests run the CLI as a
 subprocess: a home-like folder is skipped while the direct CLI still fails;
 repository roots and subdirectories keep normal scope; missing or malformed
-input, corrupt markers, a bare repository, malformed Git configuration, other
-exit-128 diagnostics, and Git failures stay failures.
+input (including an invalid `cwd` beside valid aliases), corrupt markers, a
+bare repository, malformed Git configuration, other exit-128 diagnostics, and
+Git failures, timeouts or start errors on the first probe stay failures.

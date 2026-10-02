@@ -1037,7 +1037,9 @@ def test_hook_mode_fails_when_git_cannot_run(tmp_path):
     for path in (str(empty_bin), str(failing_bin)):
         result = run_cli(["--hook", "--human"], json.dumps({"cwd": str(home)}), home, path=path)
         assert result.returncode == 1, path
-        assert result.stdout.startswith("startup-cleanup: could not run — not a git repository")
+        assert result.stdout.startswith(
+            "startup-cleanup: could not run — cannot determine the git repository"
+        )
 
 
 def test_hook_mode_fails_on_malformed_git_config_exit_128(tmp_path):
@@ -1078,7 +1080,110 @@ def test_hook_mode_requires_exact_absence_diagnostic_with_exit_128(tmp_path, std
     report = json.loads(result.stdout)
     assert report["ok"] is False
     assert "applicable" not in report
-    assert "rev-parse --git-dir exited 128" in report["error"]
+    assert "rev-parse --show-toplevel exited 128" in report["error"]
+
+
+NO_REPOSITORY = "fatal: not a git repository (or any of the parent directories): .git"
+
+
+def test_hook_mode_first_probe_unexpected_exit_is_not_a_skip(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_git = fake_bin / "git"
+    # The first probe fails unexpectedly; any later probe would look like absence.
+    fake_git.write_text(
+        "#!/usr/bin/env python3\nimport sys\n"
+        "if '--show-toplevel' in sys.argv:\n"
+        "    sys.stderr.write('error: transient failure\\n')\n"
+        "    sys.exit(1)\n"
+        f"sys.stderr.write({NO_REPOSITORY!r} + '\\n')\nsys.exit(128)\n"
+    )
+    fake_git.chmod(0o755)
+
+    result = run_cli(["--hook"], json.dumps({"cwd": str(home)}), home, path_prefix=fake_bin)
+    assert result.returncode == 1
+    report = json.loads(result.stdout)
+    assert report["ok"] is False
+    assert "applicable" not in report
+    assert "exited 1: error: transient failure" in report["error"]
+
+
+@pytest.mark.parametrize("first_failure", [
+    subprocess.TimeoutExpired(["git"], 3),
+    OSError("git vanished"),
+])
+def test_hook_mode_first_probe_timeout_or_oserror_is_not_a_skip(sc, tmp_path, monkeypatch,
+                                                                first_failure):
+    home = tmp_path / "home"
+    home.mkdir()
+    calls = []
+
+    def flaky_run(args, cwd, timeout, env=None):
+        calls.append(args)
+        if len(calls) == 1:
+            raise first_failure
+        return subprocess.CompletedProcess(args, 128, stdout="", stderr=NO_REPOSITORY + "\n")
+
+    monkeypatch.setattr(sc, "_run", flaky_run)
+    report = sc.run_startup_cleanup(home, hook=True)
+    assert report["ok"] is False
+    assert "applicable" not in report
+    assert calls[0][:2] == ["git", "rev-parse"]
+
+
+@pytest.mark.parametrize("cwd", [None, False, 0, "", [], {}, "missing"])
+def test_hook_mode_never_selects_alias_when_cwd_is_invalid(tmp_path, cwd):
+    home = tmp_path / "home"
+    home.mkdir()
+    payload = {"project_dir": str(home), "working_directory": str(home)}
+    if cwd != "missing":
+        payload["cwd"] = cwd
+    # Selecting either alias (or the process cwd) would produce a successful skip.
+    for aliases in (payload, {k: v for k, v in payload.items() if k != "project_dir"}):
+        result = run_cli(["--hook", "--human"], json.dumps(aliases), home)
+        assert result.returncode == 1, aliases
+        assert "non-empty cwd string" in json.loads(result.stdout)["error"]
+
+
+def test_hook_mode_valid_cwd_takes_precedence_over_aliases(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    repo = make_repo(tmp_path, "target")
+
+    in_repo = run_cli(
+        ["--hook", "--dry-run"],
+        json.dumps({"cwd": str(repo), "project_dir": str(home), "working_directory": str(home)}),
+        home,
+    )
+    assert in_repo.returncode == 0, in_repo.stdout + in_repo.stderr
+    assert json.loads(in_repo.stdout)["repo_root"] == str(repo.resolve())
+
+    outside = run_cli(
+        ["--hook", "--dry-run"],
+        json.dumps({"cwd": str(home), "project_dir": str(repo), "working_directory": str(repo)}),
+        repo,
+    )
+    assert outside.returncode == 0, outside.stdout + outside.stderr
+    report = json.loads(outside.stdout)
+    assert report["applicable"] is False
+    assert report["project_dir"] == str(home.resolve())
+
+
+def test_direct_cli_rejects_null_input_but_empty_stdin_falls_back(tmp_path):
+    repo = make_repo(tmp_path)
+    make_task_branch(repo, "task/703-null", "null.txt")
+
+    null_input = run_cli(["--dry-run"], "null", repo)
+    assert null_input.returncode == 1
+    assert "invalid startup hook input" in json.loads(null_input.stdout)["error"]
+
+    empty_input = run_cli(["--dry-run"], "", repo)
+    assert empty_input.returncode == 0, empty_input.stdout + empty_input.stderr
+    report = json.loads(empty_input.stdout)
+    assert report["repo_root"] == str(repo.resolve())
+    assert "task/703-null" in branch_names(repo)
 
 
 def test_total_budget_refuses_slow_pr_lookup(sc, tmp_path, monkeypatch):

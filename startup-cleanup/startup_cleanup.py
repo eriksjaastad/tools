@@ -154,20 +154,39 @@ def _resolve_repo(project_dir: Path) -> Path:
     return Path(out.strip()).resolve()
 
 
-def _confirm_outside_repository(project_dir: Path) -> tuple[bool, str]:
-    """Return (True, "") only when no Git repository can apply to project_dir.
+def _resolve_hook_repo(project_dir: Path) -> Path | None:
+    """Resolve the repository for hook mode; None means no repository applies.
 
-    Used in hook mode after ``rev-parse --show-toplevel`` has failed. The
-    folder counts as outside Git only when GIT_DIR does not bypass discovery,
-    neither the folder nor any ancestor holds a ``.git`` entry that Git could
-    have rejected as corrupt, and ``rev-parse --git-dir`` run under ``LC_ALL=C``
-    exits 128 with exactly Git's untranslated not-a-repository diagnostic.
-    Exit 128 alone is not enough: Git also uses it for real errors such as a
-    malformed configuration file. Any other outcome, including an unreadable
-    ancestor or a Git that cannot run, is a failure.
+    One ``rev-parse --show-toplevel`` probe, run under ``LC_ALL=C`` so its
+    diagnostic is untranslated, decides the outcome; no later probe can turn
+    an unexpected first failure into a skip. The folder counts as outside Git
+    only when that probe exits 128 with exactly Git's not-a-repository
+    diagnostic, GIT_DIR does not bypass discovery, and neither the folder nor
+    any ancestor holds a ``.git`` entry that Git could have rejected as
+    corrupt. Exit 128 alone is not enough: Git also uses it for real errors
+    such as a malformed configuration file. Every other outcome, including a
+    timeout, a Git that cannot start, a bare repository, or an unreadable
+    ancestor, raises StartupCleanupError.
     """
+    prefix = f"cannot determine the git repository for {project_dir}"
+    env = {key: value for key, value in os.environ.items() if key != "LANGUAGE"}
+    env["LC_ALL"] = "C"
+    args = ["git", "rev-parse", "--show-toplevel"]
+    try:
+        proc = _run(args, project_dir, DEFAULT_GIT_TIMEOUT, env=env)
+    except subprocess.TimeoutExpired as exc:
+        raise StartupCleanupError(f"{prefix}: git rev-parse --show-toplevel timed out") from exc
+    except OSError as exc:
+        raise StartupCleanupError(f"{prefix}: git failed to start: {exc}") from exc
+    if proc.returncode == 0:
+        return Path(proc.stdout.strip()).resolve()
+    if proc.returncode != 128 or proc.stderr.strip() != NOT_A_REPOSITORY_DIAGNOSTIC:
+        detail = proc.stderr.strip() or "no diagnostic"
+        raise StartupCleanupError(
+            f"{prefix}: git rev-parse --show-toplevel exited {proc.returncode}: {detail}"
+        )
     if os.environ.get("GIT_DIR"):
-        return False, "GIT_DIR is set, so Git did not search for a repository"
+        raise StartupCleanupError(f"{prefix}: GIT_DIR is set, so Git did not search for a repository")
     for directory in (project_dir, *project_dir.parents):
         marker = directory / ".git"
         try:
@@ -175,22 +194,9 @@ def _confirm_outside_repository(project_dir: Path) -> tuple[bool, str]:
         except (FileNotFoundError, NotADirectoryError):
             continue
         except OSError as exc:
-            return False, f"cannot inspect {marker}: {exc}"
-        return False, f"Git rejected the repository marker {marker}"
-    env = {key: value for key, value in os.environ.items() if key != "LANGUAGE"}
-    env["LC_ALL"] = "C"
-    try:
-        proc = _run(["git", "rev-parse", "--git-dir"], project_dir, DEFAULT_GIT_TIMEOUT, env=env)
-    except subprocess.TimeoutExpired:
-        return False, "git rev-parse --git-dir timed out"
-    except OSError as exc:
-        return False, f"git failed to start: {exc}"
-    if proc.returncode == 0:
-        return False, "Git found a repository without a work tree"
-    if proc.returncode != 128 or proc.stderr.strip() != NOT_A_REPOSITORY_DIAGNOSTIC:
-        detail = proc.stderr.strip() or "no diagnostic"
-        return False, f"git rev-parse --git-dir exited {proc.returncode}: {detail}"
-    return True, ""
+            raise StartupCleanupError(f"{prefix}: cannot inspect {marker}: {exc}") from exc
+        raise StartupCleanupError(f"{prefix}: Git rejected the repository marker {marker}")
+    return None
 
 
 def _resolve_main_branch(repo: Path) -> str | None:
@@ -648,19 +654,15 @@ def run_startup_cleanup(
     }
 
     try:
-        repo = _resolve_repo(project_dir)
+        repo = _resolve_hook_repo(project_dir) if hook else _resolve_repo(project_dir)
     except StartupCleanupError as exc:
-        error = str(exc)
-        if hook:
-            outside, detail = _confirm_outside_repository(project_dir)
-            if outside:
-                report["applicable"] = False
-                report["summary"] = {"reason": "not in a git repository"}
-                report["duration_ms"] = int((time.time() - started) * 1000)
-                return report
-            error = f"{error}; {detail}"
         report["ok"] = False
-        report["error"] = error
+        report["error"] = str(exc)
+        report["duration_ms"] = int((time.time() - started) * 1000)
+        return report
+    if repo is None:
+        report["applicable"] = False
+        report["summary"] = {"reason": "not in a git repository"}
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
     report["repo_root"] = str(repo)
@@ -925,8 +927,8 @@ def _maybe_stamp(dry_run: bool, stamp: Path, now: float) -> None:
 def _read_hook_project_dir(required: bool = False) -> str | None:
     """Read a project dir from hook stdin JSON without blocking on a TTY.
 
-    With ``required`` (hook mode) the payload must be a JSON object naming the
-    session directory as a non-empty string.
+    With ``required`` (hook mode) the payload must be a JSON object whose
+    ``cwd`` is a non-empty string; the legacy aliases are not consulted.
     """
     try:
         raw = "" if sys.stdin.isatty() else sys.stdin.read()
@@ -935,11 +937,19 @@ def _read_hook_project_dir(required: bool = False) -> str | None:
                 raise StartupCleanupError("startup hook input is missing; expected JSON with cwd")
             return None
         payload = json.loads(raw)
-        cwd = payload.get("cwd") or payload.get("project_dir") or payload.get("working_directory")
-    except (json.JSONDecodeError, OSError, AttributeError) as exc:
+    except (json.JSONDecodeError, OSError) as exc:
         raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
-    if required and not (isinstance(cwd, str) and cwd):
-        raise StartupCleanupError("invalid startup hook input: no cwd string")
+    if required:
+        cwd = payload.get("cwd") if isinstance(payload, dict) else None
+        if not (isinstance(cwd, str) and cwd):
+            raise StartupCleanupError(
+                "invalid startup hook input: expected a JSON object with a non-empty cwd string"
+            )
+        return cwd
+    try:
+        cwd = payload.get("cwd") or payload.get("project_dir") or payload.get("working_directory")
+    except AttributeError as exc:
+        raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
     return str(cwd) if cwd else None
 
 
