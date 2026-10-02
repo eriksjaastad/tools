@@ -52,7 +52,14 @@ governance/
 ./install-hooks.sh /path/to/project
 ```
 
-This creates a `.git/hooks/pre-commit` file that will run governance checks on every commit.
+This creates `.git/hooks/pre-commit`, which runs governance checks on every
+commit, and `.git/hooks/pre-push`, the push-range backstop described below. An
+existing pre-push hook that the installer did not write is never overwritten:
+the install stops before writing anything and prints the line to merge in by
+hand. Git ignores `.git/hooks` in a repository whose hooks come from a
+`core.hooksPath` (on these machines the global one is `~/.claude/.githooks`,
+owned by claude-user-config); there, that hooks directory has to call the
+backstop itself.
 
 ### Uninstalling Hooks
 
@@ -326,8 +333,9 @@ uv run governance/validators/content-guard.py file1.py file2.yaml
 
 Git runs pre-commit for `git commit` and `git merge` only. Commits made by
 cherry-pick, revert, `am` and rebase replays, and commits made with
-`--no-verify`, reach a push unchecked. `push-range-check.py` closes that gap. A
-pre-push hook pipes Git's ref lines to it on stdin:
+`--no-verify`, reach a push unchecked. `push-range-check.py` closes that gap.
+`install-hooks.sh` installs it as `.git/hooks/pre-push`; any other pre-push
+hook pipes Git's ref lines to it on stdin:
 
 ```bash
 "$HOME/.local/bin/uv" run --no-project "$HOME/projects/_tools/governance/push-range-check.py" "$@"

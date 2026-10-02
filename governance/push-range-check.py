@@ -83,8 +83,12 @@ def commit_of(sha: str) -> str | None:
 def known_locally(sha: str) -> bool:
     if not HEX.fullmatch(sha):
         raise ValueError(f"pre-push object name is not a hex SHA: {sha!r}")
-    result = subprocess.run(["git", "cat-file", "-e", sha + "^{commit}"],
+    # `rev-parse --verify --quiet` exits 1 only when the name does not resolve;
+    # any other status is a broken repository, not an absent tip, and raises.
+    result = subprocess.run(["git", "rev-parse", "--verify", "--quiet", sha + "^{commit}"],
                             capture_output=True, timeout=GIT_TIMEOUT)
+    if result.returncode not in (0, 1):
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
     return result.returncode == 0
 
 
@@ -242,13 +246,13 @@ def main(argv: list[str] | None = None) -> int:
         for index, sha in enumerate(commits):
             scratch = Path(tmp) / str(index)
             scratch.mkdir()
+            subject = sha
             try:
                 failures = check_commit(sha, scratch)
                 if failures:
                     subject = git("log", "-1", "--format=%h %s", sha).decode(errors="replace").strip()
             except (OSError, ValueError, UnicodeError, subprocess.SubprocessError) as error:
                 failures = [("push-range-check", 1, f"unable to read the commit ({type(error).__name__}: {error})\n")]
-                subject = sha
             if not failures:
                 continue
             blocked += 1

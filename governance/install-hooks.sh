@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # install-hooks.sh
-# Installs pre-commit hook that runs governance checks
+# Installs the pre-commit hook and the pre-push backstop that run governance checks
 # Usage: ./install-hooks.sh [project-directory]
 
 set -euo pipefail
@@ -34,6 +34,16 @@ mkdir -p "$HOOKS_DIR"
 
 # Path to pre-commit hook
 HOOK_FILE="$HOOKS_DIR/pre-commit"
+PUSH_HOOK_FILE="$HOOKS_DIR/pre-push"
+
+# A project's own pre-push hook is never overwritten. Refuse before writing
+# anything, so a refused install leaves no half-installed governance hooks.
+if [ -e "$PUSH_HOOK_FILE" ] && ! grep -q "installed by governance system" "$PUSH_HOOK_FILE" 2>/dev/null; then
+    echo -e "${RED}Error: $PUSH_HOOK_FILE exists and is not a governance hook${NC}" >&2
+    echo "Merge the governance push check into it by hand, then re-run:" >&2
+    echo "  \"\$HOME/.local/bin/uv\" run --no-project \"$GOVERNANCE_DIR/push-range-check.py\" \"\$@\"" >&2
+    exit 1
+fi
 
 # Create the pre-commit hook (note: no quotes around EOF so $GOVERNANCE_DIR expands)
 cat > "$HOOK_FILE" << EOF
@@ -56,7 +66,28 @@ EOF
 # Make the hook executable
 chmod +x "$HOOK_FILE"
 
+# Create the pre-push backstop (#7841): checks every commit the push would
+# publish, including cherry-picks, rebase replays and --no-verify commits that
+# pre-commit never saw. Git's ref lines arrive on stdin and pass through exec.
+cat > "$PUSH_HOOK_FILE" << EOF
+#!/bin/bash
+# Pre-push hook installed by governance system
+# Runs governance checks on every commit the push would publish
+
+PUSH_CHECK="$GOVERNANCE_DIR/push-range-check.py"
+
+if [ ! -f "\$PUSH_CHECK" ]; then
+    echo "Error: push-range-check.py not found at \$PUSH_CHECK" >&2
+    exit 1
+fi
+
+exec "\$HOME/.local/bin/uv" run --no-project "\$PUSH_CHECK" "\$@"
+EOF
+
+chmod +x "$PUSH_HOOK_FILE"
+
 echo -e "${GREEN}✓ Pre-commit hook installed successfully!${NC}"
+echo -e "${GREEN}✓ Pre-push hook installed successfully!${NC}"
 echo ""
 echo "The hook will run the following validators on each commit:"
 echo "  - secrets-scanner.py (blocks API keys and secrets)"
@@ -68,4 +99,4 @@ echo "updated by project-scaffolding's 'scaffold sync', and drift is reported"
 echo "by agent-runtime-config's 'runtime-doctor monitor'."
 echo ""
 echo "Governance directory: $GOVERNANCE_DIR"
-echo "Hook installed at: $HOOK_FILE"
+echo "Hooks installed at: $HOOK_FILE and $PUSH_HOOK_FILE"

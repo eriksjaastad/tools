@@ -285,3 +285,73 @@ def test_validator_timeout_fails_closed(tmp_path, monkeypatch):
     monkeypatch.setattr(driver, "VALIDATOR_TIMEOUT", 0.5)
     code, output = driver.run_validator("slow.py", [], None)
     assert code == 124 and "timed out" in output
+
+
+# Codex review on 428f5a7: the installer must install the backstop, and a Git
+# failure while looking up the old remote tip must not narrow the range.
+
+INSTALL = DRIVER.parent / "install-hooks.sh"
+UNINSTALL = DRIVER.parent / "uninstall-hooks.sh"
+
+
+def installer_repo(tmp_path):
+    root, remote, home = tmp_path / "work", tmp_path / "remote.git", tmp_path / "home"
+    uv = home / ".local/bin/uv"
+    uv.parent.mkdir(parents=True)
+    uv.write_text('#!/bin/sh\n[ "$1 $2" = "run --no-project" ] || { echo "unexpected uv: $*" >&2; exit 97; }\n'
+                  'shift 2\nexec ' + shlex.quote(sys.executable) + ' "$@"\n')
+    uv.chmod(0o700)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update(HOME=str(home), GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1",
+               GIT_AUTHOR_NAME="Fixture", GIT_AUTHOR_EMAIL="fixture@example.invalid",
+               GIT_COMMITTER_NAME="Fixture", GIT_COMMITTER_EMAIL="fixture@example.invalid")
+    subprocess.run(["git", "init", "-q", "--bare", str(remote)], env=env, check=True, timeout=10)
+    subprocess.run(["git", "init", "-q", "-b", "main", str(root)], env=env, check=True, timeout=10)
+    state = (root, env, remote)
+    git(state, "remote", "add", "origin", str(remote))
+    return state
+
+
+def run_script(repo, script):
+    root, env, _ = repo
+    return subprocess.run(["bash", str(script), str(root)], env=env, capture_output=True,
+                          text=True, timeout=30)
+
+
+def test_installer_adds_a_working_pre_push_backstop(tmp_path):
+    repo = installer_repo(tmp_path)
+    installed = run_script(repo, INSTALL)
+    assert installed.returncode == 0, installed.stderr
+    hook = repo[0] / ".git/hooks/pre-push"
+    assert os.access(hook, os.X_OK)
+    git(repo, "commit", "-q", "--allow-empty", "-m", "base")
+    (repo[0] / "handler.py").write_text(SILENT)
+    git(repo, "add", "handler.py")
+    git(repo, "commit", "-q", "--no-verify", "-m", "skipped pre-commit")
+    result = push(repo, "main")
+    assert result.returncode != 0 and "SF002" in result.stderr
+    assert remote_tip(repo) is None
+    assert run_script(repo, INSTALL).returncode == 0  # reinstall over its own hook
+
+
+def test_installer_and_uninstaller_leave_a_foreign_pre_push_alone(tmp_path):
+    repo = installer_repo(tmp_path)
+    hooks = repo[0] / ".git/hooks"
+    hooks.mkdir(exist_ok=True)
+    (hooks / "pre-push").write_text("#!/bin/sh\necho project hook\n")
+    refused = run_script(repo, INSTALL)
+    assert refused.returncode == 1 and "not a governance hook" in refused.stderr
+    assert not (hooks / "pre-commit").exists()
+    assert (hooks / "pre-push").read_text() == "#!/bin/sh\necho project hook\n"
+    kept = run_script(repo, UNINSTALL)
+    assert kept.returncode == 1 and "pre-push hook exists but doesn't appear" in kept.stdout
+    assert (hooks / "pre-push").exists()
+
+
+def test_git_failure_looking_up_the_old_tip_fails_closed(tmp_path, monkeypatch):
+    driver = load_driver()
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    monkeypatch.delenv("GIT_DIR", raising=False)
+    with pytest.raises(subprocess.CalledProcessError):
+        driver.known_locally("1" * 40)
