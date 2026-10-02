@@ -51,7 +51,7 @@ if [ -n "$ACTIVE_HOOKS" ]; then
     for pair in "pre-commit:governance-check.sh" "pre-push:push-range-check.py"; do
         hook="${pair%%:*}"
         check="${pair#*:}"
-        if [ -f "$ACTIVE_HOOKS/$hook" ] && grep -q "$check" "$ACTIVE_HOOKS/$hook" 2>/dev/null; then
+        if [ -f "$ACTIVE_HOOKS/$hook" ] && [ -x "$ACTIVE_HOOKS/$hook" ] && grep -q "$check" "$ACTIVE_HOOKS/$hook" 2>/dev/null; then
             echo -e "${GREEN}✓ $ACTIVE_HOOKS/$hook runs $check${NC}"
         else
             echo -e "${RED}✗ $ACTIVE_HOOKS/$hook does not run $check: the check is NOT active${NC}" >&2

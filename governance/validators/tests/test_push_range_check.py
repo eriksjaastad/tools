@@ -365,6 +365,7 @@ def test_installer_with_hooks_path_writes_nothing_and_reports_the_active_hooks(t
     active = tmp_path / "active-hooks"
     active.mkdir()
     (active / "pre-commit").write_text('#!/bin/sh\nexec bash "$HOME/tools/governance-check.sh"\n')
+    (active / "pre-commit").chmod(0o755)
     git(repo, "config", "core.hooksPath", str(active))
     missing = run_script(repo, INSTALL)
     assert missing.returncode == 1
@@ -374,6 +375,10 @@ def test_installer_with_hooks_path_writes_nothing_and_reports_the_active_hooks(t
     assert not (repo[0] / ".git/hooks/pre-push").exists()
     (active / "pre-push").write_text('#!/bin/sh\nexec uv run --no-project "$HOME/tools/push-range-check.py" "$@"\n')
     git(repo, "config", "core.hooksPath", "../active-hooks")  # relative to the worktree root
+    not_executable = run_script(repo, INSTALL)  # Git skips a hook without the execute bit
+    assert not_executable.returncode == 1
+    assert "pre-push does not run push-range-check.py" in not_executable.stderr
+    (active / "pre-push").chmod(0o755)
     both = run_script(repo, INSTALL)
     assert both.returncode == 0, both.stderr
     assert not (repo[0] / ".git/hooks/pre-push").exists()
