@@ -357,28 +357,22 @@ def test_git_failure_looking_up_the_old_tip_fails_closed(tmp_path, monkeypatch):
         driver.known_locally("1" * 40)
 
 
-# Codex review on f9b56bb: with core.hooksPath set, .git/hooks is dead, so the
-# installer must not report an install that does nothing.
+# Codex reviews on f9b56bb and 8fc22e7: with core.hooksPath set, .git/hooks is
+# dead, and the installer cannot verify hooks it does not own, so it refuses.
 
-def test_installer_with_hooks_path_writes_nothing_and_reports_the_active_hooks(tmp_path):
+@pytest.mark.parametrize("hooks_path", ["absolute", "../active-hooks"])
+def test_installer_with_hooks_path_refuses_and_writes_nothing(tmp_path, hooks_path):
     repo = installer_repo(tmp_path)
     active = tmp_path / "active-hooks"
     active.mkdir()
-    (active / "pre-commit").write_text('#!/bin/sh\nexec bash "$HOME/tools/governance-check.sh"\n')
-    (active / "pre-commit").chmod(0o755)
-    git(repo, "config", "core.hooksPath", str(active))
-    missing = run_script(repo, INSTALL)
-    assert missing.returncode == 1
-    assert "pre-push does not run push-range-check.py" in missing.stderr
-    assert "runs governance-check.sh" in missing.stdout
+    # Even hooks that mention both checks prove nothing about what they run.
+    for hook, check in (("pre-commit", "governance-check.sh"), ("pre-push", "push-range-check.py")):
+        (active / hook).write_text(f"#!/bin/sh\n# {check}\nexit 0\n")
+        (active / hook).chmod(0o755)
+    git(repo, "config", "core.hooksPath", str(active) if hooks_path == "absolute" else hooks_path)
+    refused = run_script(repo, INSTALL)
+    assert refused.returncode == 1
+    assert "Not installed: core.hooksPath is set" in refused.stderr
+    assert "push-range-check.py" in refused.stderr
     assert not (repo[0] / ".git/hooks/pre-commit").exists()
-    assert not (repo[0] / ".git/hooks/pre-push").exists()
-    (active / "pre-push").write_text('#!/bin/sh\nexec uv run --no-project "$HOME/tools/push-range-check.py" "$@"\n')
-    git(repo, "config", "core.hooksPath", "../active-hooks")  # relative to the worktree root
-    not_executable = run_script(repo, INSTALL)  # Git skips a hook without the execute bit
-    assert not_executable.returncode == 1
-    assert "pre-push does not run push-range-check.py" in not_executable.stderr
-    (active / "pre-push").chmod(0o755)
-    both = run_script(repo, INSTALL)
-    assert both.returncode == 0, both.stderr
     assert not (repo[0] / ".git/hooks/pre-push").exists()
