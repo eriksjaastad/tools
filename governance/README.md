@@ -24,6 +24,7 @@ still covers behavior beyond the supported patterns. See
 governance/
 ├── README.md                      # This file
 ├── governance-check.sh            # Master script that runs all validators
+├── push-range-check.py            # Pre-push backstop: checks every commit a push publishes
 ├── install-hooks.sh               # Installs pre-commit hook in a project
 ├── uninstall-hooks.sh             # Removes pre-commit hook
 └── validators/                    # Standalone validators
@@ -320,6 +321,43 @@ uv run governance/validators/content-guard.py file1.py file2.yaml
 3. **Runs Validators**: Each validator in `validators/` is executed
 4. **Reports Results**: Clear pass/fail for each validator
 5. **Blocks if Needed**: Commit is blocked if any validator fails
+
+## Push-Range Backstop (pre-push, #7841)
+
+Git runs pre-commit for `git commit` and `git merge` only. Commits made by
+cherry-pick, revert, `am` and rebase replays, and commits made with
+`--no-verify`, reach a push unchecked. `push-range-check.py` closes that gap. A
+pre-push hook pipes Git's ref lines to it on stdin:
+
+```bash
+"$HOME/.local/bin/uv" run --no-project "$HOME/projects/_tools/governance/push-range-check.py" "$@"
+```
+
+Design decisions:
+
+- **Which commits it checks:** `git rev-list <pushed tips> --not --remotes <old remote tips>`.
+  Each pushed ref contributes its old remote tip when this clone has it. A new
+  branch (remote sha all zeros) has no old tip, so its base is whatever any
+  remote-tracking ref already contains. Branch deletions, tags of trees or
+  blobs, and pushes whose commits are already on a remote check nothing. A
+  history never pushed anywhere is checked in full on its first push;
+  `git push --no-verify` is the explicit way past that, and it skips every
+  other pre-push check too.
+- **Per commit, not net range:** each commit is judged against its parents,
+  exactly as pre-commit would have judged it. A secret added in one commit and
+  removed in the next still blocks, because it stays in the pushed history.
+- **Which validators get a range mode:** none needs a range mode. The
+  whole-file validators (secrets, absolute paths, API wrapper) read the
+  commit's blobs, written under their repository-relative names to a
+  temporary directory, so path rules apply as at commit time. Symlinks and
+  submodules carry no file content and are skipped. The changed-code
+  validators gained `--commit REV`: `silent-failure-check.py` and
+  `source-deletion-check.py` compare the commit with each parent.
+- **Merges:** a merge is judged only on what it introduces: files and
+  findings that differ from every parent. Code it brings in from the other
+  side is judged in its own commit, here if unpublished, or already on a remote.
+- **Failure:** any finding, validator error or unreadable input blocks the push
+  (exit 1). The commit, the validator and its output are printed.
 
 ## Exit Codes
 

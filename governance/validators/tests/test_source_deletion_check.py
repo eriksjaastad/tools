@@ -254,3 +254,13 @@ def test_review_found_syntax_and_evaluation_order_gaps(repository, source):
 def test_unrelated_local_shadow_preserves_legitimate_atomic_cleanup(repository):
     stage(repository, 'import tempfile, os\ndef unrelated():\n    tempfile = 1\ndef cleanup():\n    name = None\n    try:\n        fd, name = tempfile.mkstemp()\n        os.replace(name, destination)\n    finally:\n        if name is not None:\n            os.unlink(name)\n')
     assert check(repository).returncode == 0
+
+
+def test_commit_mode_checks_one_commit_against_its_parents(repository):
+    stage(repository, 'p.unlink()\n')
+    git(repository, "commit", "-qm", "root with deletion")
+    assert check(repository, "--commit", "HEAD").returncode == 1
+    stage(repository, 'p.unlink()\nVALUE = 1\n')
+    git(repository, "commit", "-qm", "unrelated edit")
+    assert check(repository, "--commit", "HEAD").returncode == 0
+    assert check(repository, "--commit", "HEAD", "--base", "HEAD~1").returncode == 2
