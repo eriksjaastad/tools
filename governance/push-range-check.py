@@ -31,9 +31,17 @@ temporary directory under their repository-relative names (paths that would
 collide on a case-insensitive filesystem go to separate directories). Symlinks and
 submodules carry no file content in the commit and are skipped. The
 changed-code validators (silent failure, source deletion) read Git directly
-through their `--commit` mode. A merge is judged only on what it introduces:
-files and findings that differ from every parent. Its parents are judged as
-commits of their own, here if unpublished, or already on a remote.
+through their `--commit` mode.
+
+Merges: the changed-code validators count only findings new relative to every
+parent. The whole-file validators are file-granular, as at commit time: they
+check, in full, each file whose merged content differs from every parent, so
+a file that combines both sides is checked whole, including findings it
+inherited. This matches the commit-time gate, whose pre-merge-commit hook runs
+pre-commit and checks every file differing from the first parent in full, so
+such a merge is refused when it is made. Untouched files the merge brings in
+from the other side are not checked here; their own commits are, here if
+unpublished, or they are already on a remote.
 
 Exit 0 when every commit passes, 1 when any validator reports findings or
 fails to run.

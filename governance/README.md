@@ -364,9 +364,14 @@ Design decisions:
   blob. Symlinks and submodules carry no file content and are skipped. The changed-code
   validators gained `--commit REV`: `silent-failure-check.py` and
   `source-deletion-check.py` compare the commit with each parent.
-- **Merges:** a merge is judged only on what it introduces: files and
-  findings that differ from every parent. Code it brings in from the other
-  side is judged in its own commit, here if unpublished, or already on a remote.
+- **Merges:** the changed-code validators count only findings new relative to
+  every parent. The whole-file validators stay file-granular, as at commit
+  time: a file whose merged content differs from every parent is checked in
+  full, including findings it inherited from one side (the global
+  pre-merge-commit runs pre-commit, which checks every file differing from the
+  first parent in full, so the same merge is already refused when made).
+  Files taken unchanged from either side are not rechecked; their own commits
+  are, here if unpublished, or they are already on a remote.
 - **Failure:** any finding, validator error or unreadable input blocks the push
   (exit 1). The commit, the validator and its output are printed.
 

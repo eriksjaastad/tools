@@ -376,3 +376,23 @@ def test_installer_with_hooks_path_refuses_and_writes_nothing(tmp_path, hooks_pa
     assert "push-range-check.py" in refused.stderr
     assert not (repo[0] / ".git/hooks/pre-commit").exists()
     assert not (repo[0] / ".git/hooks/pre-push").exists()
+
+
+# Codex review on 46faccb: the whole-file validators are file-granular in a
+# merge, as at commit time; only the changed-code validators count findings.
+
+def test_merge_combining_both_sides_of_a_file_is_checked_whole(repo):
+    commit(repo, "shared.py", "VALUE = 1\n\n\n\nOTHER = 1\n", "base")
+    assert push(repo, "main").returncode == 0
+    git(repo, "checkout", "-qb", "feature")
+    commit(repo, "shared.py", "VALUE = 2\n\n\n\nOTHER = 1\n", "feature edit")
+    git(repo, "checkout", "-q", "main")
+    commit(repo, "shared.py", "VALUE = 1\n\n\n\nOTHER = 1\n" + ABSOLUTE + SILENT, "legacy on main")
+    assert push(repo, "--no-verify", "main").returncode == 0
+    git(repo, "fetch", "-q", "origin")
+    git(repo, "checkout", "-q", "feature")
+    git(repo, "merge", "-q", "--no-ff", "--no-edit", "main")
+    result = push(repo, "feature")
+    assert result.returncode != 0
+    assert "absolute-path-check.py" in result.stderr
+    assert "SF002" not in result.stderr  # inherited, not introduced by the merge
