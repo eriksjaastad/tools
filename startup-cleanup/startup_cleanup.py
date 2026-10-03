@@ -39,10 +39,13 @@ Startup boundedness
 Output and exit codes
 ---------------------
 The default output is JSON (schema ``tools.startup-cleanup.v1``) on stdout for
-direct callers. Claude/Codex SessionStart hooks request ``--human`` so their
+direct callers. Claude/Codex SessionStart hooks request ``--hook --human`` so their
 session contexts receive a readable text report. Exit code 0 means "check
 completed" (whether or not anything was removed or refused);
-exit code 1 means the tool itself could not run.
+exit code 1 means the tool itself could not run. Outside any Git repository a
+direct run exits 1, while ``--hook`` reports the session folder as not
+applicable and exits 0 only on Git's exact not-a-repository diagnostic;
+corrupt repository markers and other Git errors still fail.
 """
 
 from __future__ import annotations
@@ -70,6 +73,8 @@ DEFAULT_GH_TIMEOUT = 5
 DEFAULT_TRASH_TIMEOUT = 5
 DEFAULT_MAX_DURATION_SECONDS = 35
 THROTTLE_STAMP_NAME = "startup-cleanup-last-run"
+# Git's exact untranslated message when discovery finds no repository.
+NOT_A_REPOSITORY_DIAGNOSTIC = "fatal: not a git repository (or any of the parent directories): .git"
 _RUN_DEADLINE: float | None = None
 
 
@@ -104,7 +109,9 @@ class Removal:
     note: str = ""
 
 
-def _run(args: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProcess:
+def _run(
+    args: list[str], cwd: Path, timeout: int, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess:
     """Run a subprocess with a mandatory timeout and captured output.
 
     Raises subprocess.TimeoutExpired / OSError; callers translate those into
@@ -121,6 +128,7 @@ def _run(args: list[str], cwd: Path, timeout: int) -> subprocess.CompletedProces
         capture_output=True,
         text=True,
         timeout=timeout,
+        env=env,
     )
 
 
@@ -144,6 +152,51 @@ def _resolve_repo(project_dir: Path) -> Path:
     if not ok:
         raise StartupCleanupError(f"not a git repository ({project_dir}): {err.strip() or 'rev-parse failed'}")
     return Path(out.strip()).resolve()
+
+
+def _resolve_hook_repo(project_dir: Path) -> Path | None:
+    """Resolve the repository for hook mode; None means no repository applies.
+
+    One ``rev-parse --show-toplevel`` probe, run under ``LC_ALL=C`` so its
+    diagnostic is untranslated, decides the outcome; no later probe can turn
+    an unexpected first failure into a skip. The folder counts as outside Git
+    only when that probe exits 128 with exactly Git's not-a-repository
+    diagnostic, GIT_DIR does not bypass discovery, and neither the folder nor
+    any ancestor holds a ``.git`` entry that Git could have rejected as
+    corrupt. Exit 128 alone is not enough: Git also uses it for real errors
+    such as a malformed configuration file. Every other outcome, including a
+    timeout, a Git that cannot start, a bare repository, or an unreadable
+    ancestor, raises StartupCleanupError.
+    """
+    prefix = f"cannot determine the git repository for {project_dir}"
+    env = {key: value for key, value in os.environ.items() if key != "LANGUAGE"}
+    env["LC_ALL"] = "C"
+    args = ["git", "rev-parse", "--show-toplevel"]
+    try:
+        proc = _run(args, project_dir, DEFAULT_GIT_TIMEOUT, env=env)
+    except subprocess.TimeoutExpired as exc:
+        raise StartupCleanupError(f"{prefix}: git rev-parse --show-toplevel timed out") from exc
+    except OSError as exc:
+        raise StartupCleanupError(f"{prefix}: git failed to start: {exc}") from exc
+    if proc.returncode == 0:
+        return Path(proc.stdout.strip()).resolve()
+    if proc.returncode != 128 or proc.stderr.strip() != NOT_A_REPOSITORY_DIAGNOSTIC:
+        detail = proc.stderr.strip() or "no diagnostic"
+        raise StartupCleanupError(
+            f"{prefix}: git rev-parse --show-toplevel exited {proc.returncode}: {detail}"
+        )
+    if os.environ.get("GIT_DIR"):
+        raise StartupCleanupError(f"{prefix}: GIT_DIR is set, so Git did not search for a repository")
+    for directory in (project_dir, *project_dir.parents):
+        marker = directory / ".git"
+        try:
+            os.lstat(marker)
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        except OSError as exc:
+            raise StartupCleanupError(f"{prefix}: cannot inspect {marker}: {exc}") from exc
+        raise StartupCleanupError(f"{prefix}: Git rejected the repository marker {marker}")
+    return None
 
 
 def _resolve_main_branch(repo: Path) -> str | None:
@@ -574,12 +627,14 @@ def run_startup_cleanup(
     active_cwds_fn=None,
     now: float | None = None,
     max_duration_seconds: int = DEFAULT_MAX_DURATION_SECONDS,
+    hook: bool = False,
 ) -> dict:
     """Run one bounded per-project startup cleanup check.
 
     Returns the JSON-serializable report. Never raises for environmental
     refusals; StartupCleanupError is raised only when the repository itself
-    cannot be inspected.
+    cannot be inspected. With ``hook=True`` a folder confirmed to be outside
+    any Git repository yields an ok report with ``applicable`` false.
     """
     started = time.time()
     now = time.time() if now is None else now
@@ -599,10 +654,15 @@ def run_startup_cleanup(
     }
 
     try:
-        repo = _resolve_repo(project_dir)
+        repo = _resolve_hook_repo(project_dir) if hook else _resolve_repo(project_dir)
     except StartupCleanupError as exc:
         report["ok"] = False
         report["error"] = str(exc)
+        report["duration_ms"] = int((time.time() - started) * 1000)
+        return report
+    if repo is None:
+        report["applicable"] = False
+        report["summary"] = {"reason": "not in a git repository"}
         report["duration_ms"] = int((time.time() - started) * 1000)
         return report
     report["repo_root"] = str(repo)
@@ -864,27 +924,47 @@ def _maybe_stamp(dry_run: bool, stamp: Path, now: float) -> None:
         _write_throttle_stamp(stamp, now)
 
 
-def _read_hook_project_dir() -> str | None:
-    """Read a project dir from hook stdin JSON without blocking on a TTY."""
+def _read_hook_project_dir(required: bool = False) -> str | None:
+    """Read a project dir from hook stdin JSON without blocking on a TTY.
+
+    With ``required`` (hook mode) the payload must be a JSON object whose
+    ``cwd`` is a non-empty string; the legacy aliases are not consulted.
+    """
     try:
-        if sys.stdin.isatty():
-            return None
-        raw = sys.stdin.read()
+        raw = "" if sys.stdin.isatty() else sys.stdin.read()
         if not raw.strip():
+            if required:
+                raise StartupCleanupError("startup hook input is missing; expected JSON with cwd")
             return None
         payload = json.loads(raw)
-        cwd = payload.get("cwd") or payload.get("project_dir") or payload.get("working_directory")
-        return str(cwd) if cwd else None
-    except (json.JSONDecodeError, OSError, AttributeError) as exc:
+    except (json.JSONDecodeError, OSError) as exc:
         raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
+    if required:
+        cwd = payload.get("cwd") if isinstance(payload, dict) else None
+        if not (isinstance(cwd, str) and cwd):
+            raise StartupCleanupError(
+                "invalid startup hook input: expected a JSON object with a non-empty cwd string"
+            )
+        return cwd
+    try:
+        cwd = payload.get("cwd") or payload.get("project_dir") or payload.get("working_directory")
+    except AttributeError as exc:
+        raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
+    return str(cwd) if cwd else None
 
 
-def _resolve_project_dir(cli_dir: str | None) -> Path:
+def _resolve_project_dir(cli_dir: str | None, hook: bool = False) -> Path:
     if cli_dir:
         path = Path(cli_dir)
         if not path.is_dir():
             raise StartupCleanupError(f"explicit project directory does not exist: {cli_dir}")
         return path.resolve()
+    if hook:
+        # The session cwd is authoritative; never fall back to the process cwd.
+        cwd = _read_hook_project_dir(required=True)
+        if cwd is None or not Path(cwd).is_dir():
+            raise StartupCleanupError(f"startup hook cwd is not an existing directory: {cwd}")
+        return Path(cwd).resolve()
     candidates = [_read_hook_project_dir(), os.getcwd()]
     for candidate in candidates:
         if candidate and Path(candidate).is_dir():
@@ -898,6 +978,10 @@ def _print_human(report: dict) -> None:
         return
     if not report.get("ok"):
         print(f"startup-cleanup: could not run — {report.get('error', 'unknown error')}")
+        return
+    if report.get("applicable") is False:
+        print(f"startup-cleanup: skipped — {report['project_dir']} is not in a Git repository; "
+              "no cleanup applies")
         return
     root = report.get("repo_root", report.get("project_dir", "?"))
     print(f"startup-cleanup: repo={root} main={report.get('main_branch', '?')} "
@@ -942,7 +1026,7 @@ def _hook_command(provider: str) -> str:
                 "hooks": [
                     {
                         "type": "command",
-                        "command": f'python3 "{script}" --human',
+                        "command": f'python3 "{script}" --hook --human',
                         "timeout": 45,
                     }
                 ]
@@ -955,7 +1039,7 @@ def _hook_command(provider: str) -> str:
             "hooks": [
                 {
                     "type": "command",
-                    "command": f'python3 "{script}" --human',
+                    "command": f'python3 "{script}" --hook --human',
                     "timeout": 45,
                 }
             ]
@@ -985,6 +1069,12 @@ def main(argv: list[str] | None = None) -> int:
                         help="Total seconds allowed for one startup scan")
     parser.add_argument("--human", action="store_true", help="Human-readable output instead of JSON")
     parser.add_argument(
+        "--hook",
+        action="store_true",
+        help="SessionStart hook mode: require the session cwd on stdin and report a "
+             "folder outside any Git repository as not applicable (exit 0)",
+    )
+    parser.add_argument(
         "--print-claude-hook-config",
         action="store_true",
         help="Print the JSON hook entry to add to ~/.claude/settings.json SessionStart",
@@ -1004,7 +1094,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
-        project_dir = _resolve_project_dir(args.project_dir)
+        project_dir = _resolve_project_dir(args.project_dir, hook=args.hook)
     except StartupCleanupError as exc:
         print(json.dumps({"schema_version": SCHEMA_VERSION, "ok": False, "error": str(exc)}))
         return 1
@@ -1017,6 +1107,7 @@ def main(argv: list[str] | None = None) -> int:
         force=args.force,
         dry_run=args.dry_run,
         max_duration_seconds=args.max_duration,
+        hook=args.hook,
     )
 
     if args.human:
