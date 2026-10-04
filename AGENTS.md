@@ -122,7 +122,7 @@ together. Name any check that could not run.
 | M2 | Flag swallowed unexpected failures. Documented best-effort and expected-absence handling are valid when the contract is preserved. |
 | M3 | No real credentials in files. Secrets come from Doppler. Synthetic fixtures and documented placeholders are permitted. |
 | M4 | No unresolved placeholders in rendered deliverables or runtime config. Source templates and literal fixtures may contain them. |
-| M5 | For changed `.js` under any `static` directory, run from the project root: `npx eslint --no-config-lookup --rule '{"no-redeclare": "error"}' <paths>`. Exit0 passes; skip if none. |
+| M5 | Changed `.js` files beneath any `static` directory must have no redeclarations. The manager's review launcher checks them on the exact HEAD and supplies the result to the independent reviewer. A missing or failed check prevents PASS; no matching files skips M5. The check's command and evidence format are owned by the review launcher and full protocol, not by this portable rule. |
 
 ### Judgment and scope
 
