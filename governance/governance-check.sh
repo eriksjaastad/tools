@@ -75,9 +75,8 @@ validator_args() {
 
 # Ecosystem-level validators (not file-based). Empty since 2026-09-01.
 #
-# "agent-sync" was removed (#6681). It pointed at
-# project-scaffolding/scripts/sync_agent_configs.py, which has never
-# existed — project-scaffolding has no scripts/ directory at all. Every
+# "agent-sync" was removed (#6681). It pointed at a sync script that never
+# existed. Every
 # commit that staged an AGENTS.md printed a yellow "Skipped (sync script
 # not found...)" and left OVERALL_STATUS untouched, so the run still ended
 # "All governance checks passed". The auto-generation everyone believed was
@@ -89,9 +88,9 @@ validator_args() {
 # AGENTS.md is the GENERATED side — CLAUDE.md is the source. Regenerating
 # from the output would have been worse than doing nothing.
 #
-# The real mechanism now: project-scaffolding's 'scaffold sync' creates
-# and updates the AGENTS.md mirror (#6680), and agent-runtime-config's
-# 'runtime-doctor monitor' reports drift on the CLAUDE.md/AGENTS.md pair.
+# The real mechanism now: agent-runtime-config's runtime-doctor generates
+# the AGENTS.md mirror from CLAUDE.md, and 'runtime-doctor monitor' reports
+# drift on the pair.
 ECOSYSTEM_VALIDATORS=()
 
 # Run each validator

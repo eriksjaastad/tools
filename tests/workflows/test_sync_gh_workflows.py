@@ -41,7 +41,6 @@ CANONICAL_REPOS = [
     "model-updater",
     "muffinpanrecipes",
     "Portfolio-ai",
-    "project-scaffolding",
     "project-tracker",
     "tax-organizer",
     "trading-copilot",
