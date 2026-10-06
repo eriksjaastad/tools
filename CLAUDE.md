@@ -71,9 +71,8 @@ GitHub actor alone no longer distinguishes a floor manager from a worker.
 tests, dependencies, and CI references are removed, and the sealed pilot
 results are preserved under `_archive/model-bench-results/` as historical
 evidence. The project-owned `seats.yaml` files and their schema never lived in
-`_tools`; they sit in the portfolio project repos, and the contract belongs to
-`project-scaffolding` (`scaffold/seats.py`, `templates/seats.schema.v1.md`),
-which is now archived. Nothing in `_tools` owns or changes the seats contract.
+`_tools`; they sit in the portfolio project repos. Nothing in `_tools` owns or
+changes the seats contract.
 
 ## Code Review Standards
 

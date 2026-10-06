@@ -41,7 +41,6 @@ CANONICAL_REPOS = [
     "model-updater",
     "muffinpanrecipes",
     "Portfolio-ai",
-    "project-scaffolding",
     "project-tracker",
     "tax-organizer",
     "trading-copilot",
@@ -370,7 +369,7 @@ def test_archived_repo_is_filtered_from_canonical_list(tmp_path):
 
     assert result.returncode == 0, result.stderr
     assert "skip: archived, no write attempted" in result.stderr
-    assert "Repos:  15" in result.stdout
+    assert f"Repos:  {len(CANONICAL_REPOS) - 1}" in result.stdout
     # The archived repo never gets a per-repo api call.
     calls = read_calls(log)
     assert not any("ai-journal" in " ".join(call) and call[0] == "api"
