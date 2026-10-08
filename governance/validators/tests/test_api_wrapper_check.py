@@ -173,6 +173,9 @@ class TestWrapperIndicators:
     """Any wrapper indicator exempts the whole file — by design."""
 
     @pytest.mark.parametrize("line", [
+        "from api_cost_tracker import track",
+        "from api_cost_tracker import (\n    log_call,\n    track,\n)",
+        "import api_cost_tracker",
         "from api_trust_tracker import track",
         "import api_trust_tracker",
         "from ai_cost_tracker import track",
@@ -189,6 +192,18 @@ class TestWrapperIndicators:
 
     def test_absent_wrapper_is_detected(self, api_check):
         assert api_check.file_uses_wrapper("x = 1") is False
+
+    def test_renamed_wrapper_passes_the_commit(self, tmp_path):
+        """synth-insight-labs #7830 renamed the client; a file importing the new
+        name must not be reported as raw calls (#8038)."""
+        f = tmp_path / "client.py"
+        f.write_text(
+            "from api_cost_tracker import track\n"
+            "result = client.messages.create(model='m')\n"
+            "track(result, 'anthropic')\n"
+        )
+        proc = subprocess.run([sys.executable, VALIDATOR_PATH, str(f)], capture_output=True, text=True, timeout=30)
+        assert proc.returncode == 0, proc.stderr
 
     def test_exemption_is_file_global(self, tmp_path):
         """Pinned, not endorsed: one indicator anywhere exempts every call in

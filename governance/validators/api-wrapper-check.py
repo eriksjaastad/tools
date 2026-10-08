@@ -8,8 +8,9 @@
 API Wrapper Enforcement — Standalone Git Hook Validator
 
 Catches raw API client calls that bypass the cost tracking wrapper.
-Every API call must go through the api-trust-tracker wrapper so we
-have visibility into spend.
+Every API call must go through the api-cost-tracker wrapper so we
+have visibility into spend. The package's old name, api-trust-tracker, still
+counts: it remains importable as a shim (synth-insight-labs #7830).
 
 Exit codes:
 - 0: No raw API calls found, continue
@@ -48,6 +49,8 @@ RAW_API_PATTERNS = [
 
 # Wrapper import patterns — if any of these appear in the file, it's using the wrapper
 WRAPPER_INDICATORS = [
+    r'from\s+api_cost_tracker\s+import',
+    r'import\s+api_cost_tracker',
     r'from\s+api_trust_tracker\s+import',
     r'import\s+api_trust_tracker',
     r'from\s+ai_cost_tracker\s+import',
@@ -239,7 +242,7 @@ def main():
 
         print("Every API call must go through the cost tracking wrapper:", file=sys.stderr)
         print("", file=sys.stderr)
-        print("  from api_trust_tracker import track", file=sys.stderr)
+        print("  from api_cost_tracker import track", file=sys.stderr)
         print("", file=sys.stderr)
         print("  resp = client.messages.create(model=..., ...)", file=sys.stderr)
         print('  track(resp, "anthropic", project="your-project")', file=sys.stderr)
