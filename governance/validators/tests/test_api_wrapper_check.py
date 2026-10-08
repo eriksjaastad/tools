@@ -173,6 +173,8 @@ class TestWrapperIndicators:
     """Any wrapper indicator exempts the whole file — by design."""
 
     @pytest.mark.parametrize("line", [
+        "from api_cost_tracker import track",
+        "import api_cost_tracker",
         "from api_trust_tracker import track",
         "import api_trust_tracker",
         "from ai_cost_tracker import track",
@@ -180,7 +182,9 @@ class TestWrapperIndicators:
         "from tracker import track",
         "from .tracker import track",
         "require('api-trust-tracker')",
+        "require('api-cost-tracker')",
         "import { track } from 'api_trust_tracker'",
+        "import { track } from 'api_cost_tracker'",
         "track(resp, 'anthropic')",
         "track(response, 'anthropic')",
     ])
