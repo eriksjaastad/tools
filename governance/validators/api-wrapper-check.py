@@ -57,8 +57,10 @@ WRAPPER_INDICATORS = [
     r'import\s+ai_cost_tracker',
     r'from\s+\.?tracker\s+import\s+track',
     r'require\s*\(\s*[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]\s*\)',
-    # [^;] crosses newlines, so a multi-line named import counts too
-    r'import\s+[^;]*?\bfrom\s+[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]',
+    # The gap crosses newlines, so a multi-line named import counts too. It
+    # stops at the first ; or quote (an import clause has neither), which keeps
+    # the scan linear and inside one statement.
+    r'import\s+[^;\'"]*?\bfrom\s+[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]',
     r'\btrack\s*\(\s*resp',          # track(resp, ...) call pattern
     r'\btrack\s*\(\s*response',      # track(response, ...) call pattern
 ]
