@@ -185,6 +185,8 @@ class TestWrapperIndicators:
         "require('api-cost-tracker')",
         "import { track } from 'api_trust_tracker'",
         "import { track } from 'api_cost_tracker'",
+        "import {\n  track,\n  logCall,\n} from 'api-cost-tracker'",
+        "import {\n  track,\n} from \"api-trust-tracker\"",
         "track(resp, 'anthropic')",
         "track(response, 'anthropic')",
     ])
@@ -193,6 +195,21 @@ class TestWrapperIndicators:
 
     def test_absent_wrapper_is_detected(self, api_check):
         assert api_check.file_uses_wrapper("x = 1") is False
+
+    def test_another_package_imported_over_lines_is_not_the_wrapper(self, api_check):
+        assert api_check.file_uses_wrapper("import {\n  track,\n} from 'some-other-tracker'") is False
+
+    def test_multiline_js_import_of_the_renamed_wrapper_passes_the_commit(self, tmp_path):
+        """Codex on #8038: a named import over several lines, tracking a response
+        held in a variable the track(resp...) heuristic does not know."""
+        f = tmp_path / "client.ts"
+        f.write_text(
+            "import {\n  track,\n} from 'api-cost-tracker';\n"
+            "const result = await anthropic.messages.create({ model: 'm' });\n"
+            "track(result, 'anthropic');\n"
+        )
+        proc = subprocess.run([sys.executable, VALIDATOR_PATH, str(f)], capture_output=True, text=True, timeout=30)
+        assert proc.returncode == 0, proc.stderr
 
     def test_exemption_is_file_global(self, tmp_path):
         """Pinned, not endorsed: one indicator anywhere exempts every call in

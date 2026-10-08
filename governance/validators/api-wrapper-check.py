@@ -57,7 +57,8 @@ WRAPPER_INDICATORS = [
     r'import\s+ai_cost_tracker',
     r'from\s+\.?tracker\s+import\s+track',
     r'require\s*\(\s*[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]\s*\)',
-    r'import\s+.*from\s+[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]',
+    # [^;] crosses newlines, so a multi-line named import counts too
+    r'import\s+[^;]*?\bfrom\s+[\'"]api[_-](?:cost|trust)[_-]tracker[\'"]',
     r'\btrack\s*\(\s*resp',          # track(resp, ...) call pattern
     r'\btrack\s*\(\s*response',      # track(response, ...) call pattern
 ]
