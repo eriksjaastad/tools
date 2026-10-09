@@ -55,3 +55,6 @@ jobs:
             route/test_pricing.py \
             route/test_readers.py \
             -q
+
+      - name: Run batch-crop tests
+        run: uv run --frozen --python 3.12 --directory batch-crop pytest -q
