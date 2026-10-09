@@ -222,7 +222,7 @@ stderr.
 ## Development
 
 ```bash
-cd tools/batch-crop
+cd batch-crop
 uv run pytest -q
 ```
 
