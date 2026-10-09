@@ -70,6 +70,8 @@ step "test suites" env PYTHONPATH=integrity-warden \
     tests/workflows/ \
     route/test_pricing.py \
     route/test_readers.py
+# batch-crop is its own uv project (Pillow), locked in batch-crop/uv.lock.
+step "batch-crop tests" "$UV" run -q --frozen --python 3.12 --directory batch-crop pytest -q -p no:cacheprovider
 
 if [ "${#failed[@]}" -gt 0 ]; then
     printf 'local checks FAILED: %s\n' "${failed[@]}"
