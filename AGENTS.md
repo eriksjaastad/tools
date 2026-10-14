@@ -1,6 +1,3 @@
-<!-- GENERATED FROM: CLAUDE.md -->
-<!-- DO NOT EDIT DIRECTLY. Edit CLAUDE.md and run instruction-writer . --changed claude --write from the project directory -->
-
 # _tools repository instructions
 
 > Project-specific instructions are authored here. Regenerate `AGENTS.md` with `instruction-writer . --changed claude --write` after an edit. The generated `runtime-doctor:shared:code-review-rules` block is present only in `AGENTS.md`: Claude inherits the portfolio rules from its parent instructions, while GitHub Codex needs them inside this repository.
@@ -109,6 +106,52 @@ Claude implements authorized coding cards; Codex reviews the exact committed
 HEAD. This block contains the essential
 checks for in-repository review without requiring workstation files. Additional
 local detail: [full protocol](https://github.com/eriksjaastad/agent-runtime-config/blob/main/docs/code-review-protocol.md).
+
+### Better code
+
+**Main standard:** Google's code review guide, "What to look for":
+https://google.github.io/eng-practices/review/reviewer/looking-for.html
+- Design: the pieces fit together, and the change belongs here and now.
+- Functionality: it does what was meant, is good for its users, and has no bugs you can see by reading.
+- Complexity: readable quickly; nothing built for a future that hasn't arrived.
+- Tests: right kind of tests, correct, and they fail when the code breaks.
+- Naming: names say clearly what a thing is or does.
+- Comments: explain why, not what; if the code needs a "what", simplify the code.
+- Style / Consistency: follow the style guide; otherwise match the code around it.
+- Documentation: update docs when how people build, run or use the code changes.
+- Every line, Context: read every line, and check the change makes the whole system healthier.
+Python style is PEP 8, enforced by ruff.
+
+**Before you code:** State the problem in one sentence and the goal: how we'll know it's solved.
+Is the change needed? What's the smallest, simplest version that works? What could break? Build that
+and test what could break. When a test, a review or a new fact contradicts your problem statement,
+restate the problem before you patch again.
+
+**Our rules on top** (agent-specific; a finding names the one it breaks, e.g. `Breaks: 6 Tested`):
+0. **One purpose.** One purpose per PR. Bundle the cards that serve that one purpose; split unrelated work.
+   Refactors and moves go in their own PR.
+1. **Reuse.** Use what exists: the standard library, the standard tool, or the rule the code already
+   has. Never add a second copy of a rule. No repeated reads or calls inside loops.
+2. **Nothing extra.** No mechanism nobody asked for: undo files, retries, caches, fallbacks, options.
+3. **Split only to simplify.** Say in one sentence what the function does; split only where that
+   sentence needs "and". Never split to hit a size or count. Line, argument and file counts are
+   signals, not rules.
+4. **Honest.** No swallowed errors, no "success" after a failure, no secrets in output or logs.
+5. **Docs in the code.** Docstrings, `--help`, comments for why. No separate doc that can drift.
+6. **Tested, no more.** Test only the new paths this change adds, one test each, not one per
+   variation. Where existing tests already cover a path, point to them instead. Each new test must
+   fail when its bug is put back: check that once. A test that can't fail for a real reason is cost.
+7. **Smaller.** Delete before adding.
+
+**Before you commit:**
+- Read your diff against the guide and this list. If any point is bent, fix the code; don't just
+  note it. Keep a bend only with a reason a reviewer would accept, stated in the PR body.
+- If test lines added are more than about 2x the app lines changed, cut back to one test per new path.
+- If the card's checklist conflicts with this section, this section wins. Note the conflict in the PR body.
+
+**Reviewers:** mark each finding blocking (it makes the code worse) or nit. Mechanical checks (M1–M5)
+always block. For judgment findings, approve once the change clearly makes the code better; list the
+rest as nits.
 
 ### Mechanical checks
 
