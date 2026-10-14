@@ -85,12 +85,13 @@ validator_args() {
 #
 # It is deleted rather than repaired because its trigger was also backwards:
 # it fired on staged AGENTS.md and called that "the source of truth", but
-# AGENTS.md is the GENERATED side — CLAUDE.md is the source. Regenerating
-# from the output would have been worse than doing nothing.
+# AGENTS.md was then the GENERATED side and CLAUDE.md the source.
+# Regenerating from the output would have been worse than doing nothing.
 #
-# The real mechanism now: agent-runtime-config's runtime-doctor generates
-# the AGENTS.md mirror from CLAUDE.md, and 'runtime-doctor monitor' reports
-# drift on the pair.
+# Since agent-runtime-config #8283 (2026-10-14) there is nothing to sync:
+# AGENTS.md is each project's one instructions file and CLAUDE.md a symlink
+# to it. instruction-writer refreshes its shared blocks, and
+# 'runtime-doctor monitor' reports a broken layout.
 ECOSYSTEM_VALIDATORS=()
 
 # Run each validator
