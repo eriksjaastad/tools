@@ -1,6 +1,6 @@
 # _tools repository instructions
 
-> Project-specific instructions are authored here. Regenerate `AGENTS.md` with `instruction-writer . --changed claude --write` after an edit. The generated `runtime-doctor:shared:code-review-rules` block is present only in `AGENTS.md`: Claude inherits the portfolio rules from its parent instructions, while GitHub Codex needs them inside this repository.
+> Project-specific instructions are authored here, in `AGENTS.md` (`CLAUDE.md` is a symlink to it). After an edit, run `instruction-writer . --write` to refresh the generated `runtime-doctor:shared:code-review-rules` block at the end of this file: Claude also inherits the portfolio rules from its parent instructions, while GitHub Codex needs them inside this repository.
 >
 > Portfolio-wide rules (Kanban, Git workflow, secrets, `rm`) live in the provider's parent instruction file and are deliberately not restated here.
 
