@@ -12,17 +12,19 @@ SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
 print the entries). Cleanup after a merge does not depend on a session-end
 event: the next startup in that project can remove the merged task worktree
 and branch. It works on one Git repository: the one containing the folder it
-is given or started in.
+is given or started in. Inherited ``GIT_DIR``, ``GIT_WORK_TREE`` and Git's
+other repository-local variables are ignored.
 
 Safety
 ------
 Only task branches (``task/<number>[-<slug>]``) and their linked worktrees are
 ever removed, and only when every check passes: local main matches
 ``origin/<main>`` (there is no fetch, so pull main first), the branch is merged
-into main, the worktree is clean, unlocked and not in use by any visible
-process (``lsof``), and ``gha`` shows no open PR for the branch. A task branch
-or linked worktree that fails a check, or cannot be verified, is kept, and
-the report says why.
+into main, the worktree is clean and unlocked and no visible process has its
+working directory in it (``lsof``), and ``gha`` shows no open PR for the
+branch. A worktree is trashed only after its branch's deletion checks pass.
+A task branch or linked worktree that fails a check, or cannot be verified,
+is kept, and the report says why.
 
 Directories go to the Trash (the ``trash`` CLI, then Finder, then
 ``send2trash``), never ``rm`` or ``git clean``. Branches are deleted with
@@ -37,12 +39,14 @@ removed. ``--min-interval`` adds an optional throttle.
 
 Output: a JSON report (schema ``tools.startup-cleanup.v1``), or a readable one
 with ``--human``. Exit 0 means the check completed, whatever it removed or
-kept; exit 1 means it did not.
+kept; exit 1 means it did not. A ``--project-dir`` that does not exist, or bad
+hook input, prints only JSON with ``ok: false`` and ``error``, even with
+``--human``.
 
 Hook mode (``--hook``) is for SessionStart, which also fires in folders that
 are not repositories. The folder must come from ``--project-dir`` or the stdin
-JSON ``cwd``. When Git answers with exactly its not-a-repository message,
-``GIT_DIR`` is unset and no ``.git`` marker is found, the run reports
+JSON ``cwd``. When Git answers with exactly its not-a-repository message and
+no ``.git`` marker is found in the folder or above it, the run reports
 ``applicable: false`` and exits 0; any other Git error still fails. A direct
 run outside a repository is an error.
 """
