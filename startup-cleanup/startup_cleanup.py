@@ -5,7 +5,7 @@
     python3 "$cleanup" --human            # clean up the repository you are in
     python3 "$cleanup" --human --dry-run  # what would go, removing nothing
     python3 "$cleanup" --human --force    # bypass a --min-interval throttle
-    python3 "$cleanup" --project-dir ~/projects/<project>   # another project, JSON
+    python3 "$cleanup" --project-dir ~/projects/ai-memory   # another project, JSON
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
@@ -48,9 +48,9 @@ tracking settings are untouched. Remote branches are never touched.
 
 Rollback: put the worktree directory back from the Trash, and its admin entry
 back into the common Git directory's ``worktrees/``, and ``git worktree list``
-shows it again; the branch's commits are on
-main, so ``git branch task/<id>-<slug> <sha>`` restores the label, taking the
-tip from main's history.
+shows it again. The branch's commits are on main, so recreating the label
+restores it, e.g. ``git branch task/1234-example 0123abc`` with the branch's
+name from the report and its tip commit from main's history.
 
 Startup boundedness
 -------------------
