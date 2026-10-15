@@ -200,6 +200,8 @@ pdf-converter/logs/
 .claude/
 # Session memory - never source, never committed (#6783)
 PROGRESS.md
+# Local scratch: plans and notes that never ship
+.scratch/
 
 # Scan-report output — never committed (#7091).
 # The portfolio reporters walk every repo under ~/projects and write the real

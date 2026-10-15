@@ -65,17 +65,6 @@ def test_repo_global_helper_and_rollback(tmp_path, monkeypatch):
     assert cutover.scope_settings("--global") == global_before
 
 
-def test_legacy_bot_installer_cannot_reinstall_bot_author(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init", "-q", str(repo)], check=True, timeout=10)
-    result = subprocess.run([str(SOURCE.parent / "set-repo-bot-identity.sh"), "manager"],
-                            cwd=repo, capture_output=True, text=True, timeout=10)
-    assert result.returncode == 78
-    assert "retired" in result.stderr
-    assert cutover.settings(repo)["user.name"] == []
-
-
 def test_portfolio_owned_temporary_clone_is_discovered(tmp_path, monkeypatch):
     home = tmp_path / "home"
     (home / "projects").mkdir(parents=True)

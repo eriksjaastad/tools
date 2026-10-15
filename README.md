@@ -67,8 +67,6 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 
 - [`governance/`](governance/README.md) - Pre-commit hook validators for secrets, hardcoded paths, API-wrapper enforcement, and agent config sync.
 - [`route/`](route/README.md) - Model routing CLI and `model_registry.json` pricing source of truth.
-- `hooks/` - Claude Code PreToolUse/PostToolUse hooks.
-- `claude-hooks/` - Additional Claude Code hooks for PR enforcement.
 - [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
 - [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
 - [`integrity-warden/`](integrity-warden/README.md) - Security and compliance auditing.
@@ -130,8 +128,6 @@ When adding a new tool:
 _tools/
 ├── governance/             # Repo governance scripts and hook installers
 ├── route/                  # Model routing CLI and registry
-├── hooks/                  # Claude Code PreToolUse/PostToolUse hooks
-├── claude-hooks/           # Additional Claude Code hooks
 ├── claude-mcp-go/          # Go MCP hub for agent communication
 ├── ollama-mcp-go/          # Go MCP server for local Ollama models
 ├── integrity-warden/       # Security and compliance auditing
