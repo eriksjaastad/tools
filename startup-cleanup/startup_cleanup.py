@@ -17,7 +17,8 @@ every local branch.
 Safety contract
 ---------------
 An entry is removed only when every check below passes; anything that fails
-one, or cannot be verified, is refused and reported, never removed:
+one, or cannot be verified, is refused and reported, never removed (a local
+branch outside the task convention with no worktree is simply ignored):
 
 * the branch matches the task convention ``task/<number>[-<slug>]``;
 * its tip is merged into the local main branch (the first of main, master,
@@ -35,7 +36,7 @@ one, or cannot be verified, is refused and reported, never removed:
 Directories go to a recoverable Trash, trying the ``trash`` CLI, then the
 Finder AppleScript, then ``send2trash``; ``rm`` and ``git clean`` are never
 used. After the worktree directory, its admin directory
-``<main>/.git/worktrees/<name>`` is trashed the same way (a ``git worktree
+``<primary checkout>/.git/worktrees/<name>`` is trashed the same way (a ``git worktree
 prune`` scoped to one entry). The branch is then deleted with ``git branch
 -d`` from the verified primary main checkout, with a command-local mapping of
 its upstream to local main, so Git checks the current tip against main and
@@ -44,8 +45,8 @@ tracking settings are untouched. Remote branches are never touched.
 
 Rollback: put the worktree directory and its admin directory back from the
 Trash and ``git worktree list`` shows it again; the branch's commits are on
-main, so ``git branch task/<id>-<slug> <sha>`` restores the label (the tip is
-in the report).
+main, so ``git branch task/<id>-<slug> <sha>`` restores the label, taking the
+tip from main's history.
 
 Startup boundedness
 -------------------
@@ -55,9 +56,9 @@ Startup boundedness
 * more than ``--max-worktrees`` (40) worktrees or ``--max-branches`` (100)
   branches fails closed instead of scanning;
 * the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
-  each Git subprocess has ``--timeout`` (3s), PR lookups 5s and each Trash
-  backend 5s, and a candidate is refused when too little budget remains to
-  finish its removal;
+  the per-candidate Git calls take ``--timeout`` (3s) and the inventory
+  calls a fixed 3s; PR lookups take 5s and each Trash backend 5s; a
+  candidate is refused when too little budget remains to finish its removal;
 * reruns are idempotent.
 
 Output and exit codes
