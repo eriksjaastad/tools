@@ -76,7 +76,7 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 - [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
 - [`batch-crop/`](batch-crop/README.md) - Crop a folder of images to an aspect ratio, size, box or focal point (moved from synth-insight-labs, #8103).
 - [`startup-cleanup/`](startup-cleanup/README.md) - Safe, bounded per-project startup cleanup for merged local task worktrees and branches.
-- [`claude-cli/`](claude-cli/README.md) - Legacy command-line interface to Claude.
+- [`claude-cli/`](claude-cli/claude-cli.py) - Legacy command-line interface to Claude.
 
 ## Retired Tools
 
