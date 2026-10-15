@@ -32,7 +32,8 @@ bindings; an optional temporary initialized to None is supported.
 
 Prefer recoverable removal (trash, a review directory). When permanent removal
 is necessary and ownership is established outside this analysis, give the
-reason in an actual comment on the call's final line; it covers that one call:
+reason in an actual comment on the call's final line. It excuses a line
+holding exactly one deletion call:
 
     fixture.unlink()  # governance: allow-delete DS001: disposable fixture created by this test
 

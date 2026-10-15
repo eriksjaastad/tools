@@ -24,8 +24,8 @@ makes findings nonblocking, never scan errors). Output names locations and
 rules, never source snippets.
 
 With --staged (pre-commit), --base REV (CI) or --commit REV (pre-push, one
-commit against its parents), only changed code is checked; why is in the
-repository's DECISIONS.md. A finding passes only when it pairs one-to-one with
+commit against its parents), only changed code is checked; why is in
+_tools' DECISIONS.md. A finding passes only when it pairs one-to-one with
 an old finding of the same rule, AST and governing source text. For SF002 the
 handler is part of that text, so a broadened clause, a deleted guard or
 `raise`, an edited comment, a deleted rationale or a copied handler all make

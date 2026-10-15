@@ -1,12 +1,11 @@
 #!/bin/bash
 
 # governance-check.sh
-# Runs every validator in VALIDATORS over a list of files:
-#   governance-check.sh              # the staged files (what pre-commit runs)
-#   governance-check.sh a.py b.js    # these files
-# The whole-file validators read those files as they are on disk.
-# source-deletion-check.py and silent-failure-check.py read only the staged
-# changes to them, so an unstaged file passes those two unchecked.
+# Runs every validator in VALIDATORS on the staged files (what pre-commit
+# does), or with file arguments on those paths. The whole-file validators
+# read the files on disk; source-deletion-check.py and silent-failure-check.py
+# always check staged changes only, so for them the arguments just narrow
+# that set (source-deletion-check.py matches only repository-relative paths).
 # The global pre-commit and pre-merge-commit hooks call it (wiring:
 # governance/README.md); push-range-check.py runs these validators per
 # commit at pre-push, from its own FILE_VALIDATORS and COMMIT_VALIDATORS.
