@@ -7,9 +7,8 @@
     python3 "$cleanup" --project-dir ~/projects/ai-memory
 
 The first cleans up and prints a readable report, the second shows what would
-go without removing anything, the third checks another project and prints
-JSON. Outside hook mode and without --project-dir, the folder comes from a
-piped JSON ``cwd`` when there is one, else the current folder.
+go without removing anything, the third cleans up another project and prints
+JSON.
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
