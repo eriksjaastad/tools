@@ -4,7 +4,7 @@
     uv run governance/silent-failure-gate.py [--repo PATH]
 
 Scans every tracked .py/.pyi file's working-tree content, as in a CI checkout
-(scripts/local-checks.sh runs it on every push). Exit 1 for findings, 2 for
+(scripts/local-checks.sh runs it). Exit 1 for findings, 2 for
 scan or enumeration errors, unsafe paths, or no Python files at all. It is not
 a staged-index pre-commit check; governance-check.sh runs
 silent-failure-check.py --staged for that.

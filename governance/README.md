@@ -6,16 +6,18 @@ Commit-time and push-time checks shared across the repositories on these machine
 
 - **pre-commit / pre-merge-commit:** the global `core.hooksPath`
   (`~/.claude/.githooks`, owned by claude-user-config) runs
-  `governance-check.sh` on the staged files of every repository that uses it.
-  A repository with its own `core.hooksPath` runs it only if its own hook
-  does, and a machine without this checkout or uv skips it with a notice.
+  `governance-check.sh` on the staged files.
 - **pre-push:** the same hooks directory runs `push-range-check.py`, which
   checks each commit a push would publish, catching cherry-picks, rebases and
   `--no-verify` commits that never passed pre-commit.
-- **This repository's own checks:** `scripts/local-checks.sh` runs
-  `silent-failure-gate.py`, the test suites and, when the push has a base to
-  compare with, the deletion check, on every push. `content-guard.py` runs only in GitHub's `content-guard.yml`, because
-  its client-name patterns are private.
+
+Both reach only repositories that use the global hooks path: a repository with
+its own `core.hooksPath` runs them only if its own hooks do, and a machine
+without this checkout or uv skips them with a notice.
+
+This repository's own checks are `scripts/local-checks.sh`, which the shared
+pre-push runner starts. `content-guard.py` runs only in GitHub's
+`content-guard.yml`, because its client-name patterns are private.
 
 ## What is here
 
@@ -34,9 +36,4 @@ Commit-time and push-time checks shared across the repositories on these machine
 Each script's docstring (or header comment) is its contract; the argparse
 scripts also print it with `--help`. Run a validator by hand with
 `uv run governance/validators/<name> <files>`; `governance-check.sh`'s header
-says how to add one. Why the checks work the way they do is in
-the repository's `DECISIONS.md`.
-
-`git commit --no-verify` skips pre-commit, but the push-range check still
-runs at push time; `git push --no-verify` skips that too. Use either only in
-an emergency.
+says how to add one.

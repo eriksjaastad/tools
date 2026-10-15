@@ -16,8 +16,9 @@
 # block that takes file paths as arguments and exits 0 to pass, nonzero to block,
 # then its name in VALIDATORS below (and its arguments in validator_args if
 # it needs any) and in push-range-check.py's FILE_VALIDATORS, or
-# COMMIT_VALIDATORS if it takes --commit. Each runs as `uv run --no-project` from the repository being
-# committed, so uv never creates or syncs that repository's .venv (#7647).
+# COMMIT_VALIDATORS if it takes --commit. This script runs each as
+# `uv run --no-project` from the repository being committed, so uv never
+# creates or syncs that repository's .venv (#7647).
 
 set -euo pipefail
 
