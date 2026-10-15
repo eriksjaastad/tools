@@ -70,8 +70,9 @@ Output and exit codes
 A JSON report on stdout (schema ``tools.startup-cleanup.v1``), or a readable
 one with ``--human``. Exit 0 means the check completed, with or without
 removals or refusals; exit 1 means it did not, and removals made before the
-failure stand. A bad ``--project-dir`` or hook input prints only JSON with
-``schema_version``, ``ok: false`` and ``error``, even with ``--human``.
+failure stand. A ``--project-dir`` that does not exist, or bad hook input,
+prints only JSON with ``schema_version``, ``ok: false`` and ``error``, even
+with ``--human``.
 
 Direct runs and hook mode
 -------------------------
