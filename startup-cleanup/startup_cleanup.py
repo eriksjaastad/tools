@@ -16,9 +16,10 @@ every local branch.
 
 Safety contract
 ---------------
-An entry is removed only when every check below passes; anything that fails
-one, or cannot be verified, is refused and reported, never removed (a local
-branch outside the task convention with no worktree is simply ignored):
+Nothing is removed unless every check below passes. A candidate that fails
+one, or cannot be verified, is reported as refused. Candidates are every
+linked worktree and every local task branch; the primary checkout, the main
+branch and other branches are skipped without a report:
 
 * the branch matches the task convention ``task/<number>[-<slug>]``;
 * its tip is merged into the local main branch (the first of main, master,
@@ -56,8 +57,8 @@ Startup boundedness
 * more than ``--max-worktrees`` (40) worktrees or ``--max-branches`` (100)
   branches fails closed instead of scanning;
 * the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
-  the per-candidate Git calls take ``--timeout`` (3s) and the inventory
-  calls a fixed 3s; PR lookups take 5s and each Trash backend 5s; a
+  every Git call has a timeout (``--timeout``, default 3s, or a fixed 3s),
+  PR lookups 5s and each Trash backend 5s; a
   candidate is refused when too little budget remains to finish its removal;
 * reruns are idempotent.
 
