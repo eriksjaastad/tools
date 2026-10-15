@@ -2,10 +2,14 @@
 """Per-project startup cleanup for merged local task worktrees and branches.
 
     cleanup="$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"
-    python3 "$cleanup" --human            # clean up the repository you are in
-    python3 "$cleanup" --human --dry-run  # what would go, removing nothing
-    python3 "$cleanup" --human --force    # bypass a --min-interval throttle
-    python3 "$cleanup" --project-dir ~/projects/ai-memory   # another project, JSON
+    python3 "$cleanup" --human
+    python3 "$cleanup" --human --dry-run
+    python3 "$cleanup" --project-dir ~/projects/ai-memory
+
+The first cleans up and prints a readable report, the second shows what would
+go without removing anything, the third checks another project and prints
+JSON. Outside hook mode and without --project-dir, the folder comes from a
+piped JSON ``cwd`` when there is one, else the current folder.
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
@@ -20,11 +24,12 @@ Safety
 Only task branches (``task/<number>[-<slug>]``) and their linked worktrees are
 ever removed, and only when every check passes: local main matches
 ``origin/<main>`` (there is no fetch, so pull main first), the branch is merged
-into main, the worktree is clean and unlocked and no visible process has its
-working directory in it (``lsof``), and ``gha`` shows no open PR for the
+into main, the worktree has no tracked, untracked or ignored changes, it is
+unlocked and no visible process has its working directory in it (``lsof``), and ``gha`` shows no open PR for the
 branch. A worktree is trashed only after its branch's deletion checks pass.
 A task branch or linked worktree that fails a check, or cannot be verified,
-is kept, and the report says why.
+is kept, and the report says why. If a step fails after a worktree was
+trashed, whatever is left is kept and reported.
 
 Directories go to the Trash (the ``trash`` CLI, then Finder, then
 ``send2trash``), never ``rm`` or ``git clean``. Branches are deleted with
@@ -38,8 +43,8 @@ and ``--max-worktrees``/``--max-branches`` caps above which nothing is
 removed. ``--min-interval`` adds an optional throttle.
 
 Output: a JSON report (schema ``tools.startup-cleanup.v1``), or a readable one
-with ``--human``. Exit 0 means the check completed, whatever it removed or
-kept; exit 1 means it did not. A ``--project-dir`` that does not exist, or bad
+with ``--human``. The exit code is 0 when the report says ``ok: true`` and 1
+when it says ``ok: false``. A ``--project-dir`` that does not exist, or bad
 hook input, prints only JSON with ``ok: false`` and ``error``, even with
 ``--human``.
 
