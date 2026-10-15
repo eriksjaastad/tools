@@ -27,8 +27,7 @@ into main, the worktree has no tracked, untracked or ignored changes, it is
 unlocked, no visible process has its working directory in it
 (``lsof``), and ``gha`` shows no open PR for the branch. A worktree is trashed only after its branch's deletion checks pass.
 A task branch or linked worktree that fails a check, or cannot be verified,
-is kept, and the report says why. If a step fails after a worktree was
-trashed, whatever is left is kept and reported.
+is kept, and the report says why.
 
 Directories go to the Trash (the ``trash`` CLI, then Finder, then
 ``send2trash``), never ``rm`` or ``git clean``. Branches are deleted with
