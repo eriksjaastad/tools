@@ -2,7 +2,7 @@
 """Per-project startup cleanup for merged local task worktrees and branches.
 
     cleanup="$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"
-    python3 "$cleanup" --human            # report for the repository you are in
+    python3 "$cleanup" --human            # clean up the repository you are in
     python3 "$cleanup" --human --dry-run  # what would go, removing nothing
     python3 "$cleanup" --human --force    # bypass a --min-interval throttle
     python3 "$cleanup" --project-dir ~/projects/<project>   # another project, JSON
@@ -18,23 +18,23 @@ every local branch.
 
 Safety contract
 ---------------
-Nothing is removed unless every check below passes. A candidate that fails
-one, or cannot be verified, is reported as refused. Candidates are every
-linked worktree and every local task branch; the primary checkout, the main
-branch and other branches are skipped without a report:
+The main branch is the first of main, master and trunk that exists. If there
+is none, or local main differs from ``origin/<main>`` (there is no network
+fetch, so pull main first), the run removes nothing and says why. Otherwise
+every linked worktree and every local task branch is a candidate, and a
+candidate that fails a check below, or cannot be verified, is reported as
+refused. The primary checkout, main and other branches are skipped without a
+report. A candidate is removed only when it passes every check:
 
 * the branch matches the task convention ``task/<number>[-<slug>]``;
-* its tip is merged into the local main branch (the first of main, master,
-  trunk that exists);
-* main is fresh: local main equals ``origin/<main>`` (no network fetch, so pull
-  main first);
+* its tip is merged into local main;
 * the worktree has no tracked, untracked or ignored (``!!``) changes;
 * the worktree is not locked, not the primary checkout, not the one the agent
   is starting in, and no visible process has its working directory in it or
   below it (``lsof``; if lsof is unavailable or fails, every linked worktree is
   kept);
-* ``gha pr list`` finds no open PR with the branch as its head (no ``gha``, or a
-  failed lookup, refuses).
+* ``gha pr list`` finds no open PR with the branch as its head (no ``gha``, no
+  parseable origin remote, or a failed lookup refuses).
 
 Directories go to a recoverable Trash, trying the ``trash`` CLI, then the
 Finder AppleScript, then ``send2trash``; ``rm`` and ``git clean`` are never
@@ -67,15 +67,11 @@ Startup boundedness
 
 Output and exit codes
 ---------------------
-JSON on stdout by default (schema ``tools.startup-cleanup.v1``: ``ok``,
-``project_dir``, ``repo_root``, ``main_branch``, ``main_fresh``,
-``throttled``, ``summary``, ``removed[]``, ``planned[]`` in dry runs,
-``refused[]`` with ``type``/``target``/``branch``/``reasons[]``,
-``reports[]``, ``duration_ms``); ``--human`` prints a readable report. Exit 0
-means the check completed, with or without removals or refusals; exit 1 means
-the tool could not run. A failure before the scan starts (a bad
-``--project-dir`` or hook input) prints only JSON with ``schema_version``,
-``ok: false`` and ``error``, even with ``--human``.
+A JSON report on stdout (schema ``tools.startup-cleanup.v1``), or a readable
+one with ``--human``. Exit 0 means the check completed, with or without
+removals or refusals; exit 1 means it did not, and removals made before the
+failure stand. A bad ``--project-dir`` or hook input prints only JSON with
+``schema_version``, ``ok: false`` and ``error``, even with ``--human``.
 
 Direct runs and hook mode
 -------------------------
