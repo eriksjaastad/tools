@@ -37,13 +37,14 @@ regular .py/.pyi file joins the baseline; changed symlinks and submodules are
 skipped. Unparseable new source exits 2; an unparseable old version gives no
 baseline. Source is read from Git blobs, never from the working tree.
 
-An intentional exception is an actual comment on the handler line, or the
-standalone line before it, naming the rule and a reason; it covers only that
-handler and rule:
+An intentional exception is an actual comment on the handler line, or a
+standalone comment on the line before it at the same indentation, naming the
+rule and a reason; it covers only that handler and rule:
 
     except FileNotFoundError:  # governance: allow-silent SF001: temp file already cleaned up
 
-For SF003 the comment goes on the containing statement or the line before it.
+For SF003 the comment goes on the containing statement's first line or the
+line before it.
 An assignment followed immediately by `if not value: raise ...` counts as
 validation; checking a client or container instead, or returning first, does
 not. Check the caller's contract before adding an exception: a failed search

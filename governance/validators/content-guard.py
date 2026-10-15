@@ -14,9 +14,11 @@ The marker list is NEVER committed to the public repository. It is loaded from:
 1. Environment variable CONTENT_GUARD_PATTERNS (newline-separated patterns)
 2. A private file path in CONTENT_GUARD_PATTERNS_FILE
 
-Matching is case-insensitive over every tracked blob regardless of suffix,
-including UTF-8 and UTF-16/UTF-32 text with or without a BOM. Symlink target
-text is scanned without following the link; gitlinks are skipped. CI
+Matching is case-insensitive over the given files, or with --tracked over
+every tracked path and its content regardless of suffix, including UTF-8 and
+UTF-16/UTF-32 text with or without a BOM. Symlink target text is scanned
+without following the link; a gitlink's name is scanned, its contents are
+not in the checkout. CI
 (.github/workflows/content-guard.yml) runs it on pull_request_target with the
 scanner checked out from the base branch, so PR code never sees the patterns.
 

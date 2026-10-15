@@ -21,7 +21,7 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 | Directory | Purpose |
 |-----------|---------|
-| `governance/` | Pre-commit hook validators (secrets, paths, api-wrapper enforcement) |
+| `governance/` | Commit- and push-time validators (secrets, paths, api-wrapper, deletion sites, silent failures) |
 | `route/` | Model routing CLI + `model_registry.json` (pricing source of truth) |
 | `claude-mcp-go/` | MCP hub for agent communication (Go) |
 | `ollama-mcp-go/` | MCP server for local Ollama models (Go) |
@@ -82,7 +82,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 | M3 | No API keys in code |
 | H1 | Subprocess has a timeout and handles failure with `check=True` or explicit validation of expected return codes |
 
-**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. The shared pre-commit check also blocks M2 patterns SF001–SF003 on changed lines, and this repository's local checks run `governance/silent-failure-gate.py` over every tracked Python file (why: `DECISIONS.md`). This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**.
+**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. The shared pre-commit check also blocks M2 patterns SF001–SF003 on changed lines (why: `DECISIONS.md`), and this repository's local checks run `governance/silent-failure-gate.py` over every tracked Python file. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**.
 
 ## Definition of Done
 
