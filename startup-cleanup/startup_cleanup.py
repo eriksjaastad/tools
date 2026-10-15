@@ -41,9 +41,8 @@ The run is bounded by ``--max-duration``, a timeout on every external call,
 and ``--max-worktrees``/``--max-branches`` caps above which nothing is
 removed.
 
-Output: a JSON report (schema ``tools.startup-cleanup.v1``), or a readable one
-with ``--human``. The exit code is 0 when the report says ``ok: true`` and 1
-when it says ``ok: false``.
+The exit code is 1 when the run's report (schema
+``tools.startup-cleanup.v1``) has ``ok: false`` and 0 when it has ``ok: true``.
 
 Hook mode (``--hook``) is for SessionStart, which also fires in folders that
 are not repositories. The folder must come from ``--project-dir`` or the stdin
