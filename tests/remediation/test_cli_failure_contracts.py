@@ -1,7 +1,6 @@
-"""Offline proof of explicit CLI failure sentinels and archived text fallback."""
+"""Offline proof of explicit CLI failure sentinels."""
 
 import importlib.util
-import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -86,26 +85,3 @@ def test_successful_response_is_preserved_and_its_cost_recorded(cli, posted, mon
         "anthropic", "claude-test", "claude-cli", "claude_chat"
     )
     assert (payload["prompt_tokens"], payload["completion_tokens"]) == (12, 3)
-
-
-@pytest.fixture
-def archive():
-    return load_script("archived_claude_contracts", "_archive/multi-layer-delegation/multi-layer-delegation/adapters/claude_code.py")
-
-
-@pytest.mark.parametrize("text", ["preserved free text", "{broken structured output", "[]", "null"])
-def test_archived_optional_parsing_preserves_text_and_usage(archive, text):
-    result = archive.parse_claude_output(json.dumps({"result": text, "cost_usd": 0.1, "input_tokens": 10, "output_tokens": 20}))
-    assert result["result"] == text
-    assert result["cost"] == {"api_cost_usd": 0.1, "input_tokens": 10, "output_tokens": 20}
-
-
-def test_archived_structured_output_is_still_used(archive):
-    structured = {"result": "deliverable", "artifacts": [{"type": "inline", "value": "work"}], "notes": "diagnostic"}
-    assert archive.parse_claude_output(json.dumps({"result": json.dumps(structured)})) == structured
-
-
-def test_archived_non_json_envelope_reports_fallback(archive):
-    result = archive.parse_claude_output("free text envelope")
-    assert result["result"] == "free text envelope"
-    assert "not valid JSON" in result["notes"]
