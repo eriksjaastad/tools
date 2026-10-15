@@ -6,8 +6,9 @@ in its docstrings and `--help`; this file keeps only the reasons.
 ## 2026-09-30 — The silent-failure check gates changed lines, not whole files (#6900)
 
 `silent-failure-check.py --staged` runs in the shared pre-commit hook and
-blocks a commit only for a finding on a line it added or edited, or a finding
-that did not exist before (the model `source-deletion-check.py` already used).
+blocks only the findings a commit introduces or touches, not the existing
+ones (the model `source-deletion-check.py` already used). The exact rule is
+in its docstring.
 
 **Why:** the original plan waited for every repository's owners to clear all
 existing findings before turning the hook on, and it never converged. The
