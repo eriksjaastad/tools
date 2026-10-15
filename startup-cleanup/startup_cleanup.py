@@ -23,8 +23,8 @@ Safety
 Only task branches (``task/<number>[-<slug>]``) and their linked worktrees are
 ever removed, and only when every check passes: local main matches
 ``origin/<main>`` (there is no fetch, so pull main first), the branch is merged
-into main, ``git status`` shows the worktree clean (ignored files included),
-it is unlocked, no visible process has its working directory in it
+into main, the worktree has no tracked, untracked or ignored changes, it is
+unlocked, no visible process has its working directory in it
 (``lsof``), and ``gha`` shows no open PR for the branch. A worktree is trashed only after its branch's deletion checks pass.
 A task branch or linked worktree that fails a check, or cannot be verified,
 is kept, and the report says why. If a step fails after a worktree was
