@@ -66,7 +66,7 @@ Runs validators at commit and push time — secrets, hardcoded paths, naked API 
 - [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
 - [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
 - [`batch-crop/`](batch-crop/README.md) - Crop a folder of images to an aspect ratio, size, box or focal point (moved from synth-insight-labs, #8103).
-- [`startup-cleanup/`](startup-cleanup/README.md) - Safe, bounded per-project startup cleanup for merged local task worktrees and branches.
+- [`startup-cleanup/`](startup-cleanup/startup_cleanup.py) - Safe, bounded per-project startup cleanup for merged local task worktrees and branches.
 - [`claude-cli/`](claude-cli/claude-cli.py) - Legacy command-line interface to Claude.
 
 ## Retired Tools

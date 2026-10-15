@@ -1,51 +1,91 @@
 #!/usr/bin/env python3
 """Per-project startup cleanup for merged local task worktrees and branches.
 
-This is the shared, bounded startup check owned by _tools. It is intended to
-be invoked once per project/session by a Claude Code SessionStart hook and by
-a Codex SessionStart hook (or a documented Codex wrapper path). It only ever
-operates on the git repository that the invoking agent is starting inside.
+    startup_cleanup.py --project-dir ~/projects/<project> --human  # readable report
+    startup_cleanup.py --dry-run --human     # what would go, removing nothing
+    startup_cleanup.py --force --human       # bypass a --min-interval throttle
+
+The shared startup check owned by _tools, run by a Claude Code and a Codex
+SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
+print the entries; both use matcher ^startup$ and `--hook --human`). Cleanup
+after a merge does not depend on a session-end event: the next startup in that
+project removes the merged task worktree and branch. It inspects only the Git
+repository it was started in, inventorying every linked worktree (`git
+worktree list --porcelain`, including ones outside .claude/worktrees/) and
+every local branch.
 
 Safety contract
 ---------------
-Automatic removal requires *all* of the following to be true:
+An entry is removed only when every check below passes; anything that fails
+one, or cannot be verified, is refused and reported, never removed:
 
-* the worktree/branch name matches the portfolio task convention
-  ``task/<number>[-<slug>]`` (clear provenance);
-* the branch tip is fully merged into the local main branch;
-* main is fresh: local ``main`` equals ``origin/main`` (no network fetch);
-* the worktree has no tracked, untracked, or meaningful ignored changes;
-* the worktree is not locked, is not the primary checkout, and is not the
-  checkout the agent is starting inside (active session);
-* no open GitHub PR has the branch as its head;
-* the managed GitHub CLI (``gha``) is available and the PR check succeeds.
+* the branch matches the task convention ``task/<number>[-<slug>]``;
+* its tip is merged into the local main branch (the first of main, master,
+  trunk that exists);
+* main is fresh: local main equals ``origin/<main>`` (no network fetch, so pull
+  main first);
+* the worktree has no tracked, untracked or ignored (``!!``) changes;
+* the worktree is not locked, not the primary checkout, not the one the agent
+  is starting in, and no visible process has its working directory in it or
+  below it (``lsof``; if lsof is unavailable or fails, every linked worktree is
+  kept);
+* ``gha pr list`` finds no open PR with the branch as its head (no ``gha``, or a
+  failed lookup, refuses).
 
-Anything that fails one of these checks, or anything that cannot be verified,
-is refused and reported. Removal of directories always goes through a
-recoverable Trash path (``send2trash``, macOS ``/usr/bin/trash``, or the
-Finder AppleScript fallback) and never uses ``rm`` or ``git clean``. Branch
-deletion uses ``git branch -d`` with a command-local mapping that makes Git
-check the candidate's current tip against local main, regardless of its saved
-upstream. Git also rejects branches checked out in another worktree.
+Directories go to a recoverable Trash, trying the ``trash`` CLI, then the
+Finder AppleScript, then ``send2trash``; ``rm`` and ``git clean`` are never
+used. After the worktree directory, its admin directory
+``<main>/.git/worktrees/<name>`` is trashed the same way (a ``git worktree
+prune`` scoped to one entry). The branch is then deleted with ``git branch
+-d`` from the verified primary main checkout, with a command-local mapping of
+its upstream to local main, so Git checks the current tip against main and
+rejects a branch that became unmerged or is checked out elsewhere; saved
+tracking settings are untouched. Remote branches are never touched.
+
+Rollback: put the worktree directory and its admin directory back from the
+Trash and ``git worktree list`` shows it again; the branch's commits are on
+main, so ``git branch task/<id>-<slug> <sha>`` restores the label (the tip is
+in the report).
 
 Startup boundedness
 -------------------
-* an optional throttle stamp under the repo's git common dir skips runs within
-  a configured interval (default disabled; ``--force`` bypasses);
-* worktree and branch inventories are capped (``--max-worktrees``,
-  ``--max-branches``) and the check fails closed above the cap;
-* every git subprocess has a timeout (``--timeout``, default 3s).
+* an optional throttle stamp under the repository's Git common directory skips
+  repeated fully checked runs within ``--min-interval`` (default 0, disabled);
+  refusals, incomplete scans and dry runs never write it; ``--force`` bypasses;
+* more than ``--max-worktrees`` (40) worktrees or ``--max-branches`` (100)
+  branches fails closed instead of scanning;
+* the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
+  each Git subprocess has ``--timeout`` (3s), PR lookups 5s and each Trash
+  backend 5s, and a candidate is refused when too little budget remains to
+  finish its removal;
+* reruns are idempotent.
 
 Output and exit codes
 ---------------------
-The default output is JSON (schema ``tools.startup-cleanup.v1``) on stdout for
-direct callers. Claude/Codex SessionStart hooks request ``--hook --human`` so their
-session contexts receive a readable text report. Exit code 0 means "check
-completed" (whether or not anything was removed or refused);
-exit code 1 means the tool itself could not run. Outside any Git repository a
-direct run exits 1, while ``--hook`` reports the session folder as not
-applicable and exits 0 only on Git's exact not-a-repository diagnostic;
-corrupt repository markers and other Git errors still fail.
+JSON on stdout by default (schema ``tools.startup-cleanup.v1``: ``ok``,
+``project_dir``, ``repo_root``, ``main_branch``, ``main_fresh``,
+``throttled``, ``summary``, ``removed[]``, ``planned[]`` in dry runs,
+``refused[]`` with ``type``/``target``/``branch``/``reasons[]``,
+``reports[]``, ``duration_ms``); ``--human`` prints a readable report. Exit 0
+means the check completed, with or without removals or refusals; exit 1 means
+the tool could not run.
+
+Direct runs and hook mode
+-------------------------
+A direct run takes ``--project-dir``, or else the stdin JSON ``cwd``,
+``project_dir`` or ``working_directory``, or else the process working
+directory; a folder outside any Git repository is an error (exit 1).
+
+``--hook`` is for SessionStart, which also fires in folders that are not
+repositories. The folder comes only from ``--project-dir`` or the stdin JSON
+``cwd`` (a non-empty string naming an existing directory); missing or malformed
+input fails with exit 1 even when an alias is valid. Outside any repository the
+report is ``ok: true, applicable: false`` with exit 0, and nothing is searched
+or written. That skip needs one probe, ``git rev-parse --show-toplevel`` under
+``LC_ALL=C``, to exit 128 with exactly Git's not-a-repository message, and
+``GIT_DIR`` unset with no ``.git`` in the folder or any ancestor. A timeout,
+any other exit or message, a discovery stop at a filesystem boundary, a corrupt
+or dangling ``.git``, a bare repository or an unreadable ancestor still fails.
 """
 
 from __future__ import annotations
@@ -1051,7 +1091,8 @@ def _hook_command(provider: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="startup_cleanup.py",
-        description="Safe, bounded per-project startup cleanup for merged local task worktrees and branches.",
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--project-dir", help="Project directory to inspect (default: hook env/stdin/PWD)")
     parser.add_argument("--dry-run", action="store_true", help="Report what would be removed without removing")
