@@ -6,8 +6,8 @@
 #   governance-check.sh              # staged files (what pre-commit runs)
 #   governance-check.sh a.py b.js    # these files
 # The global pre-commit and pre-merge-commit hooks call it (wiring:
-# governance/README.md); push-range-check.py runs the same validators per
-# commit at pre-push.
+# governance/README.md); push-range-check.py runs these validators per
+# commit at pre-push, from its own FILE_VALIDATORS and COMMIT_VALIDATORS.
 # Exit codes:
 #   0: All validators passed
 #   1: One or more validators failed
@@ -15,7 +15,8 @@
 # Adding a validator: a script in validators/ with a PEP 723 `# /// script`
 # block that takes file paths as arguments and exits 0 to pass, nonzero to block,
 # then its name in VALIDATORS below (and its arguments in validator_args if
-# it needs any). Each runs as `uv run --no-project` from the repository being
+# it needs any) and in push-range-check.py's FILE_VALIDATORS, or
+# COMMIT_VALIDATORS if it takes --commit. Each runs as `uv run --no-project` from the repository being
 # committed, so uv never creates or syncs that repository's .venv (#7647).
 
 set -euo pipefail
