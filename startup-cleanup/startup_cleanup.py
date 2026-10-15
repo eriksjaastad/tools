@@ -23,9 +23,9 @@ Safety
 Only task branches (``task/<number>[-<slug>]``) and their linked worktrees are
 ever removed, and only when every check passes: local main matches
 ``origin/<main>`` (there is no fetch, so pull main first), the branch is merged
-into main, the worktree has no tracked, untracked or ignored changes, it is
-unlocked and no visible process has its working directory in it (``lsof``), and ``gha`` shows no open PR for the
-branch. A worktree is trashed only after its branch's deletion checks pass.
+into main, ``git status`` shows the worktree clean (ignored files included),
+it is unlocked, no visible process has its working directory in it
+(``lsof``), and ``gha`` shows no open PR for the branch. A worktree is trashed only after its branch's deletion checks pass.
 A task branch or linked worktree that fails a check, or cannot be verified,
 is kept, and the report says why. If a step fails after a worktree was
 trashed, whatever is left is kept and reported.
@@ -35,17 +35,15 @@ Directories go to the Trash (the ``trash`` CLI, then Finder, then
 ``git branch -d``, which re-checks the merge. Remote branches are never
 touched. To undo, put the directories back from the Trash; the branch's
 commits are on main, so ``git branch task/1234-example 0123abc``, with its
-name and tip, recreates it.
+name from the report and its tip found in main's history, recreates it.
 
 The run is bounded by ``--max-duration``, a timeout on every external call,
 and ``--max-worktrees``/``--max-branches`` caps above which nothing is
-removed. ``--min-interval`` adds an optional throttle.
+removed.
 
 Output: a JSON report (schema ``tools.startup-cleanup.v1``), or a readable one
 with ``--human``. The exit code is 0 when the report says ``ok: true`` and 1
-when it says ``ok: false``. A ``--project-dir`` that does not exist, or bad
-hook input, prints only JSON with ``ok: false`` and ``error``, even with
-``--human``.
+when it says ``ok: false``.
 
 Hook mode (``--hook``) is for SessionStart, which also fires in folders that
 are not repositories. The folder must come from ``--project-dir`` or the stdin
