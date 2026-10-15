@@ -74,6 +74,15 @@ DEFAULT_MAX_DURATION_SECONDS = 35
 THROTTLE_STAMP_NAME = "startup-cleanup-last-run"
 # Git's exact untranslated message when discovery finds no repository.
 NOT_A_REPOSITORY_DIAGNOSTIC = "fatal: not a git repository (or any of the parent directories): .git"
+# Git's own list of repository-local variables (`git rev-parse --local-env-vars`,
+# what Git's hook scripts unset), kept literal so clearing them costs no probe.
+GIT_REPOSITORY_ENV = (
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_PARAMETERS",
+    "GIT_CONFIG_COUNT", "GIT_OBJECT_DIRECTORY", "GIT_DIR", "GIT_WORK_TREE",
+    "GIT_IMPLICIT_WORK_TREE", "GIT_GRAFT_FILE", "GIT_INDEX_FILE",
+    "GIT_NO_REPLACE_OBJECTS", "GIT_REPLACE_REF_BASE", "GIT_PREFIX",
+    "GIT_SHALLOW_FILE", "GIT_COMMON_DIR",
+)
 _RUN_DEADLINE: float | None = None
 
 
@@ -425,26 +434,32 @@ def trash_path(path: Path, timeout: int = DEFAULT_TRASH_TIMEOUT) -> tuple[bool, 
     return False, "; ".join(filter(None, [reason, reason2, reason3]))
 
 
-def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bool, str]:
-    """Make Git's own deletion check use local main, not the branch's upstream."""
+def _prepare_branch_deletion(
+    repo: Path, branch: str, main: str, timeout: int
+) -> tuple[tuple[Path, list[str]] | None, str]:
+    """Check that `git branch -d` can delete the branch against local main.
+
+    Returns ((primary checkout, command-local git options), "") when it can,
+    or (None, reason) when it cannot. Nothing is changed.
+    """
     merged, reason = _branch_merged(repo, main, branch, timeout)
     if not merged:
-        return False, reason
+        return None, reason
     try:
         worktrees = _list_worktrees(repo)
     except StartupCleanupError as exc:
-        return False, str(exc)
+        return None, str(exc)
     if not worktrees:
-        return False, "no primary checkout available for safe branch deletion"
+        return None, "no primary checkout available for safe branch deletion"
     primary = Path(worktrees[0].path)
     if worktrees[0].branch != main or not primary.is_dir():
-        return False, f"primary checkout is not on {main}"
+        return None, f"primary checkout is not on {main}"
     ok, main_tip, err = _git_ok(repo, ["rev-parse", "--verify", f"refs/heads/{main}"], timeout)
     if not ok:
-        return False, err.strip() or "cannot resolve main tip"
+        return None, err.strip() or "cannot resolve main tip"
     ok, primary_head, err = _git_ok(primary, ["rev-parse", "HEAD"], timeout)
     if not ok or primary_head.strip() != main_tip.strip():
-        return False, "primary checkout HEAD does not match main"
+        return None, "primary checkout HEAD does not match main"
     # `git branch -d` normally checks the tracked upstream instead of HEAD.
     # A task branch can advance alongside origin/task after our ancestry check;
     # deleting it then would lose a tip that is not in local main. Supply a
@@ -453,23 +468,23 @@ def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bo
     try:
         config = _git(repo, ["config", "--null", "--get-all", f"branch.{branch}.merge"], timeout)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        return False, f"cannot inspect branch upstream: {exc}"
+        return None, f"cannot inspect branch upstream: {exc}"
     if config.returncode == 0:
         if not config.stdout.endswith("\0"):
-            return False, "malformed branch upstream configuration"
+            return None, "malformed branch upstream configuration"
         merge_values = config.stdout[:-1].split("\0")
         if len(merge_values) != 1 or not merge_values[0]:
-            return False, "branch has ambiguous upstream merge configuration"
+            return None, "branch has ambiguous upstream merge configuration"
         merge_ref = merge_values[0]
     elif config.returncode == 1 and not config.stdout and not config.stderr:
         merge_ref = f"refs/heads/{branch}"
     else:
-        return False, config.stderr.strip() or "cannot inspect branch upstream"
+        return None, config.stderr.strip() or "cannot inspect branch upstream"
     if not merge_ref.startswith("refs/heads/"):
-        return False, f"unsupported branch upstream ref: {merge_ref}"
+        return None, f"unsupported branch upstream ref: {merge_ref}"
     ok, _, err = _git_ok(repo, ["check-ref-format", merge_ref], timeout)
     if not ok:
-        return False, err.strip() or "invalid branch upstream ref"
+        return None, err.strip() or "invalid branch upstream ref"
 
     remote = f"startup-cleanup-{uuid.uuid4().hex}"
     options = [
@@ -482,11 +497,27 @@ def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bo
         primary, [*options, "rev-parse", "--symbolic-full-name", f"{branch}@{{upstream}}"], timeout
     )
     if not ok or upstream.strip() != f"refs/heads/{main}":
-        return False, err.strip() or "cannot map branch deletion check to local main"
+        return None, err.strip() or "cannot map branch deletion check to local main"
+    return (primary, options), ""
+
+
+def _delete_prepared_branch(
+    branch: str, prepared: tuple[Path, list[str]], timeout: int
+) -> tuple[bool, str]:
+    """Delete with `git branch -d`, which re-checks the merge and checkouts itself."""
+    primary, options = prepared
     ok, _, err = _git_ok(primary, [*options, "branch", "-d", branch], timeout)
     if ok:
         return True, ""
     return False, err.strip() or "git branch -d failed"
+
+
+def _delete_branch(repo: Path, branch: str, main: str, timeout: int) -> tuple[bool, str]:
+    """Make Git's own deletion check use local main, not the branch's upstream."""
+    prepared, reason = _prepare_branch_deletion(repo, branch, main, timeout)
+    if prepared is None:
+        return False, reason
+    return _delete_prepared_branch(branch, prepared, timeout)
 
 
 def _checked_out_branches(worktrees: list[Worktree]) -> set[str]:
@@ -552,6 +583,14 @@ def _remove_worktree(
     except ValueError:
         removal.note = "refused: linked-worktree admin directory is outside common git dir"
         return removal
+    # Check the branch can go before touching the worktree, so a branch Git
+    # would keep never leaves its worktree half removed.
+    prepared = None
+    if wt.branch:
+        prepared, reason = _prepare_branch_deletion(repo, wt.branch, main, timeout)
+        if prepared is None:
+            removal.note = f"refused: branch '{wt.branch}' cannot be deleted: {reason}"
+            return removal
 
     if dry_run:
         removal.note = "dry-run: would trash worktree directory" + (
@@ -576,8 +615,8 @@ def _remove_worktree(
         return removal
 
     # 3. Delete the now-unregistered branch with git's own merged-only safety.
-    if wt.branch:
-        ok, err = _delete_branch(repo, wt.branch, main, timeout)
+    if prepared is not None:
+        ok, err = _delete_prepared_branch(wt.branch, prepared, timeout)
         if ok:
             removal.branch_deleted = True
         else:
@@ -1047,6 +1086,17 @@ def _hook_command(provider: str) -> str:
     )
 
 
+def _clear_inherited_repository_env() -> None:
+    """Drop inherited Git variables that would point every git call elsewhere.
+
+    A hook or wrapper can inherit GIT_DIR, GIT_WORK_TREE and similar from its
+    parent, which would make the cleanup inspect and delete in that repository
+    while reporting the project folder.
+    """
+    for name in GIT_REPOSITORY_ENV:
+        os.environ.pop(name, None)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="startup_cleanup.py",
@@ -1094,6 +1144,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     try:
+        _clear_inherited_repository_env()
         project_dir = _resolve_project_dir(args.project_dir, hook=args.hook)
     except StartupCleanupError as exc:
         print(json.dumps({"schema_version": SCHEMA_VERSION, "ok": False, "error": str(exc)}))
