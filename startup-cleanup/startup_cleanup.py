@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Per-project startup cleanup for merged local task worktrees and branches.
 
-    startup_cleanup.py --project-dir ~/projects/<project> --human  # readable report
-    startup_cleanup.py --dry-run --human     # what would go, removing nothing
-    startup_cleanup.py --force --human       # bypass a --min-interval throttle
+    cleanup="$HOME/projects/_tools/startup-cleanup/startup_cleanup.py"
+    python3 "$cleanup" --human            # report for the repository you are in
+    python3 "$cleanup" --human --dry-run  # what would go, removing nothing
+    python3 "$cleanup" --human --force    # bypass a --min-interval throttle
+    python3 "$cleanup" --project-dir ~/projects/<project>   # another project, JSON
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
@@ -36,16 +38,17 @@ branch and other branches are skipped without a report:
 
 Directories go to a recoverable Trash, trying the ``trash`` CLI, then the
 Finder AppleScript, then ``send2trash``; ``rm`` and ``git clean`` are never
-used. After the worktree directory, its admin directory
-``<primary checkout>/.git/worktrees/<name>`` is trashed the same way (a ``git worktree
-prune`` scoped to one entry). The branch is then deleted with ``git branch
+used. After the worktree directory, its admin entry ``worktrees/<name>`` in
+the repository's common Git directory is trashed the same way (a ``git
+worktree prune`` scoped to one entry). The branch is then deleted with ``git branch
 -d`` from the verified primary main checkout, with a command-local mapping of
 its upstream to local main, so Git checks the current tip against main and
 rejects a branch that became unmerged or is checked out elsewhere; saved
 tracking settings are untouched. Remote branches are never touched.
 
-Rollback: put the worktree directory and its admin directory back from the
-Trash and ``git worktree list`` shows it again; the branch's commits are on
+Rollback: put the worktree directory back from the Trash, and its admin entry
+back into the common Git directory's ``worktrees/``, and ``git worktree list``
+shows it again; the branch's commits are on
 main, so ``git branch task/<id>-<slug> <sha>`` restores the label, taking the
 tip from main's history.
 
@@ -70,7 +73,9 @@ JSON on stdout by default (schema ``tools.startup-cleanup.v1``: ``ok``,
 ``refused[]`` with ``type``/``target``/``branch``/``reasons[]``,
 ``reports[]``, ``duration_ms``); ``--human`` prints a readable report. Exit 0
 means the check completed, with or without removals or refusals; exit 1 means
-the tool could not run.
+the tool could not run. A failure before the scan starts (a bad
+``--project-dir`` or hook input) prints only JSON with ``schema_version``,
+``ok: false`` and ``error``, even with ``--human``.
 
 Direct runs and hook mode
 -------------------------
