@@ -56,13 +56,11 @@ if [ -n "${LOCAL_CHECKS_BASE:-}" ]; then
 else
     echo "== changed Python deletion sites: NOT RUN (no base: the remote has no default branch to compare with)"
 fi
-# As in CI: PYTHONPATH=integrity-warden.
-step "test suites" env PYTHONPATH=integrity-warden \
+step "test suites" \
     "$UV" run -q --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
     --with 'httpx>=0.27,<1' --with 'typer>=0.12,<1' --with 'rich>=13,<15' \
     --with 'PyYAML>=6,<7' --with 'api-cost-tracker>=0.2.3,<0.3' pytest -q -p no:cacheprovider \
     governance/validators/tests/ \
-    integrity-warden/tests/ \
     tests/auth/ \
     tests/remediation/ \
     tests/startup-cleanup/ \

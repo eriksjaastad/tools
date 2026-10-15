@@ -210,5 +210,3 @@ PROGRESS.md
 # client's repository names and paths (#7085). Generate them, read them, leave
 # them untracked.
 governance/reports/
-integrity-warden/*_report.txt
-integrity-warden/current_status.txt
