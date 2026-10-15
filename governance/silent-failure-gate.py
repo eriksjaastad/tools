@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Block on silent-failure findings in one repository's tracked Python files.
 
-This scans working-tree content, as used by CI after checkout. It does not
-install hooks or change the shared governance validator list.
+    uv run governance/silent-failure-gate.py [--repo PATH]
+
+Scans every tracked .py/.pyi file's working-tree content, as in a CI checkout
+(scripts/local-checks.sh runs it on every push). Exit 1 for findings, 2 for
+scan or enumeration errors, unsafe paths, or no Python files at all. It is not
+a staged-index pre-commit check; governance-check.sh runs
+silent-failure-check.py --staged for that.
 """
 
 import argparse
@@ -53,7 +58,7 @@ def check_repository(repo):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--repo", default=".", help="Repository to scan; defaults to current directory")
     args = parser.parse_args(argv)
     result = check_repository(args.repo)

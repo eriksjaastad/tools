@@ -1,10 +1,22 @@
 #!/bin/bash
 
 # governance-check.sh
-# Master script that runs all validators on staged files
+# Runs every validator in VALIDATORS on the staged files, or on the files
+# given as arguments:
+#   governance-check.sh              # staged files (what pre-commit runs)
+#   governance-check.sh a.py b.js    # these files
+# The global pre-commit and pre-merge-commit hooks (core.hooksPath,
+# ~/.claude/.githooks, owned by claude-user-config) call it in every repo;
+# push-range-check.py runs the same validators per commit at pre-push.
 # Exit codes:
 #   0: All validators passed
 #   1: One or more validators failed
+#
+# Adding a validator: a script in validators/ with a PEP 723 `# /// script`
+# block that takes file paths as arguments and exits 0 (pass) or 1 (block),
+# then its name in VALIDATORS below (and its arguments in validator_args if
+# it needs any). Each runs as `uv run --no-project` from the repository being
+# committed, so uv never creates or syncs that repository's .venv (#7647).
 
 set -euo pipefail
 

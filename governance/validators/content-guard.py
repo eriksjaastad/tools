@@ -14,6 +14,12 @@ The marker list is NEVER committed to the public repository. It is loaded from:
 1. Environment variable CONTENT_GUARD_PATTERNS (newline-separated patterns)
 2. A private file path in CONTENT_GUARD_PATTERNS_FILE
 
+Matching is case-insensitive over every tracked blob regardless of suffix,
+including UTF-8 and UTF-16/UTF-32 text with or without a BOM. Symlink target
+text is scanned without following the link; gitlinks are skipped. CI
+(.github/workflows/content-guard.yml) runs it on pull_request_target with the
+scanner checked out from the base branch, so PR code never sees the patterns.
+
 Exit codes:
 - 0: No forbidden content found, continue
 - 1: Forbidden content detected, block commit

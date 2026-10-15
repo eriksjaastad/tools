@@ -82,7 +82,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 | M3 | No API keys in code |
 | H1 | Subprocess has a timeout and handles failure with `check=True` or explicit validation of expected return codes |
 
-**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. This repository's CI also runs `governance/silent-failure-gate.py` for M2 patterns SF001–SF003 against all tracked Python files. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**. The shared pre-commit validator list stays unchanged until other owners resolve their findings; see `governance/SILENT_FAILURE_ROLLOUT.md`.
+**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. The shared pre-commit check also blocks M2 patterns SF001–SF003 on changed lines, and this repository's local checks run `governance/silent-failure-gate.py` over every tracked Python file (why: `DECISIONS.md`). This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**.
 
 ## Definition of Done
 

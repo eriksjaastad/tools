@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
 """Read-only report of silent-failure findings in tracked portfolio Python files.
 
-Only immediate child Git repositories of --projects-root are examined. Findings
-never make this dry run fail; incomplete enumeration or scanning exits with 2.
+    mkdir -p governance/reports
+    uv run governance/silent-failure-report.py --projects-root "$HOME/projects" --json \\
+      > governance/reports/silent-failure-$(date +%F).json
+
+Only immediate child Git repositories (worktrees included) of --projects-root
+are examined, and only their tracked .py working-tree files; project code is
+never imported. The report records the scanner hash, repository revisions and
+tracked dirty state; with concurrent edits it is a snapshot, not a
+reproducible checkout. Findings never make this dry run fail; incomplete
+enumeration or scanning exits with 2. Zero-Python repositories are listed.
+
+Never commit the output: it holds the real path of every scanned file,
+including private client work, and committing it to this public repository
+caused #7085. governance/reports/ is gitignored.
 """
 
 import argparse
@@ -181,7 +193,7 @@ def finish_report(report):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--projects-root", required=True, type=Path)
     parser.add_argument("--json", action="store_true", help="Print the complete structured report")
     args = parser.parse_args(argv)
