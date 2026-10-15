@@ -44,13 +44,15 @@ the repository's common Git directory is trashed the same way (a ``git
 worktree prune`` scoped to one entry). The branch is then deleted with ``git branch
 -d`` from the verified primary main checkout, with a command-local mapping of
 its upstream to local main, so Git checks the current tip against main and
-rejects a branch that became unmerged or is checked out elsewhere; saved
-tracking settings are untouched. Remote branches are never touched.
+rejects a branch that became unmerged or is checked out elsewhere. The mapping
+is never written to the repository's configuration; the deletion itself drops
+the branch's own settings, as ``git branch -d`` always does. Remote branches
+are never touched.
 
 Rollback: put the worktree directory back from the Trash, and its admin entry
 back into the common Git directory's ``worktrees/``, and ``git worktree list``
 shows it again. The branch's commits are on main, so recreating the label
-restores it, e.g. ``git branch task/1234-example 0123abc`` with the branch's
+restores it (without its old upstream setting), e.g. ``git branch task/1234-example 0123abc`` with the branch's
 name from the report and its tip commit from main's history.
 
 Startup boundedness
@@ -62,8 +64,7 @@ Startup boundedness
   (100) branches the run removes nothing and reports why;
 * the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
   every Git call, PR lookup and Trash backend has its own timeout, and a
-  candidate is refused when too little budget remains to finish its removal;
-* reruns are idempotent.
+  candidate is refused when too little budget remains to finish its removal.
 
 Output and exit codes
 ---------------------
