@@ -1,6 +1,6 @@
 # Governance
 
-Commit-time and push-time checks shared by every repository on these machines.
+Commit-time and push-time checks shared across the repositories on these machines.
 
 ## How it is wired
 

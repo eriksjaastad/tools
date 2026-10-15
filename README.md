@@ -53,7 +53,7 @@ _tools/governance/sync-gh-workflows.sh --dry-run rename-default-branch
 
 ## Local Pre-Commit Hooks (`governance/`)
 
-Runs validators at `git commit` time — secrets, hardcoded paths, naked API calls, deletion sites, silent failures. The global `core.hooksPath` runs them in every repository; see [`governance/README.md`](governance/README.md). The older per-repository installer still exists:
+Runs validators at `git commit` time — secrets, hardcoded paths, naked API calls, deletion sites, silent failures. [`governance/README.md`](governance/README.md) says how they are wired. The older per-repository installer still exists:
 
 ```bash
 _tools/governance/install-hooks.sh ~/projects/<project-name>

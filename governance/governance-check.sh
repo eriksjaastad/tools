@@ -5,9 +5,9 @@
 # given as arguments:
 #   governance-check.sh              # staged files (what pre-commit runs)
 #   governance-check.sh a.py b.js    # these files
-# The global pre-commit and pre-merge-commit hooks (core.hooksPath,
-# ~/.claude/.githooks, owned by claude-user-config) call it in every repo;
-# push-range-check.py runs the same validators per commit at pre-push.
+# The global pre-commit and pre-merge-commit hooks call it (wiring:
+# governance/README.md); push-range-check.py runs the same validators per
+# commit at pre-push.
 # Exit codes:
 #   0: All validators passed
 #   1: One or more validators failed
