@@ -307,6 +307,27 @@ def test_deletes_standalone_merged_task_branch(sc, tmp_path, monkeypatch):
     assert "task/456-standalone" not in branch_names(repo)
 
 
+def test_keeps_worktree_when_its_branch_cannot_be_deleted(sc, tmp_path, monkeypatch):
+    """#8321: with the primary checkout off main, Git would keep the branch, so
+    the worktree must stay too instead of being trashed with its branch kept."""
+    repo = make_repo(tmp_path)
+    wt = tmp_path / "task-worktree"
+    make_task_worktree(repo, "task/125-primary-off-main", wt)
+    merge_branch(repo, "task/125-primary-off-main")
+    git(repo, "checkout", "-q", "-b", "feature/other")
+    monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
+    trash = FakeTrash(tmp_path / "trash")
+
+    report = sc.run_startup_cleanup(
+        repo, min_interval_seconds=0, gh_bin=str(make_fake_gh(tmp_path)), trash_fn=trash,
+    )
+
+    assert wt.exists()
+    assert trash.calls == []
+    assert "task/125-primary-off-main" in branch_names(repo)
+    assert any("primary checkout is not on main" in r for r in reasons_for(report, str(wt)))
+
+
 def test_dry_run_removes_nothing(sc, tmp_path, monkeypatch):
     repo = make_repo(tmp_path)
     wt = tmp_path / "dry-wt"
@@ -982,6 +1003,21 @@ def test_hook_mode_in_repository_runs_normal_cleanup_for_stdin_repo(tmp_path, su
     assert "task/702-target" not in branch_names(repo)
     assert branch_names(other) == other_branches
     assert other_wt.exists()
+
+
+def test_inherited_git_dir_does_not_redirect_the_run(tmp_path):
+    """#8321: an inherited GIT_DIR naming another repository is ignored."""
+    other = make_repo(tmp_path, "other")
+    make_task_branch(other, "task/801-other", "other.txt")
+    project = make_repo(tmp_path, "project")
+    make_task_branch(project, "task/802-project", "project.txt")
+
+    result = run_cli(["--dry-run", "--project-dir", str(project)], "", project,
+                     path_prefix=make_fake_gha(tmp_path),
+                     extra_env={"GIT_DIR": str(other / ".git"), "FAKE_GH_OPEN_BRANCHES": "[]"})
+
+    planned = [item["target"] for item in json.loads(result.stdout)["planned"]]
+    assert planned == ["task/802-project"]
 
 
 def test_hook_mode_rejects_missing_or_malformed_input(tmp_path):
