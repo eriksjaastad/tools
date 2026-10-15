@@ -60,7 +60,7 @@ fi
 step "test suites" env PYTHONPATH=integrity-warden \
     "$UV" run -q --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
     --with 'httpx>=0.27,<1' --with 'typer>=0.12,<1' --with 'rich>=13,<15' \
-    --with 'PyYAML>=6,<7' pytest -q -p no:cacheprovider \
+    --with 'PyYAML>=6,<7' --with 'api-cost-tracker>=0.2.3,<0.3' pytest -q -p no:cacheprovider \
     governance/validators/tests/ \
     integrity-warden/tests/ \
     tests/auth/ \
