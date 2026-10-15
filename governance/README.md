@@ -25,7 +25,7 @@ Commit-time and push-time checks shared across the repositories on these machine
 | `validators/absolute-path-check.py` | hard-coded user and machine paths |
 | `validators/api-wrapper-check.py` | provider calls that bypass api-cost-tracker |
 | `validators/source-deletion-check.py` | new permanent Python deletion sites (DS001) |
-| `validators/silent-failure-check.py` | failure-masking handlers and empty env fallbacks (SF001–SF003), changed lines only |
+| `validators/silent-failure-check.py` | failure-masking handlers and empty env fallbacks (SF001–SF003) |
 | `validators/content-guard.py` | client identifiers in this public repository |
 | `push-range-check.py` | the pre-commit validators again, per pushed commit |
 | `silent-failure-gate.py`, `silent-failure-report.py` | whole-repository gate; read-only portfolio report |
