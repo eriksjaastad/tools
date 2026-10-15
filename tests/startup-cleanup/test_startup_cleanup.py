@@ -357,12 +357,15 @@ def test_dry_run_removes_nothing(sc, tmp_path, monkeypatch):
 # --- refusal cases ---------------------------------------------------------
 
 
-def test_refuses_untracked_dirty_worktree(sc, tmp_path, monkeypatch):
+@pytest.mark.parametrize("show_untracked", [None, "no"])
+def test_refuses_untracked_dirty_worktree(sc, tmp_path, monkeypatch, show_untracked):
     repo = make_repo(tmp_path)
     wt = tmp_path / "dirty-wt"
     make_task_worktree(repo, "task/100-dirty", wt)
     merge_branch(repo, "task/100-dirty")
     (wt / "stray.txt").write_text("untracked\n")
+    if show_untracked:  # #8323: the repository setting must not hide untracked work
+        git(repo, "config", "status.showUntrackedFiles", show_untracked)
     monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
 
     report = sc.run_startup_cleanup(
@@ -482,12 +485,13 @@ def test_refuses_gh_unavailable(sc, tmp_path, monkeypatch):
     assert wt.exists()
 
 
-def test_refuses_locked_worktree(sc, tmp_path, monkeypatch):
+@pytest.mark.parametrize("lock_args", [[], ["--reason", "in use"]])
+def test_refuses_locked_worktree(sc, tmp_path, monkeypatch, lock_args):
     repo = make_repo(tmp_path)
     wt = tmp_path / "locked-wt"
     make_task_worktree(repo, "task/106-locked", wt)
     merge_branch(repo, "task/106-locked")
-    git(repo, "worktree", "lock", str(wt))
+    git(repo, "worktree", "lock", *lock_args, str(wt))  # #8323: a reason must not hide the lock
     monkeypatch.setenv("FAKE_GH_OPEN_BRANCHES", "[]")
 
     report = sc.run_startup_cleanup(
@@ -1036,6 +1040,12 @@ def test_hook_mode_rejects_missing_or_malformed_input(tmp_path):
         result = run_cli(["--hook", "--human"], stdin, home)
         assert result.returncode == 1, name
         assert json.loads(result.stdout)["ok"] is False, name
+    # #8323: undecodable bytes are invalid input too, not a traceback.
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    result = subprocess.run([sys.executable, str(TOOL), "--hook"], input=b"\xff\xfe",
+                            capture_output=True, timeout=30, cwd=str(home), env=env)
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["ok"] is False
 
 
 def test_hook_mode_fails_on_corrupt_repository_markers(tmp_path):
