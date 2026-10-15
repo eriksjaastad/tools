@@ -25,7 +25,6 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 | `route/` | Model routing CLI + `model_registry.json` (pricing source of truth) |
 | `claude-mcp-go/` | MCP hub for agent communication (Go) |
 | `ollama-mcp-go/` | MCP server for local Ollama models (Go) |
-| `integrity-warden/` | Security and compliance auditing |
 
 ## GitHub Identity — Read Before Any `gh` or `git push`
 
@@ -88,7 +87,7 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 ## Definition of Done
 
 - [ ] Automated M1/M3, API-wrapper and repository silent-failure checks pass; remaining M2/H1 reviewed manually
-- [ ] Tests pass for any touched component with a suite (e.g. `pytest integrity-warden/tests/` when editing integrity-warden; Go tests where they exist)
+- [ ] Tests pass for any touched component with a suite (`scripts/local-checks.sh` runs them all; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed
 

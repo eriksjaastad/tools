@@ -69,7 +69,6 @@ Overwrites existing `.git/hooks/pre-commit` — merge manually if the repo alrea
 - [`route/`](route/README.md) - Model routing CLI and `model_registry.json` pricing source of truth.
 - [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
 - [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
-- [`integrity-warden/`](integrity-warden/README.md) - Security and compliance auditing.
 - [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
 - [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
 - [`batch-crop/`](batch-crop/README.md) - Crop a folder of images to an aspect ratio, size, box or focal point (moved from synth-insight-labs, #8103).
@@ -130,7 +129,6 @@ _tools/
 ├── route/                  # Model routing CLI and registry
 ├── claude-mcp-go/          # Go MCP hub for agent communication
 ├── ollama-mcp-go/          # Go MCP server for local Ollama models
-├── integrity-warden/       # Security and compliance auditing
 ├── ssh_agent/              # SSH management and host routing
 ├── pdf-converter/          # PDF conversion utilities
 ├── batch-crop/             # Batch image cropping CLI
