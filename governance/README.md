@@ -35,5 +35,5 @@ pre-push runner starts. `content-guard.py` runs only in GitHub's
 
 Each script's docstring (or header comment) is its contract; the argparse
 scripts also print it with `--help`. Run a validator by hand with
-`uv run governance/validators/<name> <files>`; `governance-check.sh`'s header
-says how to add one.
+`uv run governance/validators/<name>` and the arguments its docstring gives;
+`governance-check.sh`'s header says how to add one.
