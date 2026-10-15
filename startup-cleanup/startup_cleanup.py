@@ -6,9 +6,9 @@
     python3 "$cleanup" --human --dry-run
     python3 "$cleanup" --project-dir ~/projects/ai-memory
 
-The first cleans up and prints a readable report, the second shows what would
-go without removing anything, the third cleans up another project and prints
-JSON.
+The first cleans up and prints a readable report, the second lists what a real
+run would try to remove (removing nothing), the third cleans up another
+project and prints JSON.
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
