@@ -1,2 +1,2 @@
 anthropic
-api-cost-tracker>=0.2.0,<0.3
+api-cost-tracker>=0.2.3,<0.3
