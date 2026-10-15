@@ -11,7 +11,7 @@ The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
 print the entries; both use matcher ^startup$ and `--hook --human`). Cleanup
 after a merge does not depend on a session-end event: the next startup in that
-project removes the merged task worktree and branch. It inspects only the Git
+project can remove the merged task worktree and branch. It inspects only the Git
 repository it was started in, inventorying every linked worktree (`git
 worktree list --porcelain`, including ones outside .claude/worktrees/) and
 every local branch.
@@ -21,18 +21,19 @@ Safety contract
 The main branch is the first of main, master and trunk that exists. If there
 is none, or local main differs from ``origin/<main>`` (there is no network
 fetch, so pull main first), the run removes nothing and says why. Otherwise
-every linked worktree and every local task branch is a candidate, and a
-candidate that fails a check below, or cannot be verified, is reported as
-refused. The primary checkout, main and other branches are skipped without a
-report. A candidate is removed only when it passes every check:
+the candidates are the linked worktrees other than the primary checkout and
+the local task branches. A candidate that fails a check below, or cannot be
+verified, is reported as refused; it is removed only when it passes every
+check:
 
 * the branch matches the task convention ``task/<number>[-<slug>]``;
 * its tip is merged into local main;
 * the worktree has no tracked, untracked or ignored (``!!``) changes;
-* the worktree is not locked, not the primary checkout, not the one the agent
-  is starting in, and no visible process has its working directory in it or
-  below it (``lsof``; if lsof is unavailable or fails, every linked worktree is
-  kept);
+* the worktree is not locked, not the one the agent is starting in, and no
+  visible process has its working directory in it or below it (``lsof``; if
+  lsof is unavailable or fails, every linked worktree is kept);
+* the branch is not the current branch and not checked out in a worktree
+  that is kept;
 * ``gha pr list`` finds no open PR with the branch as its head (no ``gha``, no
   parseable origin remote, or a failed lookup refuses).
 
@@ -60,8 +61,7 @@ Startup boundedness
 * with more than ``--max-worktrees`` (40) worktrees or ``--max-branches``
   (100) branches the run removes nothing and reports why;
 * the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
-  every Git call has a timeout (``--timeout``, default 3s, or a fixed 3s),
-  PR lookups 5s and each Trash backend 5s; a
+  every Git call, PR lookup and Trash backend has its own timeout, and a
   candidate is refused when too little budget remains to finish its removal;
 * reruns are idempotent.
 
