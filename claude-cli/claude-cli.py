@@ -12,9 +12,10 @@ Needs ANTHROPIC_API_KEY and the packages in requirements.txt (Python 3.11+):
 Every response is recorded with api-cost-tracker (project "claude-cli").
 """
 
-import argparse
 import os
 import sys
+import argparse
+import json
 from typing import Optional
 
 from api_cost_tracker import track

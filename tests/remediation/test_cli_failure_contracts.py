@@ -2,14 +2,14 @@
 
 import importlib.util
 import json
-import sys
 from pathlib import Path
+import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import pytest
-from api_cost_tracker import buffer as cost_buffer
 from api_cost_tracker import tracker as cost_tracker
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -22,13 +22,11 @@ def load_script(name, relative):
 
 
 @pytest.fixture
-def posted(monkeypatch, tmp_path):
-    """Records the real cost-tracker client would POST. Nothing reaches the network or the
-    machine's buffer, whatever the runner: its pytest-only guard is not relied on."""
+def posted(monkeypatch):
+    """Records the real cost-tracker client would send. Replacing its send step keeps the
+    network and the machine's buffer out of reach under any runner, not only pytest."""
     records = []
-    monkeypatch.setenv("API_COST_TRACKER_SEND_IN_TESTS", "1")
-    monkeypatch.setattr(cost_buffer, "BUFFER_DB_PATH", tmp_path / "buffer.db")
-    monkeypatch.setattr(cost_tracker, "_post_to_server", lambda endpoint, payload: records.append((endpoint, payload)) or True)
+    monkeypatch.setattr(cost_tracker, "_send", lambda endpoint, payload: records.append((endpoint, payload)))
     return records
 
 
