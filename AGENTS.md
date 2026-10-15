@@ -23,8 +23,6 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 |-----------|---------|
 | `governance/` | Pre-commit hook validators (secrets, paths, api-wrapper enforcement) |
 | `route/` | Model routing CLI + `model_registry.json` (pricing source of truth) |
-| `hooks/` | Claude Code PreToolUse/PostToolUse hooks |
-| `claude-hooks/` | Additional Claude Code hooks (PR enforcement) |
 | `claude-mcp-go/` | MCP hub for agent communication (Go) |
 | `ollama-mcp-go/` | MCP server for local Ollama models (Go) |
 | `integrity-warden/` | Security and compliance auditing |

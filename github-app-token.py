@@ -291,8 +291,8 @@ def get_bot_email(identity: str) -> str:
     "271073502+project-tracker-manager[bot]@users.noreply.github.com".
 
     Queries the GitHub API once for the bot's numeric user ID. The caller is
-    expected to hit this rarely (set-repo-bot-identity.sh uses it once per repo
-    at setup time).
+    expected to hit this rarely (the retired per-repo bot-identity installer
+    used it once per repo at setup time).
     """
     botname = get_botname(identity)  # e.g. "project-tracker-manager[bot]"
     login = botname.removesuffix("[bot]")  # GitHub API login form

@@ -6,7 +6,7 @@ name: Tests
 # bundles merge-on-green, and landing in this repo stays manual (Erik's call,
 # 2026-09-01). This job only reports.
 #
-# Includes governance, integrity-warden, authentication, identity-hook,
+# Includes governance, integrity-warden, authentication,
 # remediation-hook, workflow-sync and route pricing regressions. Authentication
 # executables are stubbed; these suites do not mint live tokens or call
 # providers.
@@ -48,7 +48,6 @@ jobs:
             governance/validators/tests/ \
             integrity-warden/tests/ \
             tests/auth/ \
-            tests/hooks/ \
             tests/remediation/ \
             tests/startup-cleanup/ \
             tests/workflows/ \

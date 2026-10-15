@@ -64,7 +64,6 @@ step "test suites" env PYTHONPATH=integrity-warden \
     governance/validators/tests/ \
     integrity-warden/tests/ \
     tests/auth/ \
-    tests/hooks/ \
     tests/remediation/ \
     tests/startup-cleanup/ \
     tests/workflows/ \
