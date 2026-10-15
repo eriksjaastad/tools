@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
-Claude CLI - A simple command-line interface for Claude
-Note: This requires an Anthropic API key to actually work with Claude
+Claude CLI - chat with Claude from the terminal.
+
+    ./claude-cli.py "What is the capital of France?"   # one message
+    ./claude-cli.py [-i]                                # interactive; type 'help' there
+
+Needs ANTHROPIC_API_KEY and the packages in requirements.txt (Python 3.11+):
+
+    python3 -m venv venv && venv/bin/pip install -r requirements.txt
+
+Every response is recorded with api-cost-tracker (project "claude-cli").
 """
 
 import os
@@ -9,6 +17,9 @@ import sys
 import argparse
 import json
 from typing import Optional
+
+from api_cost_tracker import track
+
 
 def get_api_key() -> Optional[str]:
     """Get API key from environment variable or prompt user."""
@@ -22,12 +33,6 @@ def get_api_key() -> Optional[str]:
         print("   or add it to your ~/.zshrc file")
         return None
     return api_key
-
-try:
-    from api_trust_tracker import track
-except ImportError:
-    track = lambda resp, *a, **kw: resp
-
 
 def claude_chat(message: str, api_key: str) -> Optional[str]:
     """Return response text or None; callers report failure or exit nonzero."""

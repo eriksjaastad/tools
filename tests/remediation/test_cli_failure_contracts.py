@@ -7,6 +7,7 @@ import sys
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+from api_cost_tracker import tracker as cost_tracker
 import pytest
 
 
@@ -21,8 +22,16 @@ def load_script(name, relative):
 
 
 @pytest.fixture
-def cli(monkeypatch):
-    monkeypatch.setitem(sys.modules, "api_trust_tracker", SimpleNamespace(track=Mock()))
+def posted(monkeypatch):
+    """Records the real cost-tracker client would send. Replacing its send step keeps the
+    network and the machine's buffer out of reach under any runner, not only pytest."""
+    records = []
+    monkeypatch.setattr(cost_tracker, "_send", lambda endpoint, payload: records.append((endpoint, payload)))
+    return records
+
+
+@pytest.fixture
+def cli(monkeypatch, posted):
     module = load_script("claude_failure_contracts", "claude-cli/claude-cli.py")
     monkeypatch.setattr(module, "get_api_key", lambda: "offline")
     return module
@@ -59,14 +68,24 @@ def test_interactive_errors_are_reported_and_session_can_continue(cli, monkeypat
     assert "Goodbye" in output
 
 
-def test_successful_response_is_preserved(cli, monkeypatch, capsys):
+def test_successful_response_is_preserved_and_its_cost_recorded(cli, posted, monkeypatch, capsys):
     client = Mock()
-    client.messages.create.return_value = SimpleNamespace(content=[SimpleNamespace(text="successful answer")])
+    client.messages.create.return_value = SimpleNamespace(
+        model="claude-test",
+        content=[SimpleNamespace(text="successful answer")],
+        usage=SimpleNamespace(input_tokens=12, output_tokens=3),
+    )
     monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(Anthropic=Mock(return_value=client)))
     monkeypatch.setattr(sys, "argv", ["claude-cli", "hello"])
     cli.main()
     assert "successful answer" in capsys.readouterr().out
     client.messages.create.assert_called_once()
+    ((endpoint, payload),) = posted
+    assert endpoint == "/track"
+    assert (payload["provider"], payload["model"], payload["project"], payload["caller"]) == (
+        "anthropic", "claude-test", "claude-cli", "claude_chat"
+    )
+    assert (payload["prompt_tokens"], payload["completion_tokens"]) == (12, 3)
 
 
 @pytest.fixture
