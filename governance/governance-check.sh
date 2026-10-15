@@ -1,10 +1,25 @@
 #!/bin/bash
 
 # governance-check.sh
-# Master script that runs all validators on staged files
+# Runs every validator in VALIDATORS on the staged files (what pre-commit
+# does), or with file arguments on those paths. The whole-file validators
+# read the files on disk; source-deletion-check.py and silent-failure-check.py
+# always check staged changes only, so for them the arguments just narrow
+# that set (source-deletion-check.py matches only repository-relative paths).
+# The global pre-commit and pre-merge-commit hooks call it (wiring:
+# governance/README.md); push-range-check.py runs these validators per
+# commit at pre-push, from its own FILE_VALIDATORS and COMMIT_VALIDATORS.
 # Exit codes:
 #   0: All validators passed
 #   1: One or more validators failed
+#
+# Adding a validator: list it in VALIDATORS below, with any extra arguments
+# in validator_args, and in push-range-check.py, under FILE_VALIDATORS (called
+# with file paths) or COMMIT_VALIDATORS (called with --commit SHA).
+# push-range-check.py runs it with its own Python, so use the standard
+# library only. This script runs each as `uv run --no-project` from the repository
+# being committed, so uv never creates or syncs that repository's .venv
+# (#7647).
 
 set -euo pipefail
 

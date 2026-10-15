@@ -18,12 +18,39 @@ Constructor names are matched syntactically, without resolving shadowed builtins
 Returns in nested function/class scopes are not attributed to their handlers.
 Positions are one-based; columns follow Python AST UTF-8 byte offsets.
 
+Explicit paths: .py/.pyi files only, no recursive discovery; other paths are
+skipped. Exit 1 for findings, 2 for unreadable or invalid source (--dry-run
+makes findings nonblocking, never scan errors). Output names locations and
+rules, never source snippets.
+
 With --staged (pre-commit), --base REV (CI) or --commit REV (pre-push, one
-commit against its parents), only changed code is checked.
-A finding blocks when it is new, or when its own statement or governing handler
-changed: a broadened clause, a deleted guard or `raise`, or any edited line.
-Untouched findings, including moved ones, stay in the portfolio backlog.
-Source is read from Git blobs, never from the working tree.
+commit against its parents), only changed code is checked; why is in
+_tools' DECISIONS.md. A finding passes only when it pairs one-to-one with
+an old finding of the same rule, AST and governing source text. For SF002 the
+handler is part of that text, so a broadened clause, a deleted guard or
+`raise`, an edited comment, a deleted rationale or a copied handler all make
+the finding new. The baseline pools every Python file the commit modifies or
+deletes, so untouched findings that moved, within or between files or with a
+rename, pass: they are the portfolio backlog. In a merge a finding blocks only
+when it is new relative to every parent. Only an old side that was already a
+regular .py/.pyi file joins the baseline; changed symlinks and submodules are
+skipped. Unparseable new source exits 2; an unparseable old version gives no
+baseline. Source is read from Git blobs, never from the working tree.
+
+An intentional exception is an actual comment on the handler line, or a
+standalone comment on the line before it at the same indentation, naming the
+rule and a reason; it covers only that handler and rule:
+
+    except FileNotFoundError:  # governance: allow-silent SF001: temp file already cleaned up
+
+For SF003 the comment goes on the containing statement's first line or the
+line before it.
+An assignment followed immediately by `if not value: raise ...` counts as
+validation; checking a client or container instead, or returning first, does
+not. Check the caller's contract before adding an exception: a failed search
+returning [] is indistinguishable from "no hits", while a cache miss returning
+None can be fine when the caller fetches the value elsewhere. Logging alone
+never makes a failure visible to the caller.
 """
 
 import argparse

@@ -5,11 +5,44 @@
 # ///
 """Check changed Python deletion sites in Git's index (or HEAD vs --base, or one --commit).
 
-This is bounded static analysis, not a Python sandbox. It recognizes imported
-stdlib deletion aliases and Path-style unlink/rmdir calls. Temporary cleanup
-requires a local tempfile origin; names and literal directory paths prove
-nothing. Dynamic dispatch, eval, and arbitrary library implementations remain
-review responsibilities. No source is executed and no worktree bytes are read.
+    uv run governance/validators/source-deletion-check.py                    # staged (pre-commit)
+    uv run governance/validators/source-deletion-check.py --base origin/main # committed range (CI)
+
+The staged mode reads staged blobs, including partially staged files and
+renames, so unstaged source cannot hide an unsafe staged call. Deleted files
+are skipped.
+
+DS001 (exit 1): imported os.remove/unlink/rmdir/removedirs, shutil.rmtree,
+their direct import or assignment aliases, and Path-style unlink/rmdir/rmtree
+methods. A call is compared with the baseline by structure, scope, occurrence
+count and edited lines, so an unrelated edit does not force cleanup of old
+calls, but turning a temporary binding into an unknown path makes its call
+reportable.
+DS000 (exit 2): changed Python symlinks, unreadable Git objects, invalid
+encoding and parse failures.
+
+Temporary cleanup is exempt only with a locally tracked tempfile origin: the
+path from mkstemp (never its descriptor), mkdtemp, a named temporary file's
+name, or a temporary-directory context. Direct aliases, Path/str conversion
+and one literal child of a created temporary directory keep that proof;
+nested children, parent traversal, unknown joins, captured paths and rebinding
+lose it. os.removedirs always needs review because it also removes ancestors.
+Branches, loops, exception paths and comprehensions invalidate uncertain
+bindings; an optional temporary initialized to None is supported.
+
+Prefer recoverable removal (trash, a review directory). When permanent removal
+is necessary and ownership is established outside this analysis, give the
+reason in an actual comment on the call's final line. It excuses a line
+holding exactly one deletion call:
+
+    fixture.unlink()  # governance: allow-delete DS001: disposable fixture created by this test
+
+Blank reasons and markers inside strings do not suppress findings.
+
+This is bounded static analysis, not a Python sandbox: no source is executed
+and no worktree bytes are read. Names and literal /tmp paths prove nothing;
+dynamic dispatch, eval, reflective calls, library behaviour and filesystem
+races remain review responsibilities.
 """
 import argparse
 import ast
@@ -481,7 +514,7 @@ def commit_findings(commit, paths):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("paths", nargs="*")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--base", help="Compare committed HEAD with this commit (CI); default is staged index")
