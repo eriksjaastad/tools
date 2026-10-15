@@ -31,7 +31,7 @@ pre-push runner starts. `content-guard.py` runs only in GitHub's
 | `validators/content-guard.py` | client identifiers in this public repository |
 | `push-range-check.py` | the pre-commit validators again, per pushed commit |
 | `silent-failure-gate.py`, `silent-failure-report.py` | whole-repository gate; read-only portfolio report |
-| `install-hooks.sh`, `uninstall-hooks.sh` | per-repository hooks, from before the global hooks path |
+| `install-hooks.sh`, `uninstall-hooks.sh` | per-repository hooks from before the global hooks path; the installer refuses wherever `core.hooksPath` is set |
 
 Each script's docstring (or header comment) is its contract; the argparse
 scripts also print it with `--help`. Run a validator by hand with

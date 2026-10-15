@@ -13,10 +13,11 @@
 #   0: All validators passed
 #   1: One or more validators failed
 #
-# Adding a validator: list it in VALIDATORS below and in push-range-check.py's
-# FILE_VALIDATORS or COMMIT_VALIDATORS; push-range-check.py passes its own
-# arguments and runs it with its own Python, so use the standard library
-# only. This script runs each as `uv run --no-project` from the repository
+# Adding a validator: list it in VALIDATORS below, with any extra arguments
+# in validator_args, and in push-range-check.py, under FILE_VALIDATORS (called
+# with file paths) or COMMIT_VALIDATORS (called with --commit SHA).
+# push-range-check.py runs it with its own Python, so use the standard
+# library only. This script runs each as `uv run --no-project` from the repository
 # being committed, so uv never creates or syncs that repository's .venv
 # (#7647).
 
