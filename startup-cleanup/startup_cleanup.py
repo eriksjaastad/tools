@@ -245,7 +245,7 @@ def _list_worktrees(repo: Path) -> list[Worktree]:
             current.head = line[len("HEAD "):]
         elif line.startswith("branch refs/heads/"):
             current.branch = line[len("branch refs/heads/"):]
-        elif line == "locked":
+        elif line == "locked" or line.startswith("locked "):
             current.locked = True
         elif line.startswith("prunable "):
             current.prunable = True
@@ -261,7 +261,9 @@ def _worktree_status(wt: Path, timeout: int) -> tuple[list[str], list[str]]:
     A failure to inspect the status is reported as a non-empty dirty list
     with a synthetic reason so the caller refuses (fail closed).
     """
-    ok, out, err = _git_ok(wt, ["status", "--porcelain"], timeout)
+    # --untracked-files=normal overrides a repository's status.showUntrackedFiles=no,
+    # which would otherwise hide untracked (and ignored) files from both checks.
+    ok, out, err = _git_ok(wt, ["status", "--porcelain", "--untracked-files=normal"], timeout)
     if not ok:
         return [f"<status unavailable: {err.strip() or 'git status failed'}>"], []
     dirty: list[str] = []
@@ -272,7 +274,7 @@ def _worktree_status(wt: Path, timeout: int) -> tuple[list[str], list[str]]:
         if path:
             dirty.append(path)
 
-    ok, out, err = _git_ok(wt, ["status", "--porcelain", "--ignored"], timeout)
+    ok, out, err = _git_ok(wt, ["status", "--porcelain", "--ignored", "--untracked-files=normal"], timeout)
     if not ok:
         return dirty, [f"<ignored status unavailable: {err.strip() or 'git status failed'}>"]
     ignored: list[str] = []
@@ -976,7 +978,7 @@ def _read_hook_project_dir(required: bool = False) -> str | None:
                 raise StartupCleanupError("startup hook input is missing; expected JSON with cwd")
             return None
         payload = json.loads(raw)
-    except (json.JSONDecodeError, OSError) as exc:
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError) as exc:
         raise StartupCleanupError(f"invalid startup hook input: {exc}") from exc
     if required:
         cwd = payload.get("cwd") if isinstance(payload, dict) else None
