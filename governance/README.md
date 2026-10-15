@@ -31,8 +31,7 @@ Commit-time and push-time checks shared across the repositories on these machine
 | `silent-failure-gate.py`, `silent-failure-report.py` | whole-repository gate; read-only portfolio report |
 | `install-hooks.sh`, `uninstall-hooks.sh` | per-repository hooks, from before the global hooks path |
 
-Each script's docstring (or header comment) is its contract: what it
-detects, its exit codes, and how to write a reviewed exception; the argparse
+Each script's docstring (or header comment) is its contract; the argparse
 scripts also print it with `--help`. Run a validator by hand with
 `uv run governance/validators/<name> <files>`; `governance-check.sh`'s header
 says how to add one. Why the checks work the way they do is in

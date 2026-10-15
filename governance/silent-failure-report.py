@@ -12,9 +12,9 @@ tracked dirty state; with concurrent edits it is a snapshot, not a
 reproducible checkout. Findings never make this dry run fail; incomplete
 enumeration or scanning exits with 2. Zero-Python repositories are listed.
 
-Never commit the output: it holds the real path of every scanned file,
-including private client work, and committing it to this public repository
-caused #7085. governance/reports/ is gitignored.
+Never commit the output: it names every scanned repository, including
+private client work, and the files with findings; reports committed to this
+public repository caused #7085. governance/reports/ is gitignored.
 """
 
 import argparse
