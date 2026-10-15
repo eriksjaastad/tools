@@ -9,88 +9,42 @@
 
 The shared startup check owned by _tools, run by a Claude Code and a Codex
 SessionStart hook (--print-claude-hook-config / --print-codex-hook-config
-print the entries; both use matcher ^startup$ and `--hook --human`). Cleanup
-after a merge does not depend on a session-end event: the next startup in that
-project can remove the merged task worktree and branch. It inspects only the Git
-repository it was started in, inventorying every linked worktree (`git
-worktree list --porcelain`, including ones outside .claude/worktrees/) and
-every local branch.
+print the entries). Cleanup after a merge does not depend on a session-end
+event: the next startup in that project can remove the merged task worktree
+and branch. It works on one Git repository: the one containing the folder it
+is given or started in.
 
-Safety contract
----------------
-The main branch is the first of main, master and trunk that exists. If there
-is none, or local main differs from ``origin/<main>`` (there is no network
-fetch, so pull main first), the run removes nothing and says why. Otherwise
-the candidates are the linked worktrees other than the primary checkout and
-the local task branches. A candidate that fails a check below, or cannot be
-verified, is reported as refused; it is removed only when it passes every
-check:
+Safety
+------
+Only task branches (``task/<number>[-<slug>]``) and their linked worktrees are
+ever removed, and only when every check passes: local main matches
+``origin/<main>`` (there is no fetch, so pull main first), the branch is merged
+into main, the worktree is clean, unlocked and not in use by any visible
+process (``lsof``), and ``gha`` shows no open PR for the branch. A task branch
+or linked worktree that fails a check, or cannot be verified, is kept, and
+the report says why.
 
-* the branch matches the task convention ``task/<number>[-<slug>]``;
-* its tip is merged into local main;
-* the worktree has no tracked, untracked or ignored (``!!``) changes;
-* the worktree is not locked, not the one the agent is starting in, and no
-  visible process has its working directory in it or below it (``lsof``; if
-  lsof is unavailable or fails, every linked worktree is kept);
-* the branch is not the current branch and not checked out in a worktree
-  that is kept;
-* ``gha pr list`` finds no open PR with the branch as its head (no ``gha``, no
-  parseable origin remote, or a failed lookup refuses).
+Directories go to the Trash (the ``trash`` CLI, then Finder, then
+``send2trash``), never ``rm`` or ``git clean``. Branches are deleted with
+``git branch -d``, which re-checks the merge. Remote branches are never
+touched. To undo, put the directories back from the Trash; the branch's
+commits are on main, so ``git branch task/1234-example 0123abc``, with its
+name and tip, recreates it.
 
-Directories go to a recoverable Trash, trying the ``trash`` CLI, then the
-Finder AppleScript, then ``send2trash``; ``rm`` and ``git clean`` are never
-used. After the worktree directory, its admin entry ``worktrees/<name>`` in
-the repository's common Git directory is trashed the same way (a ``git
-worktree prune`` scoped to one entry). The branch is then deleted with ``git branch
--d`` from the verified primary main checkout, with a command-local mapping of
-its upstream to local main, so Git checks the current tip against main and
-rejects a branch that became unmerged or is checked out elsewhere. The mapping
-is never written to the repository's configuration; the deletion itself drops
-the branch's own settings, as ``git branch -d`` always does. Remote branches
-are never touched.
+The run is bounded by ``--max-duration``, a timeout on every external call,
+and ``--max-worktrees``/``--max-branches`` caps above which nothing is
+removed. ``--min-interval`` adds an optional throttle.
 
-Rollback: put the worktree directory back from the Trash, and its admin entry
-back into the common Git directory's ``worktrees/``, and ``git worktree list``
-shows it again. The branch's commits are on main, so recreating the label
-restores it (without its old upstream setting), e.g. ``git branch task/1234-example 0123abc`` with the branch's
-name from the report and its tip commit from main's history.
+Output: a JSON report (schema ``tools.startup-cleanup.v1``), or a readable one
+with ``--human``. Exit 0 means the check completed, whatever it removed or
+kept; exit 1 means it did not.
 
-Startup boundedness
--------------------
-* an optional throttle stamp under the repository's Git common directory skips
-  repeated fully checked runs within ``--min-interval`` (default 0, disabled);
-  refusals, incomplete scans and dry runs never write it; ``--force`` bypasses;
-* with more than ``--max-worktrees`` (40) worktrees or ``--max-branches``
-  (100) branches the run removes nothing and reports why;
-* the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
-  every Git call, PR lookup and Trash backend has its own timeout, and a
-  candidate is refused when too little budget remains to finish its removal.
-
-Output and exit codes
----------------------
-A JSON report on stdout (schema ``tools.startup-cleanup.v1``), or a readable
-one with ``--human``. Exit 0 means the check completed, with or without
-removals or refusals; exit 1 means it did not, and removals made before the
-failure stand. A ``--project-dir`` that does not exist, or bad hook input,
-prints only JSON with ``schema_version``, ``ok: false`` and ``error``, even
-with ``--human``.
-
-Direct runs and hook mode
--------------------------
-A direct run takes ``--project-dir``, or else the stdin JSON ``cwd``,
-``project_dir`` or ``working_directory``, or else the process working
-directory; a folder outside any Git repository is an error (exit 1).
-
-``--hook`` is for SessionStart, which also fires in folders that are not
-repositories. The folder comes only from ``--project-dir`` or the stdin JSON
-``cwd`` (a non-empty string naming an existing directory); missing or malformed
-input fails with exit 1 even when an alias is valid. Outside any repository the
-report is ``ok: true, applicable: false`` with exit 0, and nothing is cleaned
-or written. That skip needs one probe, ``git rev-parse --show-toplevel`` under
-``LC_ALL=C``, to exit 128 with exactly Git's not-a-repository message, and
-``GIT_DIR`` unset with no ``.git`` in the folder or any ancestor. A timeout,
-any other exit or message, a discovery stop at a filesystem boundary, a corrupt
-or dangling ``.git``, a bare repository or an unreadable ancestor still fails.
+Hook mode (``--hook``) is for SessionStart, which also fires in folders that
+are not repositories. The folder must come from ``--project-dir`` or the stdin
+JSON ``cwd``. When Git answers with exactly its not-a-repository message,
+``GIT_DIR`` is unset and no ``.git`` marker is found, the run reports
+``applicable: false`` and exits 0; any other Git error still fails. A direct
+run outside a repository is an error.
 """
 
 from __future__ import annotations
