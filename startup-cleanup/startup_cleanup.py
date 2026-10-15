@@ -57,8 +57,8 @@ Startup boundedness
 * an optional throttle stamp under the repository's Git common directory skips
   repeated fully checked runs within ``--min-interval`` (default 0, disabled);
   refusals, incomplete scans and dry runs never write it; ``--force`` bypasses;
-* more than ``--max-worktrees`` (40) worktrees or ``--max-branches`` (100)
-  branches fails closed instead of scanning;
+* with more than ``--max-worktrees`` (40) worktrees or ``--max-branches``
+  (100) branches the run removes nothing and reports why;
 * the whole scan has a ``--max-duration`` budget (35s; the hooks allow 45s);
   every Git call has a timeout (``--timeout``, default 3s, or a fixed 3s),
   PR lookups 5s and each Trash backend 5s; a
@@ -84,7 +84,7 @@ directory; a folder outside any Git repository is an error (exit 1).
 repositories. The folder comes only from ``--project-dir`` or the stdin JSON
 ``cwd`` (a non-empty string naming an existing directory); missing or malformed
 input fails with exit 1 even when an alias is valid. Outside any repository the
-report is ``ok: true, applicable: false`` with exit 0, and nothing is searched
+report is ``ok: true, applicable: false`` with exit 0, and nothing is cleaned
 or written. That skip needs one probe, ``git rev-parse --show-toplevel`` under
 ``LC_ALL=C``, to exit 128 with exactly Git's not-a-repository message, and
 ``GIT_DIR`` unset with no ``.git`` in the folder or any ancestor. A timeout,
