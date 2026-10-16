@@ -209,6 +209,18 @@ def materialize(blobs: dict[str, str], root: Path) -> list[str]:
     return sorted(contents)
 
 
+# absolute-path-check.py reads its ignore list from its working directory.
+PATH_IGNORE_FILE = ".absolute-path-ignore"
+
+
+def path_ignore_of(sha: str) -> bytes | None:
+    """The commit's own .absolute-path-ignore, or None when it has no regular one."""
+    entry = git("ls-tree", sha, "--", PATH_IGNORE_FILE).split()
+    if not entry or entry[0].decode() not in REGULAR:
+        return None
+    return git("cat-file", "blob", entry[2].decode())
+
+
 def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, str]:
     try:
         result = subprocess.run([sys.executable, str(VALIDATORS_DIR / name), *args], cwd=cwd,
@@ -221,10 +233,13 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
+    ignore = path_ignore_of(sha)
     for index, blobs in enumerate(layers(introduced_files(sha))):
         root = scratch / str(index)
         root.mkdir()
         files = materialize(blobs, root)
+        if ignore is not None and not (root / PATH_IGNORE_FILE).exists():
+            (root / PATH_IGNORE_FILE).write_bytes(ignore)
         for name in FILE_VALIDATORS:
             code, output = run_validator(name, files, root)
             if code != 0:

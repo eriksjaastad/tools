@@ -21,6 +21,7 @@ Usage:
   python absolute-path-check.py file1.py file2.js ...
 """
 
+import fnmatch
 import re
 import sys
 from pathlib import Path
@@ -179,15 +180,54 @@ def find_absolute_paths(content: str, file_path: str) -> list[dict]:
     return issues
 
 
+IGNORE_FILE = '.absolute-path-ignore'
+
+
+def load_ignore_globs(root: Path) -> list[str]:
+    """Repo-relative globs of files to skip, from `.absolute-path-ignore` in `root`.
+
+    For data that cites web URLs whose path holds a user-directory segment
+    (CivicPlus county documents are served at https://<host>/home/...): JSON has
+    no comment to carry the deliberate-use marker. One entry per line,
+    `<glob>  # <reason>`, matched with fnmatch against the path as passed (`*`
+    also crosses `/`); blank and comment-only lines are skipped. An entry with
+    no reason raises ValueError, so the list cannot grow without a stated why.
+    `root` is the working directory: the repository root at commit time, and a
+    scratch root at push time, where push-range-check.py writes the pushed
+    commit's own copy of this file.
+    """
+    path = root / IGNORE_FILE
+    if not path.is_file():
+        return []
+    globs = []
+    for number, raw in enumerate(path.read_text().splitlines(), 1):
+        entry, _, reason = raw.partition('#')
+        entry = entry.strip()
+        if not entry:
+            continue
+        if not reason.strip():
+            raise ValueError(f"{IGNORE_FILE}:{number}: '{entry}' needs a '# reason'")
+        globs.append(entry)
+    return globs
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: absolute-path-check.py <file1> [file2] ...", file=sys.stderr)
         sys.exit(0)
 
+    try:
+        ignored = load_ignore_globs(Path.cwd())
+    except ValueError as e:
+        print(f"absolute-path-check: {e}", file=sys.stderr)
+        sys.exit(1)
+
     all_issues = []
     
     for file_path_str in sys.argv[1:]:
         file_path = Path(file_path_str)
+        if any(fnmatch.fnmatchcase(file_path.as_posix(), glob) for glob in ignored):
+            continue
         
         # Skip if file doesn't exist or shouldn't be checked
         if not file_path.exists():

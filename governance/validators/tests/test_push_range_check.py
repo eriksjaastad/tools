@@ -114,6 +114,13 @@ def test_committed_blob_is_checked_not_the_worktree(repo):
     assert "absolute-path-check.py" in result.stderr
 
 
+def test_commits_ignore_file_applies_at_push(repo):
+    commit(repo, ".absolute-path-ignore", "data/*.json  # cites county URLs\n", "ignore list")
+    commit(repo, "data/kb.json", ABSOLUTE, "county data")
+    result = push(repo, "main")
+    assert result.returncode == 0, result.stderr
+
+
 def test_root_commit_is_checked_against_the_empty_tree(repo):
     commit(repo, "cleanup.py", DELETE, "root with deletion")
     result = push(repo, "main")
