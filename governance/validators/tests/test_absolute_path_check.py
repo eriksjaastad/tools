@@ -202,6 +202,24 @@ class TestExitCodes:
         f.write_text(f"DATA_DIR={MAC}data\n")
         assert self._run(f).returncode == 1
 
+    def test_ignore_file_skips_listed_paths_only(self, tmp_path):
+        (tmp_path / "list").write_text("#raw/c#1/*.json  # cites county URLs\n", encoding="utf-8-sig")
+        (tmp_path / "#raw" / "c#1").mkdir(parents=True)
+        (tmp_path / "#raw" / "c#1" / "kb.json").write_text(f'"{LINUX}x"\n')
+        (tmp_path / "app.py").write_text(f"P = '{LINUX}x'\n")
+        result = subprocess.run([sys.executable, VALIDATOR_PATH, "--ignore-file", "list",
+                                 "#raw/c#1/kb.json", "app.py"],
+                                cwd=tmp_path, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 1
+        assert "app.py" in result.stderr and "kb.json" not in result.stderr
+
+    def test_ignore_entry_without_a_reason_fails(self, tmp_path):
+        (tmp_path / "list").write_text("data/*.json\n")
+        result = subprocess.run([sys.executable, VALIDATOR_PATH, "--ignore-file", "list", "x.py"],
+                                cwd=tmp_path, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 1
+        assert "needs '<glob>  # <reason>'" in result.stderr
+
     def test_missing_file_is_ignored(self, tmp_path):
         assert self._run(tmp_path / "nope.py").returncode == 0
 

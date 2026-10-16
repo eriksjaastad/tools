@@ -15,12 +15,15 @@ Blocks commits that contain paths like:
 
 Exit codes:
 - 0: No absolute paths found, continue
-- 1: Absolute paths found, block commit
+- 1: Absolute paths found, or the ignore list is malformed: block commit
 
 Usage:
-  python absolute-path-check.py file1.py file2.js ...
+  python absolute-path-check.py [--ignore-file LIST] file1.py file2.js ...
+
+LIST is a copy of the repository's .absolute-path-ignore (see load_ignore_globs).
 """
 
+import fnmatch
 import re
 import sys
 from pathlib import Path
@@ -179,15 +182,64 @@ def find_absolute_paths(content: str, file_path: str) -> list[dict]:
     return issues
 
 
+IGNORE_FILE = '.absolute-path-ignore'
+
+
+def load_ignore_globs(path: Path | None) -> list[str]:
+    """Globs of files to skip, from a copy of a repository's `.absolute-path-ignore`.
+
+    For data that cites web URLs whose path holds a user-directory segment
+    (CivicPlus county documents are served at https://<host>/home/...): JSON has
+    no comment to carry the deliberate-use marker. Every non-blank line is an
+    entry: a glob with no spaces (it may contain `#`), whitespace, `#`, then
+    the reason (`data/*.json  # why`); there are no comment lines. Globs match
+    with fnmatch against the path as passed, repo-relative at both gates (`*`
+    also crosses `/`). An
+    entry with no reason raises ValueError, so the list cannot grow without a
+    stated why. The callers extract the list from Git and pass `--ignore-file`:
+    governance-check.sh the staged copy, push-range-check.py each pushed
+    commit's own copy. Without the flag nothing is skipped.
+    """
+    if path is None:
+        return []
+    globs = []
+    # utf-8-sig: a byte-order mark would otherwise glue onto the first glob and
+    # silently stop it matching; the locale encoding must not decide either.
+    for number, raw in enumerate(path.read_text(encoding='utf-8-sig').splitlines(), 1):
+        line = raw.strip()
+        if not line:
+            continue
+        entry = re.fullmatch(r'(\S+)\s+#\s*(\S.*)', line)
+        if not entry:
+            raise ValueError(f"{IGNORE_FILE}:{number}: '{line}' needs '<glob>  # <reason>'")
+        globs.append(entry.group(1))
+    return globs
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: absolute-path-check.py <file1> [file2] ...", file=sys.stderr)
+    args = sys.argv[1:]
+    ignore_file = None
+    if args[:1] == ['--ignore-file']:
+        if len(args) < 2:
+            print("absolute-path-check: --ignore-file needs a path", file=sys.stderr)
+            sys.exit(1)
+        ignore_file, args = Path(args[1]), args[2:]
+    try:
+        ignored = load_ignore_globs(ignore_file)
+    except (OSError, ValueError) as e:
+        print(f"absolute-path-check: {e}", file=sys.stderr)
+        sys.exit(1)
+    if not args:  # with --ignore-file alone, this only judged the list
+        if ignore_file is None:
+            print("Usage: absolute-path-check.py [--ignore-file LIST] <file1> [file2] ...", file=sys.stderr)
         sys.exit(0)
 
     all_issues = []
     
-    for file_path_str in sys.argv[1:]:
+    for file_path_str in args:
         file_path = Path(file_path_str)
+        if any(fnmatch.fnmatchcase(file_path.as_posix(), glob) for glob in ignored):
+            continue
         
         # Skip if file doesn't exist or shouldn't be checked
         if not file_path.exists():
@@ -224,6 +276,8 @@ def main():
 
         print("Fix by using relative paths or environment variables instead.", file=sys.stderr)
         print("Example: Use './data/file.csv' or '$PROJECT_ROOT/data/file.csv'", file=sys.stderr)
+        print(f"Data citing web URLs with such a path: list the file in {IGNORE_FILE} "
+              "at the repo root ('<glob>  # <reason>').", file=sys.stderr)
         
         sys.exit(1)
     else:

@@ -114,6 +114,26 @@ def test_committed_blob_is_checked_not_the_worktree(repo):
     assert "absolute-path-check.py" in result.stderr
 
 
+def test_commits_ignore_file_applies_at_push(repo):
+    """The commit's own list is judged, even beside a case-colliding sibling."""
+    # Built with plumbing: a case-insensitive worktree cannot stage both names.
+    for name, text in ((".absolute-path-ignore", "data/*.json  # cites county URLs\n"),
+                       (".ABSOLUTE-PATH-IGNORE", "# not the list\n"), ("data/kb.json", ABSOLUTE)):
+        git(repo, "update-index", "--add", "--cacheinfo", f"100644,{blob(repo, text)},{name}")
+    git(repo, "commit", "-qm", "county data")
+    result = push(repo, "main")
+    assert result.returncode == 0, result.stderr
+
+
+def test_symlinked_ignore_list_alone_is_refused_at_push(repo):
+    target = blob(repo, "data/*.json  # cites county URLs")
+    git(repo, "update-index", "--add", "--cacheinfo", f"120000,{target},.absolute-path-ignore")
+    git(repo, "commit", "-qm", "symlinked list")
+    result = push(repo, "main")
+    assert result.returncode != 0
+    assert "must be a regular file" in result.stderr
+
+
 def test_root_commit_is_checked_against_the_empty_tree(repo):
     commit(repo, "cleanup.py", DELETE, "root with deletion")
     result = push(repo, "main")
