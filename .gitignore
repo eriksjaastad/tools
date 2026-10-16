@@ -190,12 +190,6 @@ dist/
 # Logs (each tool manages its own, don't track in git)
 logs/
 *.log
-agent_log.txt
-ssh_agent/queue/
-# Named venvs
-pdf_converter_env/
-# Ensure PDF converter logs are ignored (specifically for line 198)
-pdf-converter/logs/
 # Claude Code harness state (plan-mode artifacts, worktree workspace)
 .claude/
 # Session memory - never source, never committed (#6783)

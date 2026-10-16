@@ -58,11 +58,9 @@ else
 fi
 step "test suites" \
     "$UV" run -q --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
-    --with 'httpx>=0.27,<1' --with 'typer>=0.12,<1' --with 'rich>=13,<15' \
-    --with 'PyYAML>=6,<7' --with 'api-cost-tracker>=0.2.3,<0.3' pytest -q -p no:cacheprovider \
+    --with 'PyYAML>=6,<7' pytest -q -p no:cacheprovider \
     governance/validators/tests/ \
     tests/auth/ \
-    tests/remediation/ \
     tests/startup-cleanup/ \
     tests/workflows/
 # batch-crop is its own uv project (Pillow), locked in batch-crop/uv.lock.

@@ -62,11 +62,8 @@ Runs validators at commit and push time — secrets, hardcoded paths, naked API 
 - [`governance/`](governance/README.md) - Commit- and push-time validators for secrets, hardcoded paths, API-wrapper enforcement, deletion sites and silent failures.
 - [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
 - [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
-- [`ssh_agent/`](ssh_agent/README.md) - Automated SSH management and host routing.
-- [`pdf-converter/`](pdf-converter/README.md) - PDF to Markdown conversion and cleanup utilities.
 - [`batch-crop/`](batch-crop/README.md) - Crop a folder of images to an aspect ratio, size, box or focal point (moved from synth-insight-labs, #8103).
 - [`startup-cleanup/`](startup-cleanup/startup_cleanup.py) - Safe, bounded per-project startup cleanup for merged local task worktrees and branches.
-- [`claude-cli/`](claude-cli/claude-cli.py) - Legacy command-line interface to Claude.
 
 ## Retired Tools
 
@@ -121,11 +118,8 @@ _tools/
 ├── governance/             # Repo governance scripts and hook installers
 ├── claude-mcp-go/          # Go MCP hub for agent communication
 ├── ollama-mcp-go/          # Go MCP server for local Ollama models
-├── ssh_agent/              # SSH management and host routing
-├── pdf-converter/          # PDF conversion utilities
 ├── batch-crop/             # Batch image cropping CLI
-├── startup-cleanup/        # Per-project startup cleanup for merged task worktrees/branches
-└── claude-cli/             # Legacy Claude CLI
+└── startup-cleanup/        # Per-project startup cleanup for merged task worktrees/branches
 ```
 
 ---
