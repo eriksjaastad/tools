@@ -183,24 +183,21 @@ def find_absolute_paths(content: str, file_path: str) -> list[dict]:
 IGNORE_FILE = '.absolute-path-ignore'
 
 
-def load_ignore_globs(root: Path) -> list[str]:
-    """Repo-relative globs of files to skip, from `.absolute-path-ignore` in `root`.
+def load_ignore_globs(path: Path | None) -> list[str]:
+    """Globs of files to skip, from a copy of a repository's `.absolute-path-ignore`.
 
     For data that cites web URLs whose path holds a user-directory segment
     (CivicPlus county documents are served at https://<host>/home/...): JSON has
     no comment to carry the deliberate-use marker. One entry per line: a glob
     with no spaces, whitespace, `#`, then the reason (`data/*.json  # why`);
     blank and comment-only lines are skipped. Globs match with fnmatch against
-    the path as passed (`*` also crosses `/`). An entry with no reason raises
-    ValueError, so the list cannot grow without a stated why, and so does a
-    symlinked file, which the push gate would not read. `root` is the working
-    directory: the repository root at commit time, and a scratch root at push
-    time, where push-range-check.py writes the pushed commit's own copy.
+    the path as passed, repo-relative at both gates (`*` also crosses `/`). An
+    entry with no reason raises ValueError, so the list cannot grow without a
+    stated why. The callers extract the list from Git and pass `--ignore-file`:
+    governance-check.sh the staged copy, push-range-check.py each pushed
+    commit's own copy. Without the flag nothing is skipped.
     """
-    path = root / IGNORE_FILE
-    if path.is_symlink():
-        raise ValueError(f"{IGNORE_FILE} must be a regular file, not a symlink")
-    if not path.is_file():
+    if path is None:
         return []
     globs = []
     for number, raw in enumerate(path.read_text().splitlines(), 1):
@@ -215,19 +212,26 @@ def load_ignore_globs(root: Path) -> list[str]:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: absolute-path-check.py <file1> [file2] ...", file=sys.stderr)
+    args = sys.argv[1:]
+    ignore_file = None
+    if args[:1] == ['--ignore-file']:
+        if len(args) < 2:
+            print("absolute-path-check: --ignore-file needs a path", file=sys.stderr)
+            sys.exit(1)
+        ignore_file, args = Path(args[1]), args[2:]
+    if not args:
+        print("Usage: absolute-path-check.py [--ignore-file LIST] <file1> [file2] ...", file=sys.stderr)
         sys.exit(0)
 
     try:
-        ignored = load_ignore_globs(Path.cwd())
-    except ValueError as e:
+        ignored = load_ignore_globs(ignore_file)
+    except (OSError, ValueError) as e:
         print(f"absolute-path-check: {e}", file=sys.stderr)
         sys.exit(1)
 
     all_issues = []
     
-    for file_path_str in sys.argv[1:]:
+    for file_path_str in args:
         file_path = Path(file_path_str)
         if any(fnmatch.fnmatchcase(file_path.as_posix(), glob) for glob in ignored):
             continue

@@ -203,26 +203,22 @@ class TestExitCodes:
         assert self._run(f).returncode == 1
 
     def test_ignore_file_skips_listed_paths_only(self, tmp_path):
-        (tmp_path / ".absolute-path-ignore").write_text("# research data\ndata/c#1/*.json  # cites county URLs\n")
+        (tmp_path / "list").write_text("# research data\ndata/c#1/*.json  # cites county URLs\n")
         (tmp_path / "data" / "c#1").mkdir(parents=True)
         (tmp_path / "data" / "c#1" / "kb.json").write_text(f'"{LINUX}x"\n')
         (tmp_path / "app.py").write_text(f"P = '{LINUX}x'\n")
-        result = subprocess.run([sys.executable, VALIDATOR_PATH, "data/c#1/kb.json", "app.py"],
+        result = subprocess.run([sys.executable, VALIDATOR_PATH, "--ignore-file", "list",
+                                 "data/c#1/kb.json", "app.py"],
                                 cwd=tmp_path, capture_output=True, text=True, timeout=30)
         assert result.returncode == 1
         assert "app.py" in result.stderr and "kb.json" not in result.stderr
 
-    @pytest.mark.parametrize("make, message", [
-        (lambda d: (d / ".absolute-path-ignore").write_text("data/*.json\n"), "needs '<glob>  # <reason>'"),
-        (lambda d: ((d / "list").write_text("data/*.json  # why\n"),
-                    (d / ".absolute-path-ignore").symlink_to("list")), "must be a regular file"),
-    ], ids=["no-reason", "symlink"])
-    def test_malformed_ignore_file_fails(self, tmp_path, make, message):
-        make(tmp_path)
-        result = subprocess.run([sys.executable, VALIDATOR_PATH, "x.py"],
+    def test_ignore_entry_without_a_reason_fails(self, tmp_path):
+        (tmp_path / "list").write_text("data/*.json\n")
+        result = subprocess.run([sys.executable, VALIDATOR_PATH, "--ignore-file", "list", "x.py"],
                                 cwd=tmp_path, capture_output=True, text=True, timeout=30)
         assert result.returncode == 1
-        assert message in result.stderr
+        assert "needs '<glob>  # <reason>'" in result.stderr
 
     def test_missing_file_is_ignored(self, tmp_path):
         assert self._run(tmp_path / "nope.py").returncode == 0

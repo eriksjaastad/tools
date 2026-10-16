@@ -96,3 +96,16 @@ def test_master_blocks_new_silent_failure_but_not_historical(host):
     subprocess.run(["git", "add", "module.py"], cwd=root, env=env, check=True, timeout=10)
     result = run_master(host)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_staged_ignore_list_is_the_one_judged(host):
+    """An unstaged edit to .absolute-path-ignore must not change the verdict (#8356)."""
+    root, env = host
+    (root / ".absolute-path-ignore").write_text("data/*.json  # cites county URLs\n")
+    (root / "data").mkdir()
+    (root / "data" / "kb.json").write_text('"' + "/" + 'home/fixture/x"\n')
+    subprocess.run(["git", "add", ".absolute-path-ignore", "data/kb.json"], cwd=root, env=env,
+                   check=True, timeout=10)
+    (root / ".absolute-path-ignore").write_text("")
+    result = run_master(host)
+    assert result.returncode == 0, result.stdout + result.stderr

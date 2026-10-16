@@ -209,16 +209,14 @@ def materialize(blobs: dict[str, str], root: Path) -> list[str]:
     return sorted(contents)
 
 
-# absolute-path-check.py reads its ignore list from its working directory.
+# absolute-path-check.py skips files listed in the commit's own copy of this file.
 PATH_IGNORE_FILE = ".absolute-path-ignore"
 
 
-def path_ignore_of(sha: str) -> bytes | None:
-    """The commit's own .absolute-path-ignore, or None when it has no regular one."""
+def path_ignore_of(sha: str) -> bytes:
+    """The commit's own .absolute-path-ignore, or empty when it has none."""
     entry = git("ls-tree", sha, "--", PATH_IGNORE_FILE).split()
-    if not entry or entry[0].decode() not in REGULAR:
-        return None
-    return git("cat-file", "blob", entry[2].decode())
+    return git("cat-file", "blob", entry[2].decode()) if entry else b""
 
 
 def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, str]:
@@ -233,15 +231,15 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
-    ignore = path_ignore_of(sha)
+    ignore_list = scratch / "absolute-path-ignore"  # beside the layer roots, never inside one
+    ignore_list.write_bytes(path_ignore_of(sha))
     for index, blobs in enumerate(layers(introduced_files(sha))):
         root = scratch / str(index)
         root.mkdir()
         files = materialize(blobs, root)
-        if ignore is not None and not (root / PATH_IGNORE_FILE).exists():
-            (root / PATH_IGNORE_FILE).write_bytes(ignore)
         for name in FILE_VALIDATORS:
-            code, output = run_validator(name, files, root)
+            args = ["--ignore-file", str(ignore_list)] if name == "absolute-path-check.py" else []
+            code, output = run_validator(name, [*args, *files], root)
             if code != 0:
                 failures.append((name, code, output))
     for name in COMMIT_VALIDATORS:

@@ -69,6 +69,15 @@ echo -e "${YELLOW}Checking ${#STAGED_FILES[@]} file(s)...${NC}"
 # Track overall pass/fail
 OVERALL_STATUS=0
 
+# absolute-path-check.py judges files against the STAGED .absolute-path-ignore
+# (empty when none is staged), as push-range-check.py passes each pushed
+# commit's own copy, so both gates read the list being committed.
+IGNORE_LIST=$(mktemp)
+trap 'rm -f "${STAGED_LIST:-}" "$IGNORE_LIST"' EXIT
+if git cat-file -e ":.absolute-path-ignore" 2>/dev/null; then
+    git cat-file blob ":.absolute-path-ignore" > "$IGNORE_LIST"
+fi
+
 # Array of validators to run
 VALIDATORS=(
     "secrets-scanner.py"
@@ -85,6 +94,7 @@ VALIDATORS=(
 validator_args() {
     case "$1" in
         silent-failure-check.py) echo "--staged" ;;
+        absolute-path-check.py) echo "--ignore-file $IGNORE_LIST" ;;
     esac
 }
 
