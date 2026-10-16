@@ -558,11 +558,79 @@ def _has_active_cwd(worktree: Path, active_cwds: set[Path]) -> bool:
     return False
 
 
-def _report_worktree_refusal(
-    refusals: list[Refusal], wt: Worktree, reasons: list[str]
-) -> None:
-    if reasons:
-        refusals.append(Refusal(type="worktree", target=wt.path, branch=wt.branch, reasons=reasons))
+def _worktree_keep_reasons(
+    repo: Path,
+    main: str,
+    wt: Worktree,
+    active_cwds: set[Path] | None,
+    activity_error: str,
+    timeout: int,
+) -> list[str]:
+    """Why linked worktree ``wt`` must be kept, short of the open-PR check."""
+    reasons: list[str] = []
+    if time.monotonic() > _RUN_DEADLINE - 25:
+        reasons.append("startup time budget nearly exhausted; preserve worktree")
+    if wt.prunable:
+        reasons.append("worktree directory already missing (stale/prunable); report only")
+    if wt.branch is None:
+        reasons.append("detached worktree has no branch provenance")
+    if wt.locked:
+        reasons.append("worktree is locked")
+    if active_cwds is None:
+        reasons.append(activity_error)
+    elif _has_active_cwd(Path(wt.path), active_cwds):
+        reasons.append("active process has a working directory in this worktree")
+    if wt.branch and not TASK_BRANCH_RE.match(wt.branch):
+        reasons.append(f"branch '{wt.branch}' does not match task branch convention")
+    if wt.branch and TASK_BRANCH_RE.match(wt.branch):
+        merged, merged_reason = _branch_merged(repo, main, wt.branch, timeout)
+        if not merged:
+            reasons.append(merged_reason)
+    if wt.prunable is False and Path(wt.path).exists():
+        dirty, ignored = _worktree_status(Path(wt.path), timeout)
+        if dirty:
+            reasons.append(f"worktree is dirty: {', '.join(dirty[:5])}")
+        if ignored:
+            reasons.append(f"worktree has meaningful ignored files: {', '.join(ignored[:5])}")
+    else:
+        reasons.append("worktree directory missing; cannot verify clean state")
+    return reasons
+
+
+def _branch_keep_reasons(
+    repo: Path,
+    main: str,
+    branch: str,
+    current_branch: str | None,
+    checked_out: set[str],
+    timeout: int,
+) -> list[str]:
+    """Why standalone task branch ``branch`` must be kept, short of the open-PR check."""
+    reasons: list[str] = []
+    if time.monotonic() > _RUN_DEADLINE - 10:
+        reasons.append("startup time budget nearly exhausted; preserve branch")
+    if branch == current_branch:
+        reasons.append("current checkout branch (active session)")
+    if branch in checked_out:
+        reasons.append("branch is checked out in another worktree")
+    merged, merged_reason = _branch_merged(repo, main, branch, timeout)
+    if not merged:
+        reasons.append(merged_reason)
+    return reasons
+
+
+def _open_pr_reasons(gh_bin: str | None, repo_slug: str | None, branch: str) -> list[str]:
+    """Why ``branch`` must be kept because a PR for it is open or cannot be ruled out."""
+    if gh_bin is None:
+        return ["GitHub CLI unavailable (no gha); cannot verify no open PR"]
+    if repo_slug is None:
+        return ["no origin remote; cannot verify no open PR"]
+    pr_status, prs = _open_prs(gh_bin, repo_slug, branch, DEFAULT_GH_TIMEOUT)
+    if pr_status == "open":
+        return ["open PR(s): " + ", ".join(str(p.get("number", "?")) for p in prs)]
+    if pr_status != "none":
+        return [f"open-PR check {pr_status}; cannot verify no open PR"]
+    return []
 
 
 def _remove_worktree(
@@ -696,42 +764,44 @@ def run_startup_cleanup(
         "refused": [],
         "reports": [],
     }
+    refusals: list[Refusal] = []
+    removed: list[Removal] = []
+
+    def finish() -> dict:
+        report["planned" if dry_run else "removed"] = [r.__dict__ for r in removed]
+        report["refused"] = [r.__dict__ for r in refusals]
+        report["duration_ms"] = int((time.time() - started) * 1000)
+        return report
+
+    def fail(error: str) -> dict:
+        report["ok"] = False
+        report["error"] = error
+        return finish()
 
     try:
         repo = _resolve_hook_repo(project_dir) if hook else _resolve_repo(project_dir)
     except StartupCleanupError as exc:
-        report["ok"] = False
-        report["error"] = str(exc)
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return fail(str(exc))
     if repo is None:
         report["applicable"] = False
         report["summary"] = {"reason": "not in a git repository"}
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return finish()
     report["repo_root"] = str(repo)
 
     common_dir = _git_common_dir(repo)
     if common_dir is None:
-        report["ok"] = False
-        report["error"] = "cannot resolve git common dir"
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return fail("cannot resolve git common dir")
     stamp = common_dir / THROTTLE_STAMP_NAME
 
     if not force and min_interval_seconds > 0:
         try:
             previous = _read_throttle_stamp(stamp)
         except StartupCleanupError as exc:
-            report["ok"] = False
-            report["error"] = str(exc)
-            report["duration_ms"] = int((time.time() - started) * 1000)
-            return report
+            return fail(str(exc))
         if previous is not None and (now - previous) < min_interval_seconds:
             report["throttled"] = True
             report["summary"] = {"reason": f"last run {int(now - previous)}s ago; interval {min_interval_seconds}s"}
-            report["duration_ms"] = int((time.time() - started) * 1000)
-            return report
+            return finish()
 
     main = _resolve_main_branch(repo)
     if main is None:
@@ -739,8 +809,7 @@ def run_startup_cleanup(
             {"level": "warning", "message": "no main/master/trunk branch found; nothing removed"}
         )
         report["summary"] = {"reason": "no main branch"}
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return finish()
     report["main_branch"] = main
 
     fresh, fresh_reason = _main_fresh(repo, main)
@@ -750,16 +819,12 @@ def run_startup_cleanup(
             {"level": "warning", "message": f"main is not fresh: {fresh_reason}; automatic cleanup disabled"}
         )
         report["summary"] = {"reason": "main not fresh", "detail": fresh_reason}
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return finish()
 
     try:
         worktrees = _list_worktrees(repo)
     except StartupCleanupError as exc:
-        report["ok"] = False
-        report["error"] = str(exc)
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return fail(str(exc))
     if len(worktrees) > max_worktrees:
         report["reports"].append(
             {
@@ -771,16 +836,12 @@ def run_startup_cleanup(
             }
         )
         report["summary"] = {"reason": "worktree cap exceeded", "worktrees": len(worktrees)}
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return finish()
 
     try:
         branches = _list_branches(repo)
     except StartupCleanupError as exc:
-        report["ok"] = False
-        report["error"] = str(exc)
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return fail(str(exc))
     if len(branches) > max_branches:
         report["reports"].append(
             {
@@ -792,8 +853,7 @@ def run_startup_cleanup(
             }
         )
         report["summary"] = {"reason": "branch cap exceeded", "branches": len(branches)}
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return finish()
 
     if gh_bin is None:
         gh_bin = _resolve_gh_bin()
@@ -802,77 +862,31 @@ def run_startup_cleanup(
     # Primary checkout = first worktree block; also never touch the checkout
     # we are running from (the agent's active session).
     primary_path = worktrees[0].path if worktrees else None
-    current_repo_path = str(repo)
     if active_cwds_fn is None:
         active_cwds_fn = _active_cwds
     active_cwds, activity_error = active_cwds_fn(timeout)
-    refusals: list[Refusal] = []
-    removed: list[Removal] = []
-    budget_exhausted = False
 
     for wt in worktrees:
         if wt.path == primary_path:
             continue
-        if Path(wt.path).resolve() == Path(current_repo_path).resolve():
-            _report_worktree_refusal(
-                refusals, wt, [f"active session worktree (current project checkout)"]
-            )
+        if Path(wt.path).resolve() == repo.resolve():
+            refusals.append(Refusal(
+                "worktree", wt.path, wt.branch, ["active session worktree (current project checkout)"]
+            ))
             continue
-        reasons: list[str] = []
-        if time.monotonic() > _RUN_DEADLINE - 25:
-            reasons.append("startup time budget nearly exhausted; preserve worktree")
-            budget_exhausted = True
-        if wt.prunable:
-            reasons.append("worktree directory already missing (stale/prunable); report only")
-        if wt.branch is None:
-            reasons.append("detached worktree has no branch provenance")
-        if wt.locked:
-            reasons.append("worktree is locked")
-        if active_cwds is None:
-            reasons.append(activity_error)
-        elif _has_active_cwd(Path(wt.path), active_cwds):
-            reasons.append("active process has a working directory in this worktree")
-        if wt.branch and not TASK_BRANCH_RE.match(wt.branch):
-            reasons.append(f"branch '{wt.branch}' does not match task branch convention")
-        if wt.branch and TASK_BRANCH_RE.match(wt.branch):
-            merged, merged_reason = _branch_merged(repo, main, wt.branch, timeout)
-            if not merged:
-                reasons.append(merged_reason)
-        if wt.prunable is False and Path(wt.path).exists():
-            dirty, ignored = _worktree_status(Path(wt.path), timeout)
-            if dirty:
-                reasons.append(f"worktree is dirty: {', '.join(dirty[:5])}")
-            if ignored:
-                reasons.append(f"worktree has meaningful ignored files: {', '.join(ignored[:5])}")
-        else:
-            reasons.append("worktree directory missing; cannot verify clean state")
+        reasons = _worktree_keep_reasons(repo, main, wt, active_cwds, activity_error, timeout)
         if not reasons and wt.branch:
-            if gh_bin is None:
-                reasons.append("GitHub CLI unavailable (no gha); cannot verify no open PR")
-            elif repo_slug is None:
-                reasons.append("no origin remote; cannot verify no open PR")
-            else:
-                pr_status, prs = _open_prs(gh_bin, repo_slug, wt.branch, DEFAULT_GH_TIMEOUT)
-                if pr_status == "open":
-                    reasons.append(
-                        "open PR(s): " + ", ".join(str(p.get("number", "?")) for p in prs)
-                    )
-                elif pr_status != "none":
-                    reasons.append(f"open-PR check {pr_status}; cannot verify no open PR")
+            reasons = _open_pr_reasons(gh_bin, repo_slug, wt.branch)
+        if not reasons and time.monotonic() > _RUN_DEADLINE - 27:
+            reasons = ["startup time budget too short for recoverable worktree removal"]
         if reasons:
-            _report_worktree_refusal(refusals, wt, reasons)
+            refusals.append(Refusal("worktree", wt.path, wt.branch, reasons))
+            continue
+        removal = _remove_worktree(repo, wt, main, trash_fn, timeout, dry_run)
+        if removal.note.startswith("refused:"):
+            refusals.append(Refusal("worktree", wt.path, wt.branch, [removal.note]))
         else:
-            if time.monotonic() > _RUN_DEADLINE - 27:
-                budget_exhausted = True
-                _report_worktree_refusal(
-                    refusals, wt, ["startup time budget too short for recoverable worktree removal"]
-                )
-                continue
-            removal = _remove_worktree(repo, wt, main, trash_fn, timeout, dry_run)
-            if removal.note.startswith("refused:"):
-                refusals.append(Refusal("worktree", wt.path, wt.branch, [removal.note]))
-            else:
-                removed.append(removal)
+            removed.append(removal)
 
     # Standalone branches: task-convention branches merged into main that are
     # not checked out in any remaining worktree.
@@ -880,63 +894,26 @@ def run_startup_cleanup(
         remaining_worktrees = _list_worktrees(repo)
         current_branches = _list_branches(repo)
     except StartupCleanupError as exc:
-        report["ok"] = False
-        report["error"] = f"could not refresh worktree list after removals: {exc}"
-        report["planned" if dry_run else "removed"] = [r.__dict__ for r in removed]
-        report["refused"] = [
-            {"type": r.type, "target": r.target, "branch": r.branch, "reasons": r.reasons}
-            for r in refusals
-        ]
-        report["duration_ms"] = int((time.time() - started) * 1000)
-        return report
+        return fail(f"could not refresh worktree list after removals: {exc}")
     checked_out = _checked_out_branches(remaining_worktrees)
     current_branch = _current_branch(repo)
     for branch in sorted(set(current_branches)):
-        if branch == main:
+        if branch == main or not TASK_BRANCH_RE.match(branch):
             continue
-        if not TASK_BRANCH_RE.match(branch):
-            continue
-        reasons: list[str] = []
-        if time.monotonic() > _RUN_DEADLINE - 10:
-            reasons.append("startup time budget nearly exhausted; preserve branch")
-            budget_exhausted = True
-        if branch == current_branch:
-            reasons.append("current checkout branch (active session)")
-        if branch in checked_out:
-            reasons.append("branch is checked out in another worktree")
-        merged, merged_reason = _branch_merged(repo, main, branch, timeout)
-        if not merged:
-            reasons.append(merged_reason)
+        reasons = _branch_keep_reasons(repo, main, branch, current_branch, checked_out, timeout)
         if not reasons:
-            if gh_bin is None:
-                reasons.append("GitHub CLI unavailable (no gha); cannot verify no open PR")
-            elif repo_slug is None:
-                reasons.append("no origin remote; cannot verify no open PR")
-            else:
-                pr_status, prs = _open_prs(gh_bin, repo_slug, branch, DEFAULT_GH_TIMEOUT)
-                if pr_status == "open":
-                    reasons.append(
-                        "open PR(s): " + ", ".join(str(p.get("number", "?")) for p in prs)
-                    )
-                elif pr_status != "none":
-                    reasons.append(f"open-PR check {pr_status}; cannot verify no open PR")
+            reasons = _open_pr_reasons(gh_bin, repo_slug, branch)
         if reasons:
             refusals.append(Refusal("branch", branch, branch, reasons))
-            continue
-        if dry_run:
+        elif dry_run:
             removed.append(Removal("branch", branch, branch, note="dry-run: would delete branch"))
-            continue
-        ok, err = _delete_branch(repo, branch, main, timeout)
-        if ok:
-            removed.append(Removal("branch", branch, branch, branch_deleted=True))
         else:
-            refusals.append(Refusal("branch", branch, branch, [f"branch delete failed: {err}"]))
+            ok, err = _delete_branch(repo, branch, main, timeout)
+            if ok:
+                removed.append(Removal("branch", branch, branch, branch_deleted=True))
+            else:
+                refusals.append(Refusal("branch", branch, branch, [f"branch delete failed: {err}"]))
 
-    report["planned" if dry_run else "removed"] = [r.__dict__ for r in removed]
-    report["refused"] = [
-        {"type": r.type, "target": r.target, "branch": r.branch, "reasons": r.reasons}
-        for r in refusals
-    ]
     report["summary"] = {
         "worktrees_scanned": max(0, len(worktrees) - 1),
         "branches_scanned": len([b for b in branches if b != main and TASK_BRANCH_RE.match(b)]),
@@ -957,15 +934,11 @@ def run_startup_cleanup(
                 ),
             }
         )
-    _maybe_stamp(dry_run or budget_exhausted or bool(refusals) or min_interval_seconds <= 0,
-                 stamp, now)
-    report["duration_ms"] = int((time.time() - started) * 1000)
-    return report
-
-
-def _maybe_stamp(dry_run: bool, stamp: Path, now: float) -> None:
-    if not dry_run:
+    # A run that kept anything (including for lack of time) is not stamped,
+    # so the next startup retries it.
+    if not (dry_run or refusals or min_interval_seconds <= 0):
         _write_throttle_stamp(stamp, now)
+    return finish()
 
 
 def _read_hook_project_dir(required: bool = False) -> str | None:
