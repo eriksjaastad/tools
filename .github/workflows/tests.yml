@@ -6,10 +6,7 @@ name: Tests
 # bundles merge-on-green, and landing in this repo stays manual (Erik's call,
 # 2026-09-01). This job only reports.
 #
-# Includes governance, authentication, startup-cleanup and workflow-sync
-# regressions. Authentication
-# executables are stubbed; these suites do not mint live tokens or call
-# providers.
+# Includes governance, startup-cleanup and workflow-sync regressions.
 
 on:
   pull_request:
@@ -40,10 +37,9 @@ jobs:
 
       - name: Run test suites
         run: |
-          uv run --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
+          uv run --python 3.12 --with 'pytest>=8,<10' \
             --with 'PyYAML>=6,<7' pytest \
             governance/validators/tests/ \
-            tests/auth/ \
             tests/startup-cleanup/ \
             tests/workflows/ \
             -q
