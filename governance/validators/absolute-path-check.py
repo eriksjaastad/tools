@@ -188,26 +188,29 @@ def load_ignore_globs(root: Path) -> list[str]:
 
     For data that cites web URLs whose path holds a user-directory segment
     (CivicPlus county documents are served at https://<host>/home/...): JSON has
-    no comment to carry the deliberate-use marker. One entry per line,
-    `<glob>  # <reason>`, matched with fnmatch against the path as passed (`*`
-    also crosses `/`); blank and comment-only lines are skipped. An entry with
-    no reason raises ValueError, so the list cannot grow without a stated why.
-    `root` is the working directory: the repository root at commit time, and a
-    scratch root at push time, where push-range-check.py writes the pushed
-    commit's own copy of this file.
+    no comment to carry the deliberate-use marker. One entry per line: a glob
+    with no spaces, whitespace, `#`, then the reason (`data/*.json  # why`);
+    blank and comment-only lines are skipped. Globs match with fnmatch against
+    the path as passed (`*` also crosses `/`). An entry with no reason raises
+    ValueError, so the list cannot grow without a stated why, and so does a
+    symlinked file, which the push gate would not read. `root` is the working
+    directory: the repository root at commit time, and a scratch root at push
+    time, where push-range-check.py writes the pushed commit's own copy.
     """
     path = root / IGNORE_FILE
+    if path.is_symlink():
+        raise ValueError(f"{IGNORE_FILE} must be a regular file, not a symlink")
     if not path.is_file():
         return []
     globs = []
     for number, raw in enumerate(path.read_text().splitlines(), 1):
-        entry, _, reason = raw.partition('#')
-        entry = entry.strip()
-        if not entry:
+        line = raw.strip()
+        if not line or line.startswith('#'):
             continue
-        if not reason.strip():
-            raise ValueError(f"{IGNORE_FILE}:{number}: '{entry}' needs a '# reason'")
-        globs.append(entry)
+        entry = re.fullmatch(r'(\S+)\s+#\s*(\S.*)', line)
+        if not entry:
+            raise ValueError(f"{IGNORE_FILE}:{number}: '{line}' needs '<glob>  # <reason>'")
+        globs.append(entry.group(1))
     return globs
 
 
