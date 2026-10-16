@@ -40,13 +40,11 @@ GitHub actor alone no longer distinguishes a floor manager from a worker.
   to an App token or another account. `gha api user --jq .login` should return
   `eriksjaastad` when diagnosing identity.
 - Use plain `git` for commits and pushes. Do not override repo-local author or
-  credential settings ad hoc. `github-identity-cutover.py` audits/applies the
-  supported host setup and saves a private rollback snapshot first.
+  credential settings ad hoc.
 - The three historical custom Apps (`architect`, `manager`, `auxesis-coder`)
-  remain installed only while the one-year GitHub archive is validated.
-  `gh-agent.sh` and `github-app-token.py` are legacy archive tools, not writer
-  paths. Never use an explicit App role for new PRs, reviews, comments or
-  pushes. The old bot-identity installer is disabled.
+  are not writer identities. Their token tools left `_tools` once the archive
+  validation closed (#8096). Never use an App identity for new PRs, reviews,
+  comments or pushes.
 - Preserve the independent Codex GitHub review connector and Discord agent
   identities. The existing exact-head review/CI merge gates still apply.
 
@@ -59,8 +57,7 @@ GitHub actor alone no longer distinguishes a floor manager from a worker.
 
 ### Be Careful With
 1. **MCP server code** — affects all downstream agents
-2. **`gh-agent.sh` / `github-app-token.py`** — historical App credentials remain only for archive recovery; do not reintroduce them into a writer path.
-3. **Governance validators** — false positives block all commits across all projects
+2. **Governance validators** — false positives block all commits across all projects
 
 ### Do Not Touch
 `model-bench` was retired on 2026-09-25 (#6453): the package, runners, CLI,

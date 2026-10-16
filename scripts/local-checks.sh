@@ -57,10 +57,9 @@ else
     echo "== changed Python deletion sites: NOT RUN (no base: the remote has no default branch to compare with)"
 fi
 step "test suites" \
-    "$UV" run -q --python 3.12 --with 'pytest>=8,<10' --with 'PyJWT>=2,<3' \
+    "$UV" run -q --python 3.12 --with 'pytest>=8,<10' \
     --with 'PyYAML>=6,<7' pytest -q -p no:cacheprovider \
     governance/validators/tests/ \
-    tests/auth/ \
     tests/startup-cleanup/ \
     tests/workflows/
 # batch-crop is its own uv project (Pillow), locked in batch-crop/uv.lock.
