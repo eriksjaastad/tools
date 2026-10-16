@@ -22,7 +22,6 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 | Directory | Purpose |
 |-----------|---------|
 | `governance/` | Commit- and push-time validators (secrets, paths, api-wrapper, deletion sites, silent failures) |
-| `route/` | Model routing CLI + `model_registry.json` (pricing source of truth) |
 | `claude-mcp-go/` | MCP hub for agent communication (Go) |
 | `ollama-mcp-go/` | MCP server for local Ollama models (Go) |
 

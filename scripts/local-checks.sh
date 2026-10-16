@@ -64,9 +64,7 @@ step "test suites" \
     tests/auth/ \
     tests/remediation/ \
     tests/startup-cleanup/ \
-    tests/workflows/ \
-    route/test_pricing.py \
-    route/test_readers.py
+    tests/workflows/
 # batch-crop is its own uv project (Pillow), locked in batch-crop/uv.lock.
 step "batch-crop tests" "$UV" run -q --frozen --python 3.12 --directory batch-crop pytest -q -p no:cacheprovider
 
