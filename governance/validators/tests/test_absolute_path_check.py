@@ -203,12 +203,12 @@ class TestExitCodes:
         assert self._run(f).returncode == 1
 
     def test_ignore_file_skips_listed_paths_only(self, tmp_path):
-        (tmp_path / "list").write_text("# research data\ndata/c#1/*.json  # cites county URLs\n")
-        (tmp_path / "data" / "c#1").mkdir(parents=True)
-        (tmp_path / "data" / "c#1" / "kb.json").write_text(f'"{LINUX}x"\n')
+        (tmp_path / "list").write_text("#raw/c#1/*.json  # cites county URLs\n")
+        (tmp_path / "#raw" / "c#1").mkdir(parents=True)
+        (tmp_path / "#raw" / "c#1" / "kb.json").write_text(f'"{LINUX}x"\n')
         (tmp_path / "app.py").write_text(f"P = '{LINUX}x'\n")
         result = subprocess.run([sys.executable, VALIDATOR_PATH, "--ignore-file", "list",
-                                 "data/c#1/kb.json", "app.py"],
+                                 "#raw/c#1/kb.json", "app.py"],
                                 cwd=tmp_path, capture_output=True, text=True, timeout=30)
         assert result.returncode == 1
         assert "app.py" in result.stderr and "kb.json" not in result.stderr

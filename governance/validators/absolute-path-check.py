@@ -188,9 +188,9 @@ def load_ignore_globs(path: Path | None) -> list[str]:
 
     For data that cites web URLs whose path holds a user-directory segment
     (CivicPlus county documents are served at https://<host>/home/...): JSON has
-    no comment to carry the deliberate-use marker. One entry per line: a glob
-    with no spaces, whitespace, `#`, then the reason (`data/*.json  # why`);
-    blank and comment-only lines are skipped. Globs match with fnmatch against
+    no comment to carry the deliberate-use marker. Every non-blank line is an
+    entry: a glob with no spaces (it may contain `#`), whitespace, `#`, then
+    the reason (`data/*.json  # why`); there are no comment lines. Globs match with fnmatch against
     the path as passed, repo-relative at both gates (`*` also crosses `/`). An
     entry with no reason raises ValueError, so the list cannot grow without a
     stated why. The callers extract the list from Git and pass `--ignore-file`:
@@ -202,7 +202,7 @@ def load_ignore_globs(path: Path | None) -> list[str]:
     globs = []
     for number, raw in enumerate(path.read_text().splitlines(), 1):
         line = raw.strip()
-        if not line or line.startswith('#'):
+        if not line:
             continue
         entry = re.fullmatch(r'(\S+)\s+#\s*(\S.*)', line)
         if not entry:
@@ -219,15 +219,15 @@ def main():
             print("absolute-path-check: --ignore-file needs a path", file=sys.stderr)
             sys.exit(1)
         ignore_file, args = Path(args[1]), args[2:]
-    if not args:
-        print("Usage: absolute-path-check.py [--ignore-file LIST] <file1> [file2] ...", file=sys.stderr)
-        sys.exit(0)
-
     try:
         ignored = load_ignore_globs(ignore_file)
     except (OSError, ValueError) as e:
         print(f"absolute-path-check: {e}", file=sys.stderr)
         sys.exit(1)
+    if not args:  # with --ignore-file alone, this only judged the list
+        if ignore_file is None:
+            print("Usage: absolute-path-check.py [--ignore-file LIST] <file1> [file2] ...", file=sys.stderr)
+        sys.exit(0)
 
     all_issues = []
     

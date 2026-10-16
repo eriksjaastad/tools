@@ -71,12 +71,19 @@ OVERALL_STATUS=0
 
 # absolute-path-check.py judges files against the STAGED .absolute-path-ignore
 # (empty when none is staged), as push-range-check.py passes each pushed
-# commit's own copy, so both gates read the list being committed.
+# commit's own copy, so both gates read the list being committed. Only a
+# regular file is a list; push-range-check.py refuses anything else too.
 IGNORE_LIST=$(mktemp)
 trap 'rm -f "${STAGED_LIST:-}" "$IGNORE_LIST"' EXIT
-if git cat-file -e ":.absolute-path-ignore" 2>/dev/null; then
-    git cat-file blob ":.absolute-path-ignore" > "$IGNORE_LIST"
-fi
+IGNORE_ENTRY=$(git ls-files -s -- ".absolute-path-ignore")
+case "$IGNORE_ENTRY" in
+    "") ;;
+    100644*$'\t'.absolute-path-ignore|100755*$'\t'.absolute-path-ignore)
+        git cat-file blob ":.absolute-path-ignore" > "$IGNORE_LIST" ;;
+    *)
+        echo -e "${RED}.absolute-path-ignore must be a regular file${NC}" >&2
+        exit 1 ;;
+esac
 
 # Array of validators to run
 VALIDATORS=(

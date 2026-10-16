@@ -213,10 +213,18 @@ def materialize(blobs: dict[str, str], root: Path) -> list[str]:
 PATH_IGNORE_FILE = ".absolute-path-ignore"
 
 
-def path_ignore_of(sha: str) -> bytes:
-    """The commit's own .absolute-path-ignore, or empty when it has none."""
+def path_ignore_of(sha: str) -> bytes | None:
+    """The commit's own .absolute-path-ignore, or None when it has none.
+
+    A symlink or directory of that name is refused (ValueError blocks the push),
+    as governance-check.sh refuses one at commit time.
+    """
     entry = git("ls-tree", sha, "--", PATH_IGNORE_FILE).split()
-    return git("cat-file", "blob", entry[2].decode()) if entry else b""
+    if not entry:
+        return None
+    if entry[0].decode() not in REGULAR:
+        raise ValueError(f"{PATH_IGNORE_FILE} must be a regular file")
+    return git("cat-file", "blob", entry[2].decode())
 
 
 def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, str]:
@@ -231,8 +239,13 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
+    ignore = path_ignore_of(sha)
     ignore_list = scratch / "absolute-path-ignore"  # beside the layer roots, never inside one
-    ignore_list.write_bytes(path_ignore_of(sha))
+    ignore_list.write_bytes(ignore or b"")
+    if ignore is not None:  # judge the list itself, even when no file here is scanned
+        code, output = run_validator("absolute-path-check.py", ["--ignore-file", str(ignore_list)], scratch)
+        if code != 0:
+            failures.append(("absolute-path-check.py", code, output))
     for index, blobs in enumerate(layers(introduced_files(sha))):
         root = scratch / str(index)
         root.mkdir()

@@ -109,3 +109,14 @@ def test_staged_ignore_list_is_the_one_judged(host):
     (root / ".absolute-path-ignore").write_text("")
     result = run_master(host)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_symlinked_ignore_list_is_refused_at_commit(host):
+    root, env = host
+    (root / "list").write_text("data/*.json  # cites county URLs\n")
+    (root / ".absolute-path-ignore").symlink_to("list")
+    subprocess.run(["git", "add", "list", ".absolute-path-ignore"], cwd=root, env=env,
+                   check=True, timeout=10)
+    result = run_master(host)
+    assert result.returncode == 1
+    assert "must be a regular file" in result.stdout + result.stderr
