@@ -15,10 +15,12 @@ Blocks commits that contain paths like:
 
 Exit codes:
 - 0: No absolute paths found, continue
-- 1: Absolute paths found, block commit
+- 1: Absolute paths found, or the ignore list is malformed: block commit
 
 Usage:
-  python absolute-path-check.py file1.py file2.js ...
+  python absolute-path-check.py [--ignore-file LIST] file1.py file2.js ...
+
+LIST is a copy of the repository's .absolute-path-ignore (see load_ignore_globs).
 """
 
 import fnmatch
@@ -190,8 +192,9 @@ def load_ignore_globs(path: Path | None) -> list[str]:
     (CivicPlus county documents are served at https://<host>/home/...): JSON has
     no comment to carry the deliberate-use marker. Every non-blank line is an
     entry: a glob with no spaces (it may contain `#`), whitespace, `#`, then
-    the reason (`data/*.json  # why`); there are no comment lines. Globs match with fnmatch against
-    the path as passed, repo-relative at both gates (`*` also crosses `/`). An
+    the reason (`data/*.json  # why`); there are no comment lines. Globs match
+    with fnmatch against the path as passed, repo-relative at both gates (`*`
+    also crosses `/`). An
     entry with no reason raises ValueError, so the list cannot grow without a
     stated why. The callers extract the list from Git and pass `--ignore-file`:
     governance-check.sh the staged copy, push-range-check.py each pushed
@@ -200,7 +203,9 @@ def load_ignore_globs(path: Path | None) -> list[str]:
     if path is None:
         return []
     globs = []
-    for number, raw in enumerate(path.read_text().splitlines(), 1):
+    # utf-8-sig: a byte-order mark would otherwise glue onto the first glob and
+    # silently stop it matching; the locale encoding must not decide either.
+    for number, raw in enumerate(path.read_text(encoding='utf-8-sig').splitlines(), 1):
         line = raw.strip()
         if not line:
             continue
@@ -271,6 +276,8 @@ def main():
 
         print("Fix by using relative paths or environment variables instead.", file=sys.stderr)
         print("Example: Use './data/file.csv' or '$PROJECT_ROOT/data/file.csv'", file=sys.stderr)
+        print(f"Data citing web URLs with such a path: list the file in {IGNORE_FILE} "
+              "at the repo root ('<glob>  # <reason>').", file=sys.stderr)
         
         sys.exit(1)
     else:

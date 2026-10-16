@@ -203,7 +203,7 @@ class TestExitCodes:
         assert self._run(f).returncode == 1
 
     def test_ignore_file_skips_listed_paths_only(self, tmp_path):
-        (tmp_path / "list").write_text("#raw/c#1/*.json  # cites county URLs\n")
+        (tmp_path / "list").write_text("#raw/c#1/*.json  # cites county URLs\n", encoding="utf-8-sig")
         (tmp_path / "#raw" / "c#1").mkdir(parents=True)
         (tmp_path / "#raw" / "c#1" / "kb.json").write_text(f'"{LINUX}x"\n')
         (tmp_path / "app.py").write_text(f"P = '{LINUX}x'\n")
