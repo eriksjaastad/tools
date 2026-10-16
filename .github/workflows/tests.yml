@@ -7,7 +7,7 @@ name: Tests
 # 2026-09-01). This job only reports.
 #
 # Includes governance, authentication,
-# remediation-hook, workflow-sync and route pricing regressions. Authentication
+# remediation-hook and workflow-sync regressions. Authentication
 # executables are stubbed; these suites do not mint live tokens or call
 # providers.
 
