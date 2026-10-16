@@ -116,9 +116,11 @@ def test_committed_blob_is_checked_not_the_worktree(repo):
 
 def test_commits_ignore_file_applies_at_push(repo):
     """The commit's own list is judged, even beside a case-colliding sibling."""
-    commit(repo, ".absolute-path-ignore", "data/*.json  # cites county URLs\n", "ignore list")
-    commit(repo, ".ABSOLUTE-PATH-IGNORE", "# not the list\n", "case sibling")
-    commit(repo, "data/kb.json", ABSOLUTE, "county data")
+    # Built with plumbing: a case-insensitive worktree cannot stage both names.
+    for name, text in ((".absolute-path-ignore", "data/*.json  # cites county URLs\n"),
+                       (".ABSOLUTE-PATH-IGNORE", "# not the list\n"), ("data/kb.json", ABSOLUTE)):
+        git(repo, "update-index", "--add", "--cacheinfo", f"100644,{blob(repo, text)},{name}")
+    git(repo, "commit", "-qm", "county data")
     result = push(repo, "main")
     assert result.returncode == 0, result.stderr
 
