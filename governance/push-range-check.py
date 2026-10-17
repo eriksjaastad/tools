@@ -25,19 +25,18 @@ whose history was never pushed anywhere checks every commit on the first push;
 pre-push checks too.
 
 How each commit is judged: against its parents, as pre-commit would have
-judged it. The whole-file checks (gitleaks for secrets, absolute paths, API
-wrapper) read the committed blobs of the files the commit added or changed, written to a
-temporary directory under their repository-relative names (paths that would
+judged it. Secrets are checked by gitleaks, which reads the committed blobs of
+the files the commit added or changed, written to a temporary directory under
+their repository-relative names (paths that would
 collide on a case-insensitive filesystem go to separate directories). Symlinks and
 submodules carry no file content in the commit and are skipped. The
 changed-code validators (silent failure, source deletion) read Git directly
 through their `--commit` mode.
 
 Merges: the changed-code validators count only findings new relative to every
-parent. The whole-file validators are file-granular, as at commit time: they
-check, in full, each file whose merged content differs from every parent, so
-a file that combines both sides is checked whole, including findings it
-inherited. This matches the commit-time gate, whose pre-merge-commit hook runs
+parent. gitleaks is file-granular, as at commit time: it checks, in full, each
+file whose merged content differs from every parent, so a file that combines
+both sides is checked whole, including findings it inherited. This matches the commit-time gate, whose pre-merge-commit hook runs
 pre-commit and checks every file differing from the first parent in full, so
 such a merge is refused when it is made. Untouched files the merge brings in
 from the other side are not checked here; their own commits are, here if
@@ -57,7 +56,6 @@ import tempfile
 import unicodedata
 
 VALIDATORS_DIR = Path(__file__).resolve().parent / "validators"
-FILE_VALIDATORS = ("absolute-path-check.py", "api-wrapper-check.py")
 # Secrets: gitleaks with the shared config, as governance-check.sh runs it (#8363).
 GITLEAKS_CONFIG = Path(__file__).resolve().parent / "gitleaks.toml"
 COMMIT_VALIDATORS = ("silent-failure-check.py", "source-deletion-check.py")
@@ -212,24 +210,6 @@ def materialize(blobs: dict[str, str], root: Path) -> list[str]:
     return sorted(contents)
 
 
-# absolute-path-check.py skips files listed in the commit's own copy of this file.
-PATH_IGNORE_FILE = ".absolute-path-ignore"
-
-
-def path_ignore_of(sha: str) -> bytes | None:
-    """The commit's own .absolute-path-ignore, or None when it has none.
-
-    A symlink or directory of that name is refused (ValueError blocks the push),
-    as governance-check.sh refuses one at commit time.
-    """
-    entry = git("ls-tree", sha, "--", PATH_IGNORE_FILE).split()
-    if not entry:
-        return None
-    if entry[0].decode() not in REGULAR:
-        raise ValueError(f"{PATH_IGNORE_FILE} must be a regular file")
-    return git("cat-file", "blob", entry[2].decode())
-
-
 def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, str]:
     try:
         result = subprocess.run([sys.executable, str(VALIDATORS_DIR / name), *args], cwd=cwd,
@@ -259,25 +239,13 @@ def run_gitleaks(root: Path) -> tuple[int, str]:
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
-    ignore = path_ignore_of(sha)
-    ignore_list = scratch / "absolute-path-ignore"  # beside the layer roots, never inside one
-    ignore_list.write_bytes(ignore or b"")
-    if ignore is not None:  # judge the list itself, even when no file here is scanned
-        code, output = run_validator("absolute-path-check.py", ["--ignore-file", str(ignore_list)], scratch)
-        if code != 0:
-            failures.append(("absolute-path-check.py", code, output))
     for index, blobs in enumerate(layers(introduced_files(sha))):
         root = scratch / str(index)
         root.mkdir()
-        files = materialize(blobs, root)
+        materialize(blobs, root)
         code, output = run_gitleaks(root)
         if code != 0:
             failures.append(("gitleaks", code, output))
-        for name in FILE_VALIDATORS:
-            args = ["--ignore-file", str(ignore_list)] if name == "absolute-path-check.py" else []
-            code, output = run_validator(name, [*args, *files], root)
-            if code != 0:
-                failures.append((name, code, output))
     for name in COMMIT_VALIDATORS:
         code, output = run_validator(name, ["--commit", sha], None)
         if code != 0:

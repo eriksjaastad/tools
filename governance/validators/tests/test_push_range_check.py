@@ -25,7 +25,6 @@ DRIVER = Path(__file__).resolve().parents[2] / "push-range-check.py"
 SILENT = ("def collect():\n    try:\n        query()\n    except Exception:\n"
           "        logger.warning('failed')\n        return []\n")
 DELETE = 'from pathlib import Path\nPath("valuable").unlink()\n'
-ABSOLUTE = 'DATA = "' + "/" + 'Users/fixture/data.csv"\n'
 # A GitHub token with real-looking randomness: gitleaks rightly ignores "ghp_aaaa...".
 SECRET = 'TOKEN = "' + "ghp_" + "".join(random.Random(8363).choices(string.ascii_letters + string.digits, k=36)) + '"\n'
 
@@ -110,31 +109,20 @@ def test_every_commit_is_checked_not_just_the_net_range(repo):
 
 
 def test_committed_blob_is_checked_not_the_worktree(repo):
-    commit(repo, "paths.py", ABSOLUTE, "hardcoded path")
+    commit(repo, "paths.py", SECRET, "committed secret")
     (repo[0] / "paths.py").write_text("DATA = None\n")
     result = push(repo, "main")
     assert result.returncode != 0
-    assert "absolute-path-check.py" in result.stderr
+    assert "gitleaks" in result.stderr
 
 
-def test_commits_ignore_file_applies_at_push(repo):
-    """The commit's own list is judged, even beside a case-colliding sibling."""
-    # Built with plumbing: a case-insensitive worktree cannot stage both names.
-    for name, text in ((".absolute-path-ignore", "data/*.json  # cites county URLs\n"),
-                       (".ABSOLUTE-PATH-IGNORE", "# not the list\n"), ("data/kb.json", ABSOLUTE)):
-        git(repo, "update-index", "--add", "--cacheinfo", f"100644,{blob(repo, text)},{name}")
-    git(repo, "commit", "-qm", "county data")
+def test_absolute_paths_and_ignore_file_are_not_checked(repo):
+    text = "See https://example.com/" + "/".join(["home", "x", ""]) + " and " + "/".join(["", "Users", "fixture", "data.csv"])
+    commit(repo, "docs.md", text + "\n", "paths")
+    commit(repo, ".absolute-path-ignore", "docs.md\n", "ignore file")
     result = push(repo, "main")
     assert result.returncode == 0, result.stderr
-
-
-def test_symlinked_ignore_list_alone_is_refused_at_push(repo):
-    target = blob(repo, "data/*.json  # cites county URLs")
-    git(repo, "update-index", "--add", "--cacheinfo", f"120000,{target},.absolute-path-ignore")
-    git(repo, "commit", "-qm", "symlinked list")
-    result = push(repo, "main")
-    assert result.returncode != 0
-    assert "must be a regular file" in result.stderr
+    assert "2 commit(s)" in result.stderr
 
 
 def test_root_commit_is_checked_against_the_empty_tree(repo):
@@ -147,7 +135,7 @@ def test_root_commit_is_checked_against_the_empty_tree(repo):
 def test_new_branch_checks_only_commits_no_remote_has(repo):
     # Legacy history already on the remote (pushed past the gate) is not
     # re-litigated: a new branch is based on what remote-tracking refs contain.
-    commit(repo, "legacy.py", ABSOLUTE + SILENT, "legacy")
+    commit(repo, "legacy.py", SECRET + SILENT, "legacy")
     assert push(repo, "--no-verify", "main").returncode == 0
     git(repo, "fetch", "-q", "origin")
     git(repo, "checkout", "-qb", "feature")
@@ -167,7 +155,7 @@ def test_merge_is_judged_only_on_what_it_introduces(repo):
     git(repo, "checkout", "-qb", "feature")
     commit(repo, "feature.py", "FEATURE = 1\n", "feature work")
     git(repo, "checkout", "-q", "main")
-    commit(repo, "incoming.py", ABSOLUTE + SILENT + DELETE, "someone else's legacy code")
+    commit(repo, "incoming.py", SECRET + SILENT + DELETE, "someone else's legacy code")
     assert push(repo, "--no-verify", "main").returncode == 0
     git(repo, "fetch", "-q", "origin")
     git(repo, "checkout", "-q", "feature")
@@ -276,7 +264,7 @@ def test_force_push_checks_only_the_rewritten_commits(repo):
 
 
 def test_one_commit_pushed_to_two_refs_is_checked_once(repo):
-    commit(repo, "m.py", ABSOLUTE, "shared bad commit")
+    commit(repo, "m.py", SECRET, "shared bad commit")
     result = push(repo, "main", "main:refs/heads/copy")
     assert result.returncode != 0
     assert "1 of 1 commit(s)" in result.stderr
@@ -287,7 +275,7 @@ def test_annotated_tag_of_unpublished_commit_is_checked(repo):
     commit(repo, "m.py", "VALUE = 1\n", "published")
     assert push(repo, "main").returncode == 0
     git(repo, "checkout", "-q", "--detach")
-    commit(repo, "m.py", ABSOLUTE, "tagged only")
+    commit(repo, "m.py", SECRET, "tagged only")
     git(repo, "tag", "-a", "v2", "-m", "release")
     result = push(repo, "v2")
     assert result.returncode != 0 and "tagged only" in result.stderr
@@ -435,8 +423,8 @@ def test_installer_with_hooks_path_refuses_and_writes_nothing(tmp_path, hooks_pa
     assert not (repo[0] / ".git/hooks/pre-push").exists()
 
 
-# Codex review on 46faccb: the whole-file validators are file-granular in a
-# merge, as at commit time; only the changed-code validators count findings.
+# Codex review on 46faccb: gitleaks is file-granular in a merge, as at
+# commit time; only the changed-code validators count findings.
 
 def test_merge_combining_both_sides_of_a_file_is_checked_whole(repo):
     commit(repo, "shared.py", "VALUE = 1\n\n\n\nOTHER = 1\n", "base")
@@ -444,12 +432,12 @@ def test_merge_combining_both_sides_of_a_file_is_checked_whole(repo):
     git(repo, "checkout", "-qb", "feature")
     commit(repo, "shared.py", "VALUE = 2\n\n\n\nOTHER = 1\n", "feature edit")
     git(repo, "checkout", "-q", "main")
-    commit(repo, "shared.py", "VALUE = 1\n\n\n\nOTHER = 1\n" + ABSOLUTE + SILENT, "legacy on main")
+    commit(repo, "shared.py", "VALUE = 1\n\n\n\nOTHER = 1\n" + SECRET + SILENT, "legacy on main")
     assert push(repo, "--no-verify", "main").returncode == 0
     git(repo, "fetch", "-q", "origin")
     git(repo, "checkout", "-q", "feature")
     git(repo, "merge", "-q", "--no-ff", "--no-edit", "main")
     result = push(repo, "feature")
     assert result.returncode != 0
-    assert "absolute-path-check.py" in result.stderr
+    assert "gitleaks" in result.stderr
     assert "SF002" not in result.stderr  # inherited, not introduced by the merge

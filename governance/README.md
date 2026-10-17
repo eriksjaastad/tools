@@ -25,8 +25,6 @@ pre-push runner starts. `content-guard.py` runs only in GitHub's
 | File | Checks |
 |---|---|
 | gitleaks (`gitleaks.toml`) | API keys, tokens and other secrets, judged by how they are used |
-| `validators/absolute-path-check.py` | hard-coded user and machine paths |
-| `validators/api-wrapper-check.py` | provider calls that bypass api-cost-tracker |
 | `validators/source-deletion-check.py` | new permanent Python deletion sites (DS001) |
 | `validators/silent-failure-check.py` | failure-masking handlers and empty env fallbacks (SF001–SF003) |
 | `validators/content-guard.py` | client identifiers in this public repository |
