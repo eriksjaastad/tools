@@ -179,3 +179,24 @@ def test_staged_content_is_judged_not_the_worktree(host):
     result = run_master(host)
     assert result.returncode == 1, result.stdout + result.stderr
     assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_colon_named_staged_secret_is_scanned(host):
+    """A leading ':' is pathspec magic unless looked up literally (fail-open in c69bab8)."""
+    root, env = host
+    (root / ":colon.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "--literal-pathspecs", "add", ":colon.py"], cwd=root, env=env,
+                   check=True, timeout=10)
+    result = run_master(host)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_unstaged_argument_fails_the_secrets_check(host, tmp_path):
+    root, env = host
+    outside = tmp_path / "outside.py"
+    outside.write_text("VALUE = 1\n")
+    result = subprocess.run(["bash", str(MASTER), str(outside)], cwd=root, env=env,
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "no single staged entry for" in result.stdout + result.stderr

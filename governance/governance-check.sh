@@ -92,8 +92,10 @@ esac
 
 # Secrets: gitleaks over the STAGED blobs of these files, written under their
 # repository-relative names as push-range-check.py writes committed blobs, so both
-# gates judge the same content the same way. Symlinks, gitlinks and unstaged
-# paths carry no staged file content and are skipped, as at push. Its
+# gates judge the same content the same way. Symlinks and gitlinks carry no file
+# content and are skipped, as at push. Each path is looked up literally (a name
+# such as ':x.py' is not pathspec magic); a lookup error, or a path with no single
+# staged entry, fails the check rather than leaving the file unscanned. Its
 # .gitleaksignore is read from this directory, never from the repository.
 echo -n "Running gitleaks... "
 if ! command -v gitleaks >/dev/null 2>&1; then
@@ -103,26 +105,36 @@ if ! command -v gitleaks >/dev/null 2>&1; then
 else
     SECRETS_DIR=$(mktemp -d)
     trap 'rm -rf "${STAGED_LIST:-}" "$IGNORE_LIST" "$SECRETS_DIR"' EXIT
-    while IFS= read -r -d '' entry; do
-        meta=${entry%%$'\t'*}
-        path=${entry#*$'\t'}
-        case "$meta" in
+    SECRETS_UNREAD=""
+    for f in "${STAGED_FILES[@]}"; do
+        if ! entry=$(git --literal-pathspecs ls-files -s -- "$f"); then
+            SECRETS_UNREAD="$SECRETS_UNREAD $f"
+            continue
+        fi
+        case "$entry" in
+            ""|*$'\n'*) SECRETS_UNREAD="$SECRETS_UNREAD $f"; continue ;;  # unstaged, a directory or unmerged
             100644\ *|100755\ *) ;;
-            *) continue ;;
+            *) continue ;;  # symlink or gitlink
         esac
-        oid=${meta#* }
+        oid=${entry#* }
         oid=${oid%% *}
-        mkdir -p "$SECRETS_DIR/$(dirname "$path")"
-        git cat-file blob "$oid" > "$SECRETS_DIR/$path"
-    done < <(git ls-files -s -z -- "${STAGED_FILES[@]}")
+        mkdir -p "$SECRETS_DIR/$(dirname "$f")"
+        git cat-file blob "$oid" > "$SECRETS_DIR/$f"
+    done
     # --exit-code 2 marks a finding, so any other failure is reported as an error.
     set +e
     gitleaks dir "$SECRETS_DIR" --config "$SCRIPT_DIR/gitleaks.toml" --gitleaks-ignore-path "$SCRIPT_DIR" \
         --exit-code 2 --timeout 300 --no-banner --redact --verbose --log-level warn 2>&1
     GITLEAKS_STATUS=$?
     set -e
+    if [ -n "$SECRETS_UNREAD" ]; then
+        GITLEAKS_STATUS=3
+    fi
     case "$GITLEAKS_STATUS" in
         0) echo -e "${GREEN}✓ PASS${NC}" ;;
+        3) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}no single staged entry for:$SECRETS_UNREAD; secrets were not checked for them${NC}" >&2
+           OVERALL_STATUS=1 ;;
         2) echo -e "${RED}✗ FAIL${NC}"
            echo -e "${RED}gitleaks found a likely secret (value redacted above)${NC}" >&2
            OVERALL_STATUS=1 ;;
