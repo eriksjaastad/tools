@@ -90,31 +90,46 @@ case "$IGNORE_ENTRY" in
         exit 1 ;;
 esac
 
-# Secrets: gitleaks over the staged files, linked under their repository-relative
-# names (read from disk, like the whole-file validators). Its .gitleaksignore is
-# read from this directory, never from the repository, so a repo cannot add one.
+# Secrets: gitleaks over the STAGED blobs of these files, written under their
+# repository-relative names as push-range-check.py writes committed blobs, so both
+# gates judge the same content the same way. Symlinks, gitlinks and unstaged
+# paths carry no staged file content and are skipped, as at push. Its
+# .gitleaksignore is read from this directory, never from the repository.
 echo -n "Running gitleaks... "
 if ! command -v gitleaks >/dev/null 2>&1; then
     echo -e "${RED}✗ FAIL${NC}"
-    echo -e "${RED}gitleaks is not installed (brew install gitleaks); secrets cannot be checked${NC}" >&2
+    echo -e "${RED}gitleaks not found on PATH (install: brew install gitleaks; a GUI git client may need /opt/homebrew/bin on its PATH); secrets cannot be checked${NC}" >&2  # absolute path intentional: install hint text
     OVERALL_STATUS=1
 else
     SECRETS_DIR=$(mktemp -d)
     trap 'rm -rf "${STAGED_LIST:-}" "$IGNORE_LIST" "$SECRETS_DIR"' EXIT
-    for f in "${STAGED_FILES[@]}"; do
-        [ -f "$f" ] || continue
-        case "$f" in /*) src="$f" ;; *) src="$PWD/$f" ;; esac
-        mkdir -p "$SECRETS_DIR/$(dirname "$f")"
-        ln -s "$src" "$SECRETS_DIR/$f"
-    done
-    if gitleaks dir "$SECRETS_DIR" --follow-symlinks --config "$SCRIPT_DIR/gitleaks.toml" \
-            --gitleaks-ignore-path "$SCRIPT_DIR" --no-banner --redact --verbose --log-level warn 2>&1; then
-        echo -e "${GREEN}✓ PASS${NC}"
-    else
-        echo -e "${RED}✗ FAIL${NC}"
-        echo -e "${RED}gitleaks found a likely secret (value redacted above)${NC}" >&2
-        OVERALL_STATUS=1
-    fi
+    while IFS= read -r -d '' entry; do
+        meta=${entry%%$'\t'*}
+        path=${entry#*$'\t'}
+        case "$meta" in
+            100644\ *|100755\ *) ;;
+            *) continue ;;
+        esac
+        oid=${meta#* }
+        oid=${oid%% *}
+        mkdir -p "$SECRETS_DIR/$(dirname "$path")"
+        git cat-file blob "$oid" > "$SECRETS_DIR/$path"
+    done < <(git ls-files -s -z -- "${STAGED_FILES[@]}")
+    # --exit-code 2 marks a finding, so any other failure is reported as an error.
+    set +e
+    gitleaks dir "$SECRETS_DIR" --config "$SCRIPT_DIR/gitleaks.toml" --gitleaks-ignore-path "$SCRIPT_DIR" \
+        --exit-code 2 --timeout 300 --no-banner --redact --verbose --log-level warn 2>&1
+    GITLEAKS_STATUS=$?
+    set -e
+    case "$GITLEAKS_STATUS" in
+        0) echo -e "${GREEN}✓ PASS${NC}" ;;
+        2) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}gitleaks found a likely secret (value redacted above)${NC}" >&2
+           OVERALL_STATUS=1 ;;
+        *) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}gitleaks failed to run (exit $GITLEAKS_STATUS, see above); secrets were not checked${NC}" >&2
+           OVERALL_STATUS=1 ;;
+    esac
 fi
 
 # Array of validators to run

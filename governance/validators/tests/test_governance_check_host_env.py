@@ -152,3 +152,30 @@ def test_missing_gitleaks_fails_closed(host):
                             capture_output=True, text=True, timeout=120)
     assert result.returncode == 1
     assert "brew install gitleaks" in result.stdout + result.stderr
+
+
+
+def test_repository_cannot_weaken_gitleaks(host, tmp_path):
+    """The shared --config wins over a staged .gitleaks.toml and over GITLEAKS_CONFIG."""
+    root, env = host
+    allow_all = '[[allowlists]]\npaths = [".*"]\n'
+    (tmp_path / "allow.toml").write_text(allow_all)
+    (root / ".gitleaks.toml").write_text(allow_all)
+    (root / "data.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "add", ".gitleaks.toml", "data.py"], cwd=root, env=env, check=True, timeout=10)
+    result = subprocess.run(["bash", str(MASTER)], cwd=root,
+                            env={**env, "GITLEAKS_CONFIG": str(tmp_path / "allow.toml")},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_staged_content_is_judged_not_the_worktree(host):
+    """#8363: the commit gate scans staged blobs, as the push gate scans committed ones."""
+    root, env = host
+    (root / "data.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "add", "data.py"], cwd=root, env=env, check=True, timeout=10)
+    (root / "data.py").write_text("TOKEN = None\n")
+    result = run_master(host)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr

@@ -301,6 +301,29 @@ def test_tag_of_a_blob_publishes_no_commits(repo):
     assert result.returncode == 0 and "commit(s)" not in result.stderr
 
 
+def test_commit_cannot_weaken_gitleaks_at_push(repo):
+    # Same commit, so the repo's .gitleaks.toml lands in the scanned layer root.
+    (repo[0] / ".gitleaks.toml").write_text('[[allowlists]]\npaths = [".*"]\n')
+    (repo[0] / "config.py").write_text(SECRET)
+    git(repo, "add", ".gitleaks.toml", "config.py")
+    git(repo, "commit", "-qm", "token with an allow-all config")
+    result = push(repo, "main")
+    assert result.returncode != 0
+    assert "gitleaks (exit 2)" in result.stderr
+
+
+def test_gitleaks_timeout_blocks(tmp_path, monkeypatch):
+    driver = load_driver()
+    fake = tmp_path / "bin" / "gitleaks"
+    fake.parent.mkdir()
+    fake.write_text("#!/bin/sh\nsleep 30\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", str(fake.parent) + os.pathsep + os.environ["PATH"])
+    monkeypatch.setattr(driver, "VALIDATOR_TIMEOUT", 0.5)
+    code, output = driver.run_gitleaks(tmp_path)
+    assert code == 124 and "timed out" in output
+
+
 def test_missing_gitleaks_blocks_the_push(repo):
     commit(repo, "a.py", "VALUE = 1\n", "plain")
     root, env, _ = repo

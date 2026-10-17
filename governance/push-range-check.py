@@ -240,15 +240,20 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
 
 
 def run_gitleaks(root: Path) -> tuple[int, str]:
-    """gitleaks over one scratch layer; .gitleaksignore only from the governance directory."""
+    """gitleaks over one scratch layer; .gitleaksignore only from the governance directory.
+
+    --exit-code 2 marks a finding, so any other nonzero exit is labelled an error.
+    """
     try:
         result = subprocess.run(["gitleaks", "dir", str(root), "--config", str(GITLEAKS_CONFIG),
                                  "--gitleaks-ignore-path", str(GITLEAKS_CONFIG.parent),
+                                 "--exit-code", "2", "--timeout", str(int(VALIDATOR_TIMEOUT)),
                                  "--no-banner", "--redact", "--verbose", "--log-level", "warn"],
                                 capture_output=True, text=True, timeout=VALIDATOR_TIMEOUT)
     except subprocess.TimeoutExpired:
         return 124, f"gitleaks timed out after {VALIDATOR_TIMEOUT}s\n"
-    return result.returncode, result.stdout + result.stderr
+    label = "" if result.returncode in (0, 2) else "gitleaks failed to run; secrets were not checked\n"
+    return result.returncode, label + result.stdout + result.stderr
 
 
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
@@ -293,7 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     if not commits:
         return 0
     if shutil.which("gitleaks") is None:
-        print("governance push check: gitleaks is not installed (brew install gitleaks); "
+        print("governance push check: gitleaks not found on PATH (install: brew install gitleaks); "
               "secrets cannot be checked", file=sys.stderr)
         return 1
     print(f"governance push check: {len(commits)} commit(s)", file=sys.stderr)
