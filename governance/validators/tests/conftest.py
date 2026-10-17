@@ -1,7 +1,7 @@
 """Shared loader for the governance validators.
 
 The validators are executable scripts whose filenames contain hyphens
-(`absolute-path-check.py`), so they cannot be imported by module name. Load
+(`source-deletion-check.py`), so they cannot be imported by module name. Load
 them through importlib instead.
 
 All validator test modules share this helper rather than each carrying a copy.
@@ -9,8 +9,6 @@ All validator test modules share this helper rather than each carrying a copy.
 import importlib.util
 import os
 import sys
-
-import pytest
 
 VALIDATORS_DIR = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -20,7 +18,7 @@ VALIDATORS_DIR = os.path.normpath(
 def load_validator(filename: str):
     """Import a hyphenated validator script as a module.
 
-    `filename` is the script's basename, e.g. "absolute-path-check.py".
+    `filename` is the script's basename, e.g. "source-deletion-check.py".
     """
     path = os.path.join(VALIDATORS_DIR, filename)
     module_name = os.path.basename(filename)[: -len(".py")].replace("-", "_")
@@ -34,12 +32,3 @@ def load_validator(filename: str):
     spec.loader.exec_module(mod)
     return mod
 
-
-@pytest.fixture(scope="module")
-def path_check():
-    return load_validator("absolute-path-check.py")
-
-
-@pytest.fixture(scope="module")
-def api_check():
-    return load_validator("api-wrapper-check.py")

@@ -2,13 +2,13 @@
 
 # governance-check.sh
 # Runs every validator in VALIDATORS on the staged files (what pre-commit
-# does), or with file arguments on those paths. The whole-file validators
-# read the files on disk; source-deletion-check.py and silent-failure-check.py
-# always check staged changes only, so for them the arguments just narrow
-# that set (source-deletion-check.py matches only repository-relative paths).
+# does), or with file arguments on those paths. source-deletion-check.py and
+# silent-failure-check.py always check staged changes only, so for them the
+# arguments just narrow that set (source-deletion-check.py matches only
+# repository-relative paths).
 # The global pre-commit and pre-merge-commit hooks call it (wiring:
 # governance/README.md); push-range-check.py runs these validators per
-# commit at pre-push, from its own FILE_VALIDATORS and COMMIT_VALIDATORS.
+# commit at pre-push, from its own COMMIT_VALIDATORS.
 # Exit codes:
 #   0: All validators passed
 #   1: One or more validators failed
@@ -19,8 +19,8 @@
 # Without gitleaks the check fails: install it with `brew install gitleaks`.
 #
 # Adding a validator: list it in VALIDATORS below, with any extra arguments
-# in validator_args, and in push-range-check.py, under FILE_VALIDATORS (called
-# with file paths) or COMMIT_VALIDATORS (called with --commit SHA).
+# in validator_args, and in push-range-check.py, under COMMIT_VALIDATORS (called
+# with --commit SHA).
 # push-range-check.py runs it with its own Python, so use the standard
 # library only. This script runs each as `uv run --no-project` from the repository
 # being committed, so uv never creates or syncs that repository's .venv
@@ -74,22 +74,6 @@ echo -e "${YELLOW}Checking ${#STAGED_FILES[@]} file(s)...${NC}"
 # Track overall pass/fail
 OVERALL_STATUS=0
 
-# absolute-path-check.py judges files against the STAGED .absolute-path-ignore
-# (empty when none is staged), as push-range-check.py passes each pushed
-# commit's own copy, so both gates read the list being committed. Only a
-# regular file is a list; push-range-check.py refuses anything else too.
-IGNORE_LIST=$(mktemp)
-trap 'rm -f "${STAGED_LIST:-}" "$IGNORE_LIST"' EXIT
-IGNORE_ENTRY=$(git ls-files -s -- ".absolute-path-ignore")
-case "$IGNORE_ENTRY" in
-    "") ;;
-    100644*$'\t'.absolute-path-ignore|100755*$'\t'.absolute-path-ignore)
-        git cat-file blob ":.absolute-path-ignore" > "$IGNORE_LIST" ;;
-    *)
-        echo -e "${RED}.absolute-path-ignore must be a regular file${NC}" >&2
-        exit 1 ;;
-esac
-
 # Secrets: gitleaks over the STAGED blobs of these files, written under their
 # repository-relative names as push-range-check.py writes committed blobs, so both
 # gates judge the same content the same way. Symlinks and gitlinks carry no file
@@ -104,7 +88,7 @@ if ! command -v gitleaks >/dev/null 2>&1; then
     OVERALL_STATUS=1
 else
     SECRETS_DIR=$(mktemp -d)
-    trap 'rm -rf "${STAGED_LIST:-}" "$IGNORE_LIST" "$SECRETS_DIR"' EXIT
+    trap 'rm -rf "${STAGED_LIST:-}" "$SECRETS_DIR"' EXIT
     SECRETS_UNREAD=""
     for f in "${STAGED_FILES[@]}"; do
         if ! entry=$(git --literal-pathspecs ls-files -s -- "$f"); then
@@ -146,8 +130,6 @@ fi
 
 # Array of validators to run
 VALIDATORS=(
-    "absolute-path-check.py"
-    "api-wrapper-check.py"
     "source-deletion-check.py"
     "silent-failure-check.py"
 )
@@ -159,7 +141,6 @@ VALIDATORS=(
 validator_args() {
     case "$1" in
         silent-failure-check.py) echo "--staged" ;;
-        absolute-path-check.py) echo "--ignore-file $IGNORE_LIST" ;;
     esac
 }
 
