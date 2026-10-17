@@ -13,6 +13,11 @@
 #   0: All validators passed
 #   1: One or more validators failed
 #
+# Secrets are checked by gitleaks, the standard scanner (#8363), with the shared
+# governance/gitleaks.toml over the same staged files; it judges a value by how
+# it is used (an assignment's name, a known token prefix), not by its shape.
+# Without gitleaks the check fails: install it with `brew install gitleaks`.
+#
 # Adding a validator: list it in VALIDATORS below, with any extra arguments
 # in validator_args, and in push-range-check.py, under FILE_VALIDATORS (called
 # with file paths) or COMMIT_VALIDATORS (called with --commit SHA).
@@ -85,9 +90,35 @@ case "$IGNORE_ENTRY" in
         exit 1 ;;
 esac
 
+# Secrets: gitleaks over the staged files, linked under their repository-relative
+# names (read from disk, like the whole-file validators). Its .gitleaksignore is
+# read from this directory, never from the repository, so a repo cannot add one.
+echo -n "Running gitleaks... "
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo -e "${RED}✗ FAIL${NC}"
+    echo -e "${RED}gitleaks is not installed (brew install gitleaks); secrets cannot be checked${NC}" >&2
+    OVERALL_STATUS=1
+else
+    SECRETS_DIR=$(mktemp -d)
+    trap 'rm -rf "${STAGED_LIST:-}" "$IGNORE_LIST" "$SECRETS_DIR"' EXIT
+    for f in "${STAGED_FILES[@]}"; do
+        [ -f "$f" ] || continue
+        case "$f" in /*) src="$f" ;; *) src="$PWD/$f" ;; esac
+        mkdir -p "$SECRETS_DIR/$(dirname "$f")"
+        ln -s "$src" "$SECRETS_DIR/$f"
+    done
+    if gitleaks dir "$SECRETS_DIR" --follow-symlinks --config "$SCRIPT_DIR/gitleaks.toml" \
+            --gitleaks-ignore-path "$SCRIPT_DIR" --no-banner --redact --verbose --log-level warn 2>&1; then
+        echo -e "${GREEN}✓ PASS${NC}"
+    else
+        echo -e "${RED}✗ FAIL${NC}"
+        echo -e "${RED}gitleaks found a likely secret (value redacted above)${NC}" >&2
+        OVERALL_STATUS=1
+    fi
+fi
+
 # Array of validators to run
 VALIDATORS=(
-    "secrets-scanner.py"
     "absolute-path-check.py"
     "api-wrapper-check.py"
     "source-deletion-check.py"

@@ -25,8 +25,8 @@ whose history was never pushed anywhere checks every commit on the first push;
 pre-push checks too.
 
 How each commit is judged: against its parents, as pre-commit would have
-judged it. The whole-file validators (secrets, absolute paths, API wrapper)
-read the committed blobs of the files the commit added or changed, written to a
+judged it. The whole-file checks (gitleaks for secrets, absolute paths, API
+wrapper) read the committed blobs of the files the commit added or changed, written to a
 temporary directory under their repository-relative names (paths that would
 collide on a case-insensitive filesystem go to separate directories). Symlinks and
 submodules carry no file content in the commit and are skipped. The
@@ -50,13 +50,16 @@ import argparse
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unicodedata
 
 VALIDATORS_DIR = Path(__file__).resolve().parent / "validators"
-FILE_VALIDATORS = ("secrets-scanner.py", "absolute-path-check.py", "api-wrapper-check.py")
+FILE_VALIDATORS = ("absolute-path-check.py", "api-wrapper-check.py")
+# Secrets: gitleaks with the shared config, as governance-check.sh runs it (#8363).
+GITLEAKS_CONFIG = Path(__file__).resolve().parent / "gitleaks.toml"
 COMMIT_VALIDATORS = ("silent-failure-check.py", "source-deletion-check.py")
 REGULAR = {"100644", "100755"}
 HEX = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}")
@@ -236,6 +239,18 @@ def run_validator(name: str, args: list[str], cwd: Path | None) -> tuple[int, st
     return result.returncode, result.stdout + result.stderr
 
 
+def run_gitleaks(root: Path) -> tuple[int, str]:
+    """gitleaks over one scratch layer; .gitleaksignore only from the governance directory."""
+    try:
+        result = subprocess.run(["gitleaks", "dir", str(root), "--config", str(GITLEAKS_CONFIG),
+                                 "--gitleaks-ignore-path", str(GITLEAKS_CONFIG.parent),
+                                 "--no-banner", "--redact", "--verbose", "--log-level", "warn"],
+                                capture_output=True, text=True, timeout=VALIDATOR_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return 124, f"gitleaks timed out after {VALIDATOR_TIMEOUT}s\n"
+    return result.returncode, result.stdout + result.stderr
+
+
 def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
     """[(validator, exit code, output)] for every validator that did not pass."""
     failures = []
@@ -250,6 +265,9 @@ def check_commit(sha: str, scratch: Path) -> list[tuple[str, int, str]]:
         root = scratch / str(index)
         root.mkdir()
         files = materialize(blobs, root)
+        code, output = run_gitleaks(root)
+        if code != 0:
+            failures.append(("gitleaks", code, output))
         for name in FILE_VALIDATORS:
             args = ["--ignore-file", str(ignore_list)] if name == "absolute-path-check.py" else []
             code, output = run_validator(name, [*args, *files], root)
@@ -274,6 +292,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if not commits:
         return 0
+    if shutil.which("gitleaks") is None:
+        print("governance push check: gitleaks is not installed (brew install gitleaks); "
+              "secrets cannot be checked", file=sys.stderr)
+        return 1
     print(f"governance push check: {len(commits)} commit(s)", file=sys.stderr)
     blocked = 0
     with tempfile.TemporaryDirectory(prefix="governance-push-") as tmp:

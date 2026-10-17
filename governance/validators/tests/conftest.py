@@ -37,11 +37,6 @@ def load_validator(filename: str):
 
 
 @pytest.fixture(scope="module")
-def scanner():
-    return load_validator("secrets-scanner.py")
-
-
-@pytest.fixture(scope="module")
 def path_check():
     return load_validator("absolute-path-check.py")
 

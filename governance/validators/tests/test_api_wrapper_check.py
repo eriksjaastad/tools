@@ -64,7 +64,7 @@ class TestShouldCheckFile:
     def test_substring_lookalikes_are_still_checked(self, api_check, path):
         """The `(?:^|/)tests?/` anchoring must not match these.
 
-        Same class as the #6013 bug regression-tested in test_secrets_scanner.
+        Same class as the #6013 bug in the former secrets scanner.
         """
         assert api_check.should_check_file(Path(path)) is True
 
