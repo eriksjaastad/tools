@@ -13,7 +13,8 @@ Commit-time and push-time checks shared across the repositories on these machine
 
 Both reach only repositories that use the global hooks path: a repository with
 its own `core.hooksPath` runs them only if its own hooks do, and a machine
-without this checkout or uv skips them with a notice.
+without this checkout or uv skips them with a notice. The secrets check needs gitleaks
+(`brew install gitleaks`); where it is missing the check fails rather than skips.
 
 This repository's own checks are `scripts/local-checks.sh`, which the shared
 pre-push runner starts. `content-guard.py` runs only in GitHub's
@@ -23,7 +24,7 @@ pre-push runner starts. `content-guard.py` runs only in GitHub's
 
 | File | Checks |
 |---|---|
-| `validators/secrets-scanner.py` | API keys and tokens |
+| gitleaks (`gitleaks.toml`) | API keys, tokens and other secrets, judged by how they are used |
 | `validators/absolute-path-check.py` | hard-coded user and machine paths |
 | `validators/api-wrapper-check.py` | provider calls that bypass api-cost-tracker |
 | `validators/source-deletion-check.py` | new permanent Python deletion sites (DS001) |

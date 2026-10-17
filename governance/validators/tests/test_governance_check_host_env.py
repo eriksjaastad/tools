@@ -8,7 +8,9 @@ with the actual uv against a host repository that has a pyproject.toml.
 """
 import os
 from pathlib import Path
+import random
 import shutil
+import string
 import subprocess
 import sys
 
@@ -120,3 +122,81 @@ def test_symlinked_ignore_list_is_refused_at_commit(host):
     result = run_master(host)
     assert result.returncode == 1
     assert "must be a regular file" in result.stdout + result.stderr
+
+
+
+def _token():
+    return "ghp_" + "".join(random.Random(8363).choices(string.ascii_letters + string.digits, k=36))
+
+
+@pytest.mark.parametrize("text, blocked", [
+    ('SOURCE = "https://phillipscounty.colorado.gov/sites/g/files/lrnvjt1351/files/Final%20Junk.pdf"\n', False),
+    (None, True),
+], ids=["county-url", "github-token"])
+def test_gitleaks_judges_secrets_by_use(host, text, blocked):
+    """#8363: a 40-char URL path is not a secret; a real-looking token is."""
+    root, env = host
+    (root / "data.py").write_text(text or f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "add", "data.py"], cwd=root, env=env, check=True, timeout=10)
+    result = run_master(host)
+    assert (result.returncode == 1) == blocked, result.stdout + result.stderr
+    if blocked:
+        assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_missing_gitleaks_fails_closed(host):
+    root, env = host
+    no_gitleaks = {**env, "PATH": os.pathsep.join(p for p in env["PATH"].split(os.pathsep)
+                                                  if not (Path(p) / "gitleaks").exists())}
+    result = subprocess.run(["bash", str(MASTER)], cwd=root, env=no_gitleaks,
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 1
+    assert "brew install gitleaks" in result.stdout + result.stderr
+
+
+
+def test_repository_cannot_weaken_gitleaks(host, tmp_path):
+    """The shared --config wins over a staged .gitleaks.toml and over GITLEAKS_CONFIG."""
+    root, env = host
+    allow_all = '[[allowlists]]\npaths = [".*"]\n'
+    (tmp_path / "allow.toml").write_text(allow_all)
+    (root / ".gitleaks.toml").write_text(allow_all)
+    (root / "data.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "add", ".gitleaks.toml", "data.py"], cwd=root, env=env, check=True, timeout=10)
+    result = subprocess.run(["bash", str(MASTER)], cwd=root,
+                            env={**env, "GITLEAKS_CONFIG": str(tmp_path / "allow.toml")},
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_staged_content_is_judged_not_the_worktree(host):
+    """#8363: the commit gate scans staged blobs, as the push gate scans committed ones."""
+    root, env = host
+    (root / "data.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "add", "data.py"], cwd=root, env=env, check=True, timeout=10)
+    (root / "data.py").write_text("TOKEN = None\n")
+    result = run_master(host)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_colon_named_staged_secret_is_scanned(host):
+    """A leading ':' is pathspec magic unless looked up literally (fail-open in c69bab8)."""
+    root, env = host
+    (root / ":colon.py").write_text(f'TOKEN = "{_token()}"\n')
+    subprocess.run(["git", "--literal-pathspecs", "add", ":colon.py"], cwd=root, env=env,
+                   check=True, timeout=10)
+    result = run_master(host)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "gitleaks found a likely secret" in result.stdout + result.stderr
+
+
+def test_unstaged_argument_fails_the_secrets_check(host, tmp_path):
+    root, env = host
+    outside = tmp_path / "outside.py"
+    outside.write_text("VALUE = 1\n")
+    result = subprocess.run(["bash", str(MASTER), str(outside)], cwd=root, env=env,
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "no single staged entry for" in result.stdout + result.stderr

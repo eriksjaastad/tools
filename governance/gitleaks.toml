@@ -1,0 +1,12 @@
+# Shared gitleaks config for both governance gates (#8363): governance-check.sh at
+# commit and push-range-check.py at push pass it with --config, so a repository
+# cannot replace or weaken the rules. useDefault keeps every upstream rule. For a
+# false positive, mark the line with an inline `gitleaks:allow` comment (visible in
+# the diff) or add a reviewed [[allowlists]] entry here. Scope differs from the
+# retired secrets-scanner.py: Markdown, tests/ and .env.example files are scanned
+# too (mark realistic fake tokens in fixtures `gitleaks:allow`), while gitleaks'
+# default allowlist skips lockfiles and vendored dependency directories.
+title = "governance"
+
+[extend]
+useDefault = true

@@ -11,7 +11,9 @@ repository's own pre-commit gate.
 import importlib.util
 import os
 from pathlib import Path
+import random
 import shlex
+import string
 import subprocess
 import sys
 
@@ -24,7 +26,8 @@ SILENT = ("def collect():\n    try:\n        query()\n    except Exception:\n"
           "        logger.warning('failed')\n        return []\n")
 DELETE = 'from pathlib import Path\nPath("valuable").unlink()\n'
 ABSOLUTE = 'DATA = "' + "/" + 'Users/fixture/data.csv"\n'
-SECRET = 'TOKEN = "' + "ghp_" + "a" * 36 + '"\n'
+# A GitHub token with real-looking randomness: gitleaks rightly ignores "ghp_aaaa...".
+SECRET = 'TOKEN = "' + "ghp_" + "".join(random.Random(8363).choices(string.ascii_letters + string.digits, k=36)) + '"\n'
 
 
 @pytest.fixture
@@ -242,7 +245,7 @@ def test_case_colliding_paths_are_each_scanned(repo):
     git(repo, "commit", "-qm", "colliding names")
     result = push(repo, "main")
     assert result.returncode != 0
-    assert "A.py" in result.stderr and "secrets-scanner.py" in result.stderr
+    assert "A.py" in result.stderr and "gitleaks" in result.stderr
 
 
 def test_layers_separate_names_that_collide_on_disk():
@@ -296,6 +299,40 @@ def test_tag_of_a_blob_publishes_no_commits(repo):
     git(repo, "tag", "loose", blob(repo, SECRET))
     result = push(repo, "loose")
     assert result.returncode == 0 and "commit(s)" not in result.stderr
+
+
+def test_commit_cannot_weaken_gitleaks_at_push(repo):
+    # Same commit, so the repo's .gitleaks.toml lands in the scanned layer root.
+    (repo[0] / ".gitleaks.toml").write_text('[[allowlists]]\npaths = [".*"]\n')
+    (repo[0] / "config.py").write_text(SECRET)
+    git(repo, "add", ".gitleaks.toml", "config.py")
+    git(repo, "commit", "-qm", "token with an allow-all config")
+    result = push(repo, "main")
+    assert result.returncode != 0
+    assert "gitleaks (exit 2)" in result.stderr
+
+
+def test_gitleaks_timeout_blocks(tmp_path, monkeypatch):
+    driver = load_driver()
+    fake = tmp_path / "bin" / "gitleaks"
+    fake.parent.mkdir()
+    fake.write_text("#!/bin/sh\nsleep 30\n")
+    fake.chmod(0o755)
+    monkeypatch.setenv("PATH", str(fake.parent) + os.pathsep + os.environ["PATH"])
+    monkeypatch.setattr(driver, "VALIDATOR_TIMEOUT", 0.5)
+    code, output = driver.run_gitleaks(tmp_path)
+    assert code == 124 and "timed out" in output
+
+
+def test_missing_gitleaks_blocks_the_push(repo):
+    commit(repo, "a.py", "VALUE = 1\n", "plain")
+    root, env, _ = repo
+    no_gitleaks = {**env, "PATH": os.pathsep.join(p for p in env["PATH"].split(os.pathsep)
+                                                  if not (Path(p) / "gitleaks").exists())}
+    result = subprocess.run(["git", "push", "-q", "origin", "main"], cwd=root, env=no_gitleaks,
+                            capture_output=True, text=True, timeout=120)
+    assert result.returncode != 0
+    assert "brew install gitleaks" in result.stderr
 
 
 def test_validator_timeout_fails_closed(tmp_path, monkeypatch):

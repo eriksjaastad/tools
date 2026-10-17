@@ -4,8 +4,7 @@ The validators are executable scripts whose filenames contain hyphens
 (`absolute-path-check.py`), so they cannot be imported by module name. Load
 them through importlib instead.
 
-This helper was lifted out of `test_secrets_scanner.py`, which needed the same
-trick; all validator test modules share it rather than each carrying a copy.
+All validator test modules share this helper rather than each carrying a copy.
 """
 import importlib.util
 import os
@@ -34,11 +33,6 @@ def load_validator(filename: str):
     sys.modules[module_name] = mod
     spec.loader.exec_module(mod)
     return mod
-
-
-@pytest.fixture(scope="module")
-def scanner():
-    return load_validator("secrets-scanner.py")
 
 
 @pytest.fixture(scope="module")

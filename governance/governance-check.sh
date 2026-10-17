@@ -13,6 +13,11 @@
 #   0: All validators passed
 #   1: One or more validators failed
 #
+# Secrets are checked by gitleaks, the standard scanner (#8363), with the shared
+# governance/gitleaks.toml over the same staged files; it judges a value by how
+# it is used (an assignment's name, a known token prefix), not by its shape.
+# Without gitleaks the check fails: install it with `brew install gitleaks`.
+#
 # Adding a validator: list it in VALIDATORS below, with any extra arguments
 # in validator_args, and in push-range-check.py, under FILE_VALIDATORS (called
 # with file paths) or COMMIT_VALIDATORS (called with --commit SHA).
@@ -85,9 +90,62 @@ case "$IGNORE_ENTRY" in
         exit 1 ;;
 esac
 
+# Secrets: gitleaks over the STAGED blobs of these files, written under their
+# repository-relative names as push-range-check.py writes committed blobs, so both
+# gates judge the same content the same way. Symlinks and gitlinks carry no file
+# content and are skipped, as at push. Each path is looked up literally (a name
+# such as ':x.py' is not pathspec magic); a lookup error, or a path with no single
+# staged entry, fails the check rather than leaving the file unscanned. Its
+# .gitleaksignore is read from this directory, never from the repository.
+echo -n "Running gitleaks... "
+if ! command -v gitleaks >/dev/null 2>&1; then
+    echo -e "${RED}✗ FAIL${NC}"
+    echo -e "${RED}gitleaks not found on PATH (install: brew install gitleaks; a GUI git client may need /opt/homebrew/bin on its PATH); secrets cannot be checked${NC}" >&2  # absolute path intentional: install hint text
+    OVERALL_STATUS=1
+else
+    SECRETS_DIR=$(mktemp -d)
+    trap 'rm -rf "${STAGED_LIST:-}" "$IGNORE_LIST" "$SECRETS_DIR"' EXIT
+    SECRETS_UNREAD=""
+    for f in "${STAGED_FILES[@]}"; do
+        if ! entry=$(git --literal-pathspecs ls-files -s -- "$f"); then
+            SECRETS_UNREAD="$SECRETS_UNREAD $f"
+            continue
+        fi
+        case "$entry" in
+            ""|*$'\n'*) SECRETS_UNREAD="$SECRETS_UNREAD $f"; continue ;;  # unstaged, a directory or unmerged
+            100644\ *|100755\ *) ;;
+            *) continue ;;  # symlink or gitlink
+        esac
+        oid=${entry#* }
+        oid=${oid%% *}
+        mkdir -p "$SECRETS_DIR/$(dirname "$f")"
+        git cat-file blob "$oid" > "$SECRETS_DIR/$f"
+    done
+    # --exit-code 2 marks a finding, so any other failure is reported as an error.
+    set +e
+    gitleaks dir "$SECRETS_DIR" --config "$SCRIPT_DIR/gitleaks.toml" --gitleaks-ignore-path "$SCRIPT_DIR" \
+        --exit-code 2 --timeout 300 --no-banner --redact --verbose --log-level warn 2>&1
+    GITLEAKS_STATUS=$?
+    set -e
+    if [ -n "$SECRETS_UNREAD" ]; then
+        GITLEAKS_STATUS=3
+    fi
+    case "$GITLEAKS_STATUS" in
+        0) echo -e "${GREEN}✓ PASS${NC}" ;;
+        3) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}no single staged entry for:$SECRETS_UNREAD; secrets were not checked for them${NC}" >&2
+           OVERALL_STATUS=1 ;;
+        2) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}gitleaks found a likely secret (value redacted above)${NC}" >&2
+           OVERALL_STATUS=1 ;;
+        *) echo -e "${RED}✗ FAIL${NC}"
+           echo -e "${RED}gitleaks failed to run (exit $GITLEAKS_STATUS, see above); secrets were not checked${NC}" >&2
+           OVERALL_STATUS=1 ;;
+    esac
+fi
+
 # Array of validators to run
 VALIDATORS=(
-    "secrets-scanner.py"
     "absolute-path-check.py"
     "api-wrapper-check.py"
     "source-deletion-check.py"
