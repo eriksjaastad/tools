@@ -161,8 +161,7 @@ validator_args() {
 #
 # Since agent-runtime-config #8283 (2026-10-14) there is nothing to sync:
 # AGENTS.md is each project's one instructions file and CLAUDE.md a symlink
-# to it. instruction-writer refreshes its shared blocks, and
-# 'runtime-doctor monitor' reports a broken layout.
+# to it. 'runtime-doctor monitor' reports a broken layout.
 ECOSYSTEM_VALIDATORS=()
 
 # Run each validator
