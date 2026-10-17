@@ -21,7 +21,7 @@ If `PROGRESS.md` exists in the project root, read it FIRST before doing anything
 
 | Directory | Purpose |
 |-----------|---------|
-| `governance/` | Commit- and push-time validators (secrets, paths, api-wrapper, deletion sites, silent failures) |
+| `governance/` | Commit- and push-time validators (secrets, deletion sites, silent failures) |
 | `claude-mcp-go/` | MCP hub for agent communication (Go) |
 | `ollama-mcp-go/` | MCP server for local Ollama models (Go) |
 
@@ -78,11 +78,11 @@ Reviews follow the portfolio-wide protocol at `~/projects/project-tracker/REVIEW
 | M3 | No API keys in code |
 | H1 | Subprocess has a timeout and handles failure with `check=True` or explicit validation of expected return codes |
 
-**M1 and M3 are automated** by the shared governance checks, alongside API-wrapper enforcement. The shared pre-commit check also blocks M2 patterns SF001–SF003 on changed lines (why: `DECISIONS.md`), and this repository's local checks run `governance/silent-failure-gate.py` over every tracked Python file. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**.
+**M3 is automated** by the shared governance secret scan (gitleaks). M1 is no longer checked automatically (the absolute-path and API-wrapper validators were removed in the Reset), so review it manually. The shared pre-commit check also blocks M2 patterns SF001–SF003 on changed lines (why: `DECISIONS.md`), and this repository's local checks run `governance/silent-failure-gate.py` over every tracked Python file. This bounded scan does not prove complete error handling: **manual M2 review beyond these patterns and H1 review remain required**.
 
 ## Definition of Done
 
-- [ ] Automated M1/M3, API-wrapper and repository silent-failure checks pass; remaining M2/H1 reviewed manually
+- [ ] Automated M3 (secrets) and repository silent-failure checks pass; remaining M1/M2/H1 reviewed manually
 - [ ] Tests pass for any touched component with a suite (`scripts/local-checks.sh` runs them all; Go tests where they exist)
 - [ ] No new security vulnerabilities
 - [ ] Documentation updated if behavior changed

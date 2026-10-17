@@ -53,13 +53,13 @@ _tools/governance/sync-gh-workflows.sh --dry-run rename-default-branch
 
 ## Local Pre-Commit Hooks (`governance/`)
 
-Runs validators at commit and push time — secrets, hardcoded paths, naked API calls, deletion sites, silent failures. [`governance/README.md`](governance/README.md) says how they are wired.
+Runs validators at commit and push time — secrets, deletion sites, silent failures. [`governance/README.md`](governance/README.md) says how they are wired.
 
 ---
 
 ## Active Tools
 
-- [`governance/`](governance/README.md) - Commit- and push-time validators for secrets, hardcoded paths, API-wrapper enforcement, deletion sites and silent failures.
+- [`governance/`](governance/README.md) - Commit- and push-time validators for secrets, deletion sites and silent failures.
 - [`claude-mcp-go/`](claude-mcp-go/README.md) - Go MCP hub for agent communication.
 - [`ollama-mcp-go/`](ollama-mcp-go/README.md) - Go MCP server for local Ollama models.
 - [`batch-crop/`](batch-crop/README.md) - Crop a folder of images to an aspect ratio, size, box or focal point (moved from synth-insight-labs, #8103).
